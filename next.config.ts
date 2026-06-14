@@ -5,8 +5,6 @@ import { fileURLToPath } from 'node:url'
 const projectRoot = dirname(fileURLToPath(import.meta.url))
 
 const config: NextConfig = {
-  output: 'standalone',
-
   turbopack: {
     root: projectRoot,
   },
