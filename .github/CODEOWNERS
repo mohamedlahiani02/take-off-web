@@ -1,0 +1,15 @@
+# CODEOWNERS — every PR requires a review from the code owners listed here.
+# Replace @your-github-handle with the real GitHub usernames of the team.
+
+# Global fallback — all files
+* @your-github-handle
+
+# Design system and tokens are especially stable; require explicit review
+/design-system/ @your-github-handle
+
+# Auth flow is security-sensitive
+/lib/auth/ @your-github-handle
+/app/api/auth/ @your-github-handle
+
+# Workflows
+/.github/workflows/ @your-github-handle

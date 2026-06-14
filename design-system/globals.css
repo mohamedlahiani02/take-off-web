@@ -1,0 +1,102 @@
+/*
+ * Global stylesheet for Take Off Web.
+ *
+ * This file:
+ *  1. Imports Tailwind CSS v4 via the new @import syntax.
+ *  2. Defines our brand tokens in the @theme block so they become
+ *     Tailwind utility classes (e.g. bg-navy, text-lime, rounded-card).
+ *  3. Sets base typography defaults.
+ *
+ * Font faces are handled by next/font/google in design-system/fonts.ts.
+ * CSS variables --font-display, --font-body, --font-mono are injected
+ * onto <body> by the root layout.
+ */
+
+@import 'tailwindcss';
+
+@theme {
+  /* ── Colors ─────────────────────────────────────────────────────────── */
+  --color-navy: #0a1733;
+  --color-navy-alt: #0c2350;
+  --color-card-navy: #0f1f44;
+  --color-lime: #c4ef3f;
+  --color-lime-dark: #6a8a16;
+  --color-cream: #f4f5ee;
+  --color-cream-alt: #eceadf;
+  --color-ink: #0a1733;
+
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --font-display: var(--font-display-var, 'Anton', sans-serif);
+  --font-body: var(--font-body-var, 'Space Grotesk', sans-serif);
+  --font-mono: var(--font-mono-var, 'Space Mono', monospace);
+
+  /* ── Border radii ───────────────────────────────────────────────────── */
+  --radius-card: 18px;
+  --radius-large: 22px;
+  --radius-pill: 999px;
+
+  /* ── Motion ─────────────────────────────────────────────────────────── */
+  --ease-lift: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* ── Base layer ─────────────────────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--color-ink);
+    background: var(--color-navy);
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Convenience aliases for component use */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+/* ── Keyframes used across multiple pages ───────────────────────────────── */
+@keyframes rise-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes float-ghost {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}

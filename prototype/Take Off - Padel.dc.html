@@ -1,0 +1,968 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<script src="./auth.js" defer></script>
+<script src="./menu.js" defer></script>
+<script src="./cart.js" defer></script>
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ font-family:'Space Grotesk',sans-serif; background:#0a1733; color:#f4f5ee; }
+  ::selection{ background:#c4ef3f; color:#0a1733; }
+  .anton{ font-family:'Anton',sans-serif; font-weight:400; text-transform:uppercase; }
+  a{ color:inherit; text-decoration:none; }
+  @keyframes marquee{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  @keyframes upP{ from{ opacity:0; transform:translateY(26px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes drawSig{ to{ stroke-dashoffset:0; } }
+  @keyframes ballSpin{ to{ transform:rotate(360deg); } }
+  @keyframes logoIn{ to{ opacity:1; transform:scale(1); } }
+  image-slot{ display:block; }
+  .lift{ transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, background .25s ease; }
+</style>
+</helmet>
+
+<!-- LOADER -->
+<div ref="{{ loaderRef }}" style="position:fixed; inset:0; z-index:200; background:#0a1733; display:flex; align-items:center; justify-content:center; transition:opacity .7s ease, visibility .7s;">
+  <img src="./Logo/LOGO-lime.svg" alt="Take Off" style="width:240px; height:auto; opacity:0; transform:scale(.7); animation:logoIn 1.1s cubic-bezier(.2,.7,.2,1) .1s forwards;">
+</div>
+
+<div style="max-width:100%; overflow-x:hidden;">
+
+  <!-- ░ NAV ░ -->
+  <div style="position:fixed; top:0; left:0; right:0; z-index:90; display:flex; align-items:center; justify-content:space-between; padding:18px 5vw; background:rgba(10,23,51,.72); backdrop-filter:blur(14px); border-bottom:1px solid rgba(196,239,63,.14);">
+    <a href="Take Off - Gateway.dc.html" style="display:flex; align-items:center; gap:11px;">
+      <img src="./Logo/LOGO.svg" alt="Take Off" style="width:78px; height:auto; display:block;">
+      <span style="font-weight:700; font-size:14px; letter-spacing:.14em;">TAKE OFF</span>
+      <span style="width:9px; height:9px; border-radius:50%; background:#c4ef3f;"></span>
+      <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:rgba(244,245,238,.55);">PADEL</span>
+    </a>
+    <div style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
+      <div onClick="{{ openTakeOffMenu }}" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:rgba(244,245,238,.85);">
+        <div style="display:flex; flex-direction:column; gap:4px;"><span style="width:20px; height:2px; background:#c4ef3f;"></span><span style="width:20px; height:2px; background:#c4ef3f;"></span></div>
+        MENU
+      </div>
+      <a href="#book" style="color:rgba(244,245,238,.75);">BOOK</a>
+      <a href="#play" style="color:rgba(244,245,238,.75);">PLAY</a>
+      <a href="#coaches" style="color:rgba(244,245,238,.75);">COACHES</a>
+      <a href="#shop" style="color:rgba(244,245,238,.75);">SHOP</a>
+      <a href="#plans" style="color:rgba(244,245,238,.75);">PLANS</a>
+      <div onClick="{{ openCart }}" style="display:flex; align-items:center; gap:8px; padding:9px 16px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; letter-spacing:.08em; cursor:pointer;">CART · {{ cartCount }}</div>
+      <sc-if value="{{ authUser }}" hint-placeholder-val="">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-family:'Space Mono'; font-size:11px; letter-spacing:.1em; color:#c4ef3f;">◆ {{ walletBal }} DT</span>
+          <div onClick="{{ openAccount }}" style="display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:15px; cursor:pointer;">{{ userInitial }}</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noAuthUser }}" hint-placeholder-val="">
+        <span onClick="{{ openLogin }}" style="font-family:'Space Mono'; font-size:11px; letter-spacing:.14em; color:rgba(244,245,238,.75); cursor:pointer;">SIGN IN</span>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- ░ HERO ░ -->
+  <div style="position:relative; min-height:100vh; display:flex; align-items:flex-end; overflow:hidden;">
+    <video autoplay muted loop playsinline preload="auto" poster="./photos/intense-padel-play-stockcake.webp" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;"><source src="./videos/padel-hero.mp4" type="video/mp4"></video>
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,23,51,.7) 0%, rgba(10,23,51,.35) 38%, rgba(10,23,51,.92) 100%); pointer-events:none;"></div>
+    <div style="position:absolute; inset:0; background:radial-gradient(120% 80% at 80% 0%, rgba(43,107,240,.4), transparent 55%); pointer-events:none;"></div>
+
+    <div style="position:relative; z-index:3; width:100%; padding:0 5vw 7vh; display:flex; align-items:flex-end; justify-content:space-between; gap:40px; flex-wrap:wrap;">
+      <div style="max-width:880px;">
+        <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.32em; color:#c4ef3f; margin-bottom:22px; animation:upP .7s .2s both;">TAKE OFF CLUB — PADEL · TUNIS</div>
+        <h1 class="anton" style="margin:0; font-size:clamp(64px,12vw,210px); line-height:.84; letter-spacing:.005em; color:#fff; text-shadow:0 14px 60px rgba(0,0,0,.45); animation:upP .8s .3s both;">Own the<br>night court<span style="color:#c4ef3f;">.</span></h1>
+        <p style="margin:26px 0 0; font-size:clamp(16px,1.4vw,21px); line-height:1.5; color:rgba(244,245,238,.82); max-width:480px; animation:upP .8s .45s both;">Two pro courts under the lights. Grab your crew, book in seconds, bring the noise.</p>
+        <div style="margin-top:34px; display:flex; gap:14px; flex-wrap:wrap; animation:upP .8s .6s both;">
+          <a href="#book" style="display:inline-flex; align-items:center; gap:14px; padding:16px 16px 16px 28px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:16px;" class="lift">Book a court <span style="display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
+          <a href="#play" style="display:inline-flex; align-items:center; padding:16px 28px; border-radius:999px; border:1px solid rgba(244,245,238,.35); color:#fff; font-weight:600; font-size:16px;" class="lift">Explore play</a>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:20px; animation:upP .8s .7s both; max-width:340px;">
+        <!-- Phone CTA -->
+        <div style="padding:20px 22px; background:rgba(10,23,51,.7); border:1px solid rgba(196,239,63,.3); border-radius:18px; backdrop-filter:blur(8px);">
+          <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:10px;">RÉSERVATION SPONTANÉE</div>
+          <div class="anton" style="font-size:42px; color:#c4ef3f; line-height:1; letter-spacing:.01em; margin-bottom:6px;">+216 27 314 100</div>
+          <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:rgba(244,245,238,.6); margin-bottom:16px;">WHATSAPP DISPONIBLE 7/7</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="tel:+21627314100" style="display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em;" class="lift">📞 CALL</a>
+            <a href="https://wa.me/21627314100" target="_blank" style="display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:999px; border:1px solid #c4ef3f; color:#c4ef3f; font-weight:700; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em;" class="lift">💬 WHATSAPP</a>
+          </div>
+        </div>
+        <!-- Stats -->
+        <sc-for list="{{ heroStats }}" as="st" hint-placeholder-count="2">
+          <div style="display:flex; align-items:baseline; gap:12px; padding:14px 22px; border-left:2px solid #c4ef3f;">
+            <div class="anton" style="font-size:34px; color:#fff; line-height:1;">{{ st.big }}</div>
+            <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(244,245,238,.6); max-width:150px;">{{ st.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░ MARQUEE ░ -->
+  <div style="background:#c4ef3f; color:#0a1733; padding:16px 0; overflow:hidden; white-space:nowrap; border-top:3px solid #0a1733; border-bottom:3px solid #0a1733;">
+    <div style="display:inline-flex; gap:40px; animation:marquee 24s linear infinite; will-change:transform;">
+      <span class="anton" style="font-size:24px; letter-spacing:.04em;">PADEL · TOURNAMENTS · LADDER · COACHING · COURT RENTAL · NIGHT SESSIONS · PADEL · TOURNAMENTS · LADDER · COACHING · COURT RENTAL · NIGHT SESSIONS ·&nbsp;</span>
+      <span class="anton" style="font-size:24px; letter-spacing:.04em;">PADEL · TOURNAMENTS · LADDER · COACHING · COURT RENTAL · NIGHT SESSIONS · PADEL · TOURNAMENTS · LADDER · COACHING · COURT RENTAL · NIGHT SESSIONS ·&nbsp;</span>
+    </div>
+  </div>
+
+  <!-- ░ BOOKING ░ -->
+  <div id="book" style="padding:9vh 5vw; background:#0a1733;">
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:38px;">
+      <div>
+        <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">01 — RESERVE</div>
+        <h2 class="anton" style="margin:14px 0 0; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff;">Book a court</h2>
+      </div>
+      <p style="font-family:'Space Mono'; font-size:12px; letter-spacing:.05em; color:rgba(244,245,238,.55); max-width:300px; line-height:1.7;">Two courts · 1h30 slots · 20 DT a share or 80 DT the full court. Tap a slot to choose.</p>
+    </div>
+
+    <!-- date pills -->
+    <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:30px;">
+      <sc-for list="{{ dates }}" as="d" hint-placeholder-count="15">
+        <div onClick="{{ d.pick }}" style="flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:74px; padding:14px 10px; border-radius:14px; cursor:pointer; background:{{ d.bg }}; color:{{ d.fg }}; border:1px solid {{ d.bd }}; transition:all .2s ease;">
+          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.16em; opacity:.7;">{{ d.dow }}</span>
+          <span class="anton" style="font-size:28px; line-height:1;">{{ d.dayNum }}</span>
+          <span style="font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; opacity:.6;">{{ d.month }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 320px; gap:26px; align-items:start;">
+      <!-- courts -->
+      <div style="display:flex; flex-direction:column; gap:22px;">
+        <sc-for list="{{ courts }}" as="court" hint-placeholder-count="2">
+          <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.16); border-radius:20px; padding:22px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <span style="width:10px; height:10px; border-radius:50%; background:#c4ef3f;"></span>
+                <span class="anton" style="font-size:24px; color:#fff;">{{ court.name }}</span>
+              </div>
+              <span style="font-family:'Space Mono'; font-size:11px; letter-spacing:.14em; color:rgba(244,245,238,.5);">{{ court.surface }}</span>
+            </div>
+            <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
+              <sc-for list="{{ court.slots }}" as="s" hint-placeholder-count="14">
+                <div style="flex:0 0 auto; min-width:{{ s.minW }}; border-radius:11px; overflow:hidden; transition:all .15s ease;">
+                  <sc-if value="{{ s.isChoosing }}" hint-placeholder-val="">
+                    <div style="background:#0a1733; border:1px solid #c4ef3f; border-radius:11px; padding:10px 8px;">
+                      <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.06em; color:rgba(244,245,238,.6); text-align:center; margin-bottom:8px;">{{ s.time }}</div>
+                      <div style="display:flex; gap:7px;">
+                        <div onClick="{{ s.pickShare }}" style="flex:1; padding:9px 4px; border-radius:8px; background:#c4ef3f; color:#0a1733; font-family:'Space Mono'; font-size:11px; font-weight:700; text-align:center; cursor:pointer; letter-spacing:.04em;">Share · 20</div>
+                        <div onClick="{{ s.pickFull }}" style="flex:1; padding:9px 4px; border-radius:8px; background:transparent; border:1px solid #c4ef3f; color:#c4ef3f; font-family:'Space Mono'; font-size:11px; font-weight:700; text-align:center; cursor:pointer; letter-spacing:.04em;">Full · 80</div>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.notChoosing }}" hint-placeholder-val="">
+                    <div onClick="{{ s.toggle }}" style="position:relative; padding:11px 6px 22px; border-radius:11px; text-align:center; font-family:'Space Mono'; font-size:13px; letter-spacing:.04em; cursor:{{ s.cursor }}; background:{{ s.bg }}; color:{{ s.fg }}; border:1px solid {{ s.bd }}; text-decoration:{{ s.deco }}; transition:all .15s ease;">
+                      {{ s.time }}
+                      <sc-if value="{{ s.hasBadge }}" hint-placeholder-val="">
+                        <span style="position:absolute; bottom:5px; right:7px; font-family:'Space Mono'; font-size:9px; letter-spacing:.06em; color:{{ s.badgeFg }}; opacity:.85;">{{ s.badge }}</span>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        <div style="display:flex; gap:22px; font-family:'Space Mono'; font-size:11px; letter-spacing:.12em; color:rgba(244,245,238,.55); flex-wrap:wrap;">
+          <span style="display:flex; align-items:center; gap:8px;"><span style="width:13px; height:13px; border-radius:4px; border:1px solid rgba(196,239,63,.45);"></span> FREE</span>
+          <span style="display:flex; align-items:center; gap:8px;"><span style="width:13px; height:13px; border-radius:4px; background:#c4ef3f;"></span> SHARE · 20 DT</span>
+          <span style="display:flex; align-items:center; gap:8px;"><span style="width:13px; height:13px; border-radius:4px; background:#0a1733; border:1px solid #c4ef3f;"></span> FULL · 80 DT</span>
+          <span style="display:flex; align-items:center; gap:8px;"><span style="width:13px; height:13px; border-radius:4px; background:rgba(244,245,238,.08);"></span> BOOKED</span>
+        </div>
+      </div>
+
+      <!-- summary -->
+      <div style="position:sticky; top:96px; background:linear-gradient(180deg,#11254f,#0d1d40); border:1px solid rgba(196,239,63,.2); border-radius:20px; padding:24px;">
+        <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.24em; color:#c4ef3f; margin-bottom:18px;">YOUR BOOKING</div>
+        <sc-if value="{{ hasSelection }}" hint-placeholder-val="">
+          <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px; max-height:230px; overflow-y:auto;">
+            <sc-for list="{{ selectionList }}" as="sel" hint-placeholder-count="2">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 13px; background:rgba(196,239,63,.08); border-radius:11px;">
+                <div style="flex:1; min-width:0;">
+                  <div style="font-weight:600; font-size:14px; color:#fff;">{{ sel.court }} · {{ sel.time }}</div>
+                  <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.55);">{{ sel.day }} · {{ sel.modeLabel }}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="anton" style="font-size:16px; color:#c4ef3f;">{{ sel.priceLabel }}</span>
+                  <div onClick="{{ sel.remove }}" style="cursor:pointer; color:rgba(244,245,238,.5); font-size:18px;">×</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noSelection }}" hint-placeholder-val="">
+          <p style="font-size:13px; line-height:1.6; color:rgba(244,245,238,.5); margin:0 0 18px;">No slots yet. Tap available times on the courts to build your booking.</p>
+        </sc-if>
+        <div style="display:flex; justify-content:space-between; align-items:baseline; padding-top:16px; border-top:1px solid rgba(244,245,238,.12);">
+          <span style="font-family:'Space Mono'; font-size:11px; letter-spacing:.16em; color:rgba(244,245,238,.6);">{{ selCount }} SLOT(S)</span>
+          <span class="anton" style="font-size:32px; color:#c4ef3f;">{{ selTotal }} DT</span>
+        </div>
+        <div onClick="{{ confirmBooking }}" style="margin-top:18px; padding:15px; border-radius:13px; text-align:center; font-weight:700; font-size:15px; cursor:pointer; background:{{ confirmBg }}; color:{{ confirmFg }}; transition:all .2s ease;">Confirm &amp; add to cart</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░ PLAY YOUR WAY ░ -->
+  <div id="play" style="padding:9vh 5vw; background:#0a1733;">
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">02 — PLAY YOUR WAY</div>
+    <h2 class="anton" style="margin:14px 0 40px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff; max-width:760px;">More than a match</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px;">
+      <sc-for list="{{ formats }}" as="f" hint-placeholder-count="4">
+        <div class="lift" style="position:relative; min-height:340px; border-radius:20px; overflow:hidden; cursor:pointer;">
+          <image-slot id="{{ f.slot }}" placeholder="Drop photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+          <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,23,51,.15), rgba(10,23,51,.9));"></div>
+          <div style="position:absolute; inset:0; padding:22px; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.2em; color:#c4ef3f;">{{ f.n }}</div>
+            <div>
+              <h3 class="anton" style="margin:0 0 8px; font-size:30px; color:#fff;">{{ f.title }}</h3>
+              <p style="margin:0; font-size:13px; line-height:1.5; color:rgba(244,245,238,.78);">{{ f.desc }}</p>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ░ TOURNAMENTS ░ -->
+  <div id="tournaments" style="padding:9vh 5vw; background:#0a1733;">
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">02b — TOURNAMENTS</div>
+    <h2 class="anton" style="margin:14px 0 42px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff; max-width:860px;">Cups, americanos &amp; seasonal cups</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px;">
+      <sc-for list="{{ tournaments }}" as="t" hint-placeholder-count="3">
+        <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.3); border-radius:20px; overflow:hidden; display:flex; flex-direction:column;">
+          <image-slot id="{{ t.slot }}" placeholder="Drop tournament photo" style="width:100%; height:140px; display:block;"></image-slot>
+          <div style="padding:22px; flex:1; display:flex; flex-direction:column; gap:14px;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+              <span style="padding:5px 12px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-family:'Space Mono'; font-size:10px; letter-spacing:.12em; font-weight:700;">{{ t.date }}</span>
+            </div>
+            <div>
+              <h3 class="anton" style="margin:0 0 6px; font-size:26px; color:#fff;">{{ t.title }}</h3>
+              <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.14em; color:rgba(244,245,238,.5);">{{ t.format }}</div>
+            </div>
+            <div style="font-size:13px; color:rgba(244,245,238,.7);"><span style="color:#c4ef3f;">Prize:</span> {{ t.prize }}</div>
+            <div>
+              <div style="display:flex; justify-content:space-between; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em; color:rgba(244,245,238,.55); margin-bottom:7px;">
+                <span>{{ t.filled }} / {{ t.total }} spots filled</span>
+                <span>{{ t.pct }}%</span>
+              </div>
+              <div style="height:5px; border-radius:999px; background:rgba(244,245,238,.1);">
+                <div style="height:5px; border-radius:999px; background:#c4ef3f; width:{{ t.pct }}%;"></div>
+              </div>
+            </div>
+            <div onClick="{{ t.signup }}" style="margin-top:auto; padding:13px; border-radius:12px; text-align:center; font-weight:700; font-size:14px; cursor:pointer; background:#c4ef3f; color:#0a1733;">Sign up · 80 DT</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ░ LADDER ░ -->
+  <div id="ladder" style="padding:9vh 5vw; background:#0c1c3f;">
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">02c — LADDER</div>
+    <h2 class="anton" style="margin:0 0 10px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff;">Monthly club ladder</h2>
+    <p style="font-family:'Space Mono'; font-size:12px; letter-spacing:.05em; color:rgba(244,245,238,.45); margin:0 0 48px; line-height:1.7;">Log your matches in your account · top 10 each month win shop credit</p>
+
+    <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:32px; align-items:start;">
+
+      <!-- Leaderboard -->
+      <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.18); border-radius:20px; overflow:hidden;">
+        <!-- header row -->
+        <div style="display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid rgba(196,239,63,.15); gap:12px;">
+          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); width:32px;">#</span>
+          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); flex:1;">PLAYER</span>
+          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); width:52px; text-align:center;">LVL</span>
+          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); width:56px; text-align:center;">W-L</span>
+          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); width:48px; text-align:right;">PTS</span>
+        </div>
+        <sc-for list="{{ ladderRows }}" as="row" hint-placeholder-count="10">
+          <div style="display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid rgba(196,239,63,.08); gap:12px;">
+            <span class="anton" style="font-size:22px; color:#c4ef3f; width:32px; line-height:1;">{{ row.rank }}</span>
+            <span style="font-weight:600; font-size:15px; color:#f4f5ee; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ row.name }}</span>
+            <span style="display:inline-block; width:52px; text-align:center; font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; padding:4px 0; border-radius:6px; background:#0a1733; border:1px solid rgba(196,239,63,.4); color:#c4ef3f;">LV {{ row.level }}</span>
+            <span style="font-family:'Space Mono'; font-size:12px; color:rgba(244,245,238,.45); width:56px; text-align:center;">{{ row.wl }}</span>
+            <span class="anton" style="font-size:22px; color:#fff; width:48px; text-align:right; line-height:1;">{{ row.pts }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- Your Standing -->
+      <div style="position:sticky; top:96px; border:1px solid #c4ef3f; background:#0f1f44; border-radius:20px; padding:24px;">
+        <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:#c4ef3f; margin-bottom:18px;">YOUR STANDING</div>
+        <sc-if value="{{ ladderLoggedIn }}" hint-placeholder-val="">
+          <div style="margin-bottom:18px;">
+            <div style="font-weight:700; font-size:18px; color:#fff; margin-bottom:8px;">{{ ladderUserName }}</div>
+            <span style="display:inline-block; padding:5px 13px; border-radius:999px; background:#0a1733; border:1px solid rgba(196,239,63,.5); color:#c4ef3f; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em;">LV {{ ladderUserLevel }}</span>
+          </div>
+          <div style="display:flex; gap:24px; margin-bottom:22px;">
+            <div>
+              <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:rgba(244,245,238,.45); margin-bottom:4px;">RANK</div>
+              <div class="anton" style="font-size:34px; color:#fff; line-height:1;">{{ ladderUserRank }}</div>
+            </div>
+            <div>
+              <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:rgba(244,245,238,.45); margin-bottom:4px;">W-L</div>
+              <div class="anton" style="font-size:34px; color:#fff; line-height:1;">{{ ladderUserWL }}</div>
+            </div>
+          </div>
+          <div onClick="{{ openAccountMatches }}" style="padding:13px; border-radius:13px; text-align:center; font-weight:700; font-size:14px; cursor:pointer; background:#c4ef3f; color:#0a1733;" class="lift">+ Log a match</div>
+        </sc-if>
+        <sc-if value="{{ ladderLoggedOut }}" hint-placeholder-val="">
+          <p style="font-size:14px; line-height:1.6; color:rgba(244,245,238,.55); margin:0 0 20px;">Sign in to track your rank and log your matches on the monthly ladder.</p>
+          <div onClick="{{ openLogin }}" style="padding:13px; border-radius:13px; text-align:center; font-weight:700; font-size:14px; cursor:pointer; background:#c4ef3f; color:#0a1733;" class="lift">Sign in</div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░ COACHES ░ -->
+  <div id="coaches" style="padding:9vh 5vw; background:#f4f5ee; color:#0a1733;">
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:42px;">
+      <div>
+        <h2 class="anton" style="margin:0; font-size:clamp(40px,6.5vw,92px); line-height:.86;">Meet the<br>coaches behind<br><span style="color:#6a8a16;">champions</span></h2>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:16px;">
+        <p style="max-width:300px; font-size:14px; line-height:1.6; color:rgba(10,23,51,.6); margin:0;">Elite padel trainers dedicated to building skill, precision, and winning confidence.</p>
+        <a href="Take Off - Coaches.dc.html" style="font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:#6a8a16; text-decoration:underline; cursor:pointer;">See all coaches →</a>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;">
+      <sc-for list="{{ coaches }}" as="c" hint-placeholder-count="4">
+        <div onClick="{{ c.open }}" class="lift" style="position:relative; aspect-ratio:3/4; border-radius:16px; overflow:hidden; cursor:pointer;">
+          <image-slot id="{{ c.slot }}" placeholder="Drop coach photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+          <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(10,23,51,.92));"></div>
+          <div style="position:absolute; left:0; right:0; bottom:0; padding:18px;">
+            <div style="font-weight:700; font-size:17px; line-height:1.1;"><span style="color:#c4ef3f;">{{ c.first }}</span> <span style="color:#fff;">{{ c.last }}</span></div>
+            <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.75); margin-top:6px;">{{ c.role }}</div>
+            <div style="font-size:11px; line-height:1.4; color:rgba(244,245,238,.6); margin-top:8px;"><span style="color:#c4ef3f;">Specialty:</span> {{ c.spec }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ░ COACH MODAL ░ -->
+  <sc-if value="{{ coachModalOpen }}" hint-placeholder-val="">
+    <div onClick="{{ closeCoachModal }}" style="position:fixed; inset:0; z-index:300; background:rgba(7,15,36,.65); backdrop-filter:blur(4px);"></div>
+    <div style="position:fixed; inset:0; z-index:301; display:flex; align-items:center; justify-content:center; padding:20px; pointer-events:none;">
+      <div onClick="{{ stopCoachProp }}" style="pointer-events:all; background:#0a1733; border:1px solid rgba(196,239,63,.2); border-radius:24px; padding:36px; width:100%; max-width:880px; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 40px 100px rgba(0,0,0,.65);">
+        <button onClick="{{ closeCoachModal }}" style="position:absolute; top:18px; right:22px; cursor:pointer; font-size:24px; color:rgba(244,245,238,.5); background:none; border:none; line-height:1;">×</button>
+        <div style="display:grid; grid-template-columns:2fr 3fr; gap:30px; align-items:start;">
+          <div style="aspect-ratio:4/5; border-radius:16px; overflow:hidden; position:relative;">
+            <image-slot id="{{ coachModal.slot }}" placeholder="Coach photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+          </div>
+          <div>
+            <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.22em; color:#c4ef3f; margin-bottom:10px;">{{ coachModal.role }}</div>
+            <h2 class="anton" style="margin:0 0 18px; font-size:38px; color:#fff;">{{ coachModal.name }}</h2>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
+              <sc-for list="{{ coachModal.specs }}" as="sp" hint-placeholder-count="3">
+                <span style="padding:5px 13px; border-radius:999px; border:1px solid rgba(196,239,63,.4); background:rgba(196,239,63,.07); color:#c4ef3f; font-family:'Space Mono'; font-size:10px; letter-spacing:.1em;">{{ sp }}</span>
+              </sc-for>
+            </div>
+            <p style="font-size:14px; line-height:1.65; color:rgba(244,245,238,.72); margin:0 0 20px;">{{ coachModal.bio }}</p>
+            <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.5); margin-bottom:12px;">ACHIEVEMENTS</div>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:28px;">
+              <sc-for list="{{ coachModal.achievements }}" as="ach" hint-placeholder-count="3">
+                <div style="display:flex; align-items:flex-start; gap:10px; font-size:14px; color:rgba(244,245,238,.8);"><span style="color:#c4ef3f; font-weight:700; flex-shrink:0;">✓</span> {{ ach }}</div>
+              </sc-for>
+            </div>
+            <a href="#coaching-form" onClick="{{ closeCoachModal }}" style="display:inline-flex; align-items:center; gap:10px; padding:14px 26px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:15px; cursor:pointer;" class="lift">Book a lesson ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ░ SHOP ░ (white) -->
+  <div id="shop" style="padding:9vh 5vw; background:#eceadf; color:#0a1733;">
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:40px;">
+      <div>
+        <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16;">03 — THE PRO SHOP</div>
+        <h2 class="anton" style="margin:14px 0 0; font-size:clamp(40px,6vw,86px); line-height:.9;">Gear up</h2>
+      </div>
+      <div onClick="{{ openCart }}" style="display:flex; align-items:center; gap:10px; padding:13px 22px; border-radius:999px; background:#0a1733; color:#c4ef3f; font-weight:600; cursor:pointer;" class="lift">View cart · {{ cartCount }}</div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:18px;">
+      <sc-for list="{{ products }}" as="p" hint-placeholder-count="6">
+        <div style="background:#fff; border-radius:18px; overflow:hidden; border:1px solid rgba(10,23,51,.07);" class="lift">
+          <div style="position:relative; aspect-ratio:1/1; background:#f4f5ee;">
+            <image-slot id="{{ p.slot }}" placeholder="Drop product photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+            <div style="position:absolute; top:12px; left:12px; font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; padding:5px 9px; border-radius:999px; background:rgba(10,23,51,.85); color:#c4ef3f;">{{ p.tag }}</div>
+          </div>
+          <div style="padding:16px;">
+            <div style="font-weight:600; font-size:15px;">{{ p.name }}</div>
+            <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.05em; color:rgba(10,23,51,.5); margin-top:4px;">{{ p.cat }}</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-top:14px;">
+              <span class="anton" style="font-size:24px;">{{ p.price }} DT</span>
+              <div onClick="{{ p.add }}" style="padding:9px 16px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap;" class="lift">Add +</div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ░ PACKS ░ -->
+  <div id="plans" style="padding:9vh 5vw; background:#0a1733;">
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">04 — PADEL PACKS</div>
+    <h2 class="anton" style="margin:14px 0 42px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff;">Play more,<br>pay less</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px;">
+      <sc-for list="{{ plans }}" as="pl" hint-placeholder-count="4">
+        <div class="lift" style="background:{{ pl.bg }}; border:1px solid {{ pl.bd }}; border-radius:22px; padding:30px; display:flex; flex-direction:column; gap:16px; color:{{ pl.fg }}; position:relative;">
+          <sc-if value="{{ pl.popular }}" hint-placeholder-val="">
+            <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); padding:5px 16px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; font-weight:700; white-space:nowrap;">MOST POPULAR</div>
+          </sc-if>
+          <div>
+            <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.2em; opacity:.7;">{{ pl.kicker }}</div>
+            <h3 class="anton" style="margin:10px 0 0; font-size:32px;">{{ pl.name }}</h3>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:6px;">
+            <span class="anton" style="font-size:52px; color:{{ pl.accent }};">{{ pl.price }}</span>
+            <span style="font-family:'Space Mono'; font-size:12px; opacity:.7;">{{ pl.per }}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <sc-for list="{{ pl.feats }}" as="ft" hint-placeholder-count="3">
+              <div style="display:flex; align-items:center; gap:10px; font-size:14px;"><span style="color:{{ pl.accent }};">✓</span> {{ ft }}</div>
+            </sc-for>
+          </div>
+          <div onClick="{{ pl.cta }}" style="margin-top:auto; padding:14px; border-radius:13px; text-align:center; font-weight:700; cursor:pointer; background:{{ pl.btnBg }}; color:{{ pl.btnFg }};">{{ pl.ctaLabel }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ░ COACHING FORM ░ -->
+  <div id="coaching-form" style="padding:9vh 5vw; background:#0a1733;">
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">05 — COACHING INQUIRY</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:start; margin-bottom:48px;">
+      <div>
+        <h2 class="anton" style="margin:0 0 18px; font-size:clamp(36px,5.5vw,78px); line-height:.9; color:#fff;">Envie de progresser<br>au padel<span style="color:#c4ef3f;">?</span></h2>
+        <p style="font-size:15px; line-height:1.65; color:rgba(244,245,238,.65); margin:0;">Nos coachs proposent des cours individuels et en groupe, sur rendez-vous. En semaine, les créneaux sont disponibles de 9h à 17h30. Le week-end, de 9h à midi et de 14h à 17h30. Pendant l'été, les cours se déroulent tôt le matin ou en soirée après 18h pour votre confort. Remplissez le formulaire — nous vous recontactons sous 24h par téléphone ou WhatsApp.</p>
+      </div>
+      <div>
+        <div style="background:rgba(255,255,255,.04); border:1px solid rgba(196,239,63,.15); border-radius:16px; padding:20px;">
+          <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:#c4ef3f; margin-bottom:8px;">CONTACT DIRECT</div>
+          <div class="anton" style="font-size:28px; color:#fff; margin-bottom:6px;">+216 27 314 100</div>
+          <div style="font-size:13px; color:rgba(244,245,238,.55);">Téléphone & WhatsApp · Lun–Dim 7h–23h</div>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ coachFormSubmitted }}" hint-placeholder-val="">
+      <div style="background:rgba(196,239,63,.1); border:1px solid rgba(196,239,63,.3); border-radius:18px; padding:40px; text-align:center;">
+        <div style="font-size:48px; margin-bottom:18px;">✓</div>
+        <div class="anton" style="font-size:32px; color:#c4ef3f; margin-bottom:10px;">Merci !</div>
+        <div style="font-size:15px; color:rgba(244,245,238,.7); line-height:1.6;">Nous vous recontactons très vite.<br><span style="color:#c4ef3f;">+216 27 314 100</span> · WhatsApp disponible.</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ coachFormNotSubmitted }}" hint-placeholder-val="">
+      <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.16); border-radius:22px; padding:32px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px;">
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">NOM</label>
+            <input id="cf-nom" type="text" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="Ben Ahmed">
+          </div>
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">PRÉNOM</label>
+            <input id="cf-prenom" type="text" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="Sami">
+          </div>
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">TÉLÉPHONE</label>
+            <input id="cf-tel" type="tel" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="+216 XX XXX XXX">
+            <div style="font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.4); margin-top:5px;">Nous vous contactons par téléphone ou WhatsApp</div>
+          </div>
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">EMAIL</label>
+            <input id="cf-email" type="email" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="vous@email.com">
+            <div style="font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.4); margin-top:5px;">Pour la confirmation</div>
+          </div>
+        </div>
+
+        <!-- Type de cours -->
+        <div style="margin-top:20px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:10px;">TYPE DE COURS SOUHAITÉ</label>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <sc-for list="{{ coursTypes }}" as="ct" hint-placeholder-count="2">
+              <div onClick="{{ ct.toggle }}" style="padding:9px 18px; border-radius:999px; cursor:pointer; border:1px solid rgba(196,239,63,.4); background:{{ ct.bg }}; color:{{ ct.fg }}; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em; transition:all .15s;">{{ ct.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- Groupe pré-formé (sc-if) -->
+        <sc-if value="{{ showGroupField }}" hint-placeholder-val="">
+          <div style="margin-top:16px;">
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">GROUPE PRÉ-FORMÉ (noms, niveau)</label>
+            <textarea id="cf-groupe" rows="3" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Ex: Amine (niveau 3), Yassine (niveau 2)..."></textarea>
+          </div>
+        </sc-if>
+
+        <!-- Disponibilités grid -->
+        <div style="margin-top:20px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:12px;">DISPONIBILITÉS</label>
+          <div style="overflow-x:auto;">
+            <table style="border-collapse:collapse; font-size:12px; font-family:'Space Grotesk',sans-serif; min-width:420px;">
+              <thead>
+                <tr>
+                  <th style="padding:8px 12px; font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; color:rgba(244,245,238,.4); text-align:left; font-weight:400;"></th>
+                  <sc-for list="{{ availSlots }}" as="sl" hint-placeholder-count="4">
+                    <th style="padding:8px 10px; font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.5); text-align:center; font-weight:400; white-space:nowrap;">{{ sl }}</th>
+                  </sc-for>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ availDays }}" as="ad" hint-placeholder-count="7">
+                  <tr>
+                    <td style="padding:8px 12px; font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.7); white-space:nowrap;">{{ ad.label }}</td>
+                    <sc-for list="{{ ad.cells }}" as="cell" hint-placeholder-count="4">
+                      <td style="padding:6px 10px; text-align:center;">
+                        <div onClick="{{ cell.toggle }}" style="width:24px; height:24px; border-radius:6px; border:1px solid rgba(196,239,63,.35); background:{{ cell.bg }}; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; color:#0a1733; margin:0 auto; transition:all .15s;">{{ cell.check }}</div>
+                      </td>
+                    </sc-for>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- More fields -->
+        <div style="margin-top:16px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">PRÉCISIONS DISPONIBILITÉS</label>
+          <textarea id="cf-dispos" rows="2" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Ex: libre le matin en semaine sauf mercredi..."></textarea>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px; margin-top:16px;">
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">NIVEAU PADEL</label>
+            <select id="cf-niveau" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box; appearance:none;">
+              <option value="NA">N/A — aucun sport de raquette</option>
+              <option value="0">0 — Débutant total</option>
+              <option value="1">1 — J'ai essayé quelques fois</option>
+              <option value="2">2 — Joueur occasionnel</option>
+              <option value="3">3 — Joueur régulier</option>
+              <option value="4">4 — Joueur compétitif local</option>
+              <option value="5">5 — Niveau tournoi</option>
+              <option value="6">6 — Semi-pro</option>
+              <option value="7">7 — Pro</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">LANGUE PRÉFÉRÉE</label>
+            <div style="display:flex; gap:10px; padding-top:4px;">
+              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:14px; color:#f4f5ee;"><input type="radio" name="cf-lang" value="fr" checked style="accent-color:#c4ef3f;"> Français</label>
+              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:14px; color:#f4f5ee;"><input type="radio" name="cf-lang" value="en" style="accent-color:#c4ef3f;"> English</label>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">POURQUOI PRENDRE DES COURS ?</label>
+          <textarea id="cf-pourquoi" rows="3" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Améliorer mon coup droit, préparer un tournoi, découvrir le padel..."></textarea>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">INFORMATIONS COMPLÉMENTAIRES</label>
+          <textarea id="cf-info" rows="2" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Blessure, contrainte particulière, questions..."></textarea>
+        </div>
+
+        <div style="margin-top:18px; font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.35); line-height:1.6;">
+          Vos données sont utilisées uniquement pour organiser vos cours et vous recontacter. Elles ne sont pas partagées avec des tiers.
+        </div>
+
+        <div onClick="{{ submitCoachForm }}" style="margin-top:22px; padding:15px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:15px; cursor:pointer; display:inline-block;" class="lift">Envoyer la demande →</div>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- ░ PARTENAIRES ░ -->
+  <div id="partenaires" style="padding:9vh 5vw; background:#eceadf; color:#0a1733;">
+    <div style="text-align:center; margin-bottom:42px;">
+      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16; margin-bottom:14px;">06 — NOS PARTENAIRES</div>
+      <h2 class="anton" style="margin:0; font-size:clamp(36px,5.5vw,76px); line-height:.9;">Avec la confiance de</h2>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
+      <sc-for list="{{ partners }}" as="pt" hint-placeholder-count="8">
+        <div class="lift" style="background:#dddbd0; border-radius:14px; height:120px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
+          <image-slot id="{{ pt.slot }}" placeholder="Logo partenaire" style="position:absolute; inset:0; width:100%; height:100%; filter:grayscale(1) opacity(.55); transition:filter .3s;"></image-slot>
+          <div style="position:relative; z-index:1; font-family:'Space Mono'; font-size:11px; letter-spacing:.14em; color:rgba(10,23,51,.4);">{{ pt.name }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="text-align:center; font-family:'Space Mono'; font-size:11px; letter-spacing:.12em; color:rgba(10,23,51,.45);">Vous voulez devenir partenaire ? Contactez le club.</div>
+  </div>
+
+  <!-- ░ CTA ░ -->
+  <div style="position:relative; padding:13vh 5vw; background:#1b4dd1; overflow:hidden;">
+    <div style="position:absolute; inset:0; background:radial-gradient(80% 120% at 100% 0%, rgba(196,239,63,.3), transparent 50%);"></div>
+    <div style="position:relative; z-index:2; text-align:center;">
+      <h2 class="anton" style="margin:0; font-size:clamp(56px,11vw,180px); line-height:.84; color:#fff;">Ready to<br>play<span style="color:#c4ef3f;">?</span></h2>
+      <a href="#book" style="margin-top:34px; display:inline-flex; align-items:center; gap:14px; padding:17px 16px 17px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:17px;" class="lift">Book your court <span style="display:grid; place-items:center; width:36px; height:36px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
+    </div>
+  </div>
+
+  <!-- ░ FOOTER ░ -->
+  <div style="padding:7vh 5vw 5vh; background:#070f24; color:rgba(244,245,238,.7);">
+    <div style="display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap; padding-bottom:40px; border-bottom:1px solid rgba(244,245,238,.1);">
+      <div style="max-width:300px;">
+        <img src="./Logo/LOGO.svg" alt="Take Off" style="width:120px; height:auto; display:block; margin-bottom:16px;">
+        <p style="font-size:13px; line-height:1.6; margin:0;">Take Off Club — Padel &amp; Pilates under one roof. Tunis. Open 7/7.</p>
+      </div>
+      <div style="display:flex; gap:60px; flex-wrap:wrap; font-size:13px;">
+        <div style="display:flex; flex-direction:column; gap:11px;"><span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:#c4ef3f;">PADEL</span><a href="#book">Book a court</a><a href="#tournaments">Tournaments</a><a href="#ladder">Ladder</a><a href="#coaching-form">Contact / Coaching</a><a href="Take Off - Coaches.dc.html">Coaches</a><a href="#plans">Packs</a></div>
+        <div style="display:flex; flex-direction:column; gap:11px;"><span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:#c4ef3f;">CLUB</span><a href="Take Off - Gateway.dc.html">Gateway</a><a href="Take Off - Pilates.dc.html">Pilates</a><a href="Take Off - Store.dc.html">Store</a><a href="Take Off - Coaches.dc.html">Coaches</a></div>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:space-between; padding-top:24px; font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); flex-wrap:wrap; gap:10px;">
+      <span>© 2026 TAKE OFF CLUB</span><span>PADEL · PILATES · TUNIS</span>
+    </div>
+  </div>
+</div>
+
+<!-- Cart is handled by cart.js (shared) -->
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  loaderRef = React.createRef();
+  state = {
+    dateIdx: 0, selected: {}, _authTick: 0, _cartTick: 0,
+    openCoachIdx: null,
+    // coaching form
+    coachFormDone: false, coursSelected: {}, availGrid: {}, // key: "day|slot" => bool
+    // plans
+  };
+
+  componentDidMount() {
+    setTimeout(() => { const l = this.loaderRef.current; if (l) { l.style.opacity = '0'; l.style.visibility = 'hidden'; } }, 1500);
+    if (window.takeOffAuth) {
+      window.takeOffAuth.subscribe(() => this.setState(s => ({ _authTick: s._authTick + 1 })));
+    }
+    if (window.takeOffCart) {
+      window.takeOffCart.subscribe(() => this.setState(s => ({ _cartTick: s._cartTick + 1 })));
+    }
+    // prefill coaching form from auth
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.setState({ openCoachIdx: null });
+    });
+  }
+
+  _dates() {
+    const dows = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const mons = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const base = new Date(2026, 5, 13);
+    return Array.from({ length: 15 }, (_, i) => {
+      const d = new Date(base); d.setDate(base.getDate() + i);
+      return { key: i, dow: i === 0 ? 'TODAY' : dows[d.getDay()], dayNum: d.getDate(), month: mons[d.getMonth()] };
+    });
+  }
+  _times() { return ['09:00', '10:30', '12:00', '13:30', '15:00', '16:30', '18:00', '19:30', '21:00']; }
+  _booked(dateIdx, courtIdx, timeIdx) { return ((dateIdx * 31 + courtIdx * 17 + timeIdx * 13 + 7) % 5) === 0; }
+  _price(mode) { return mode === 'full' ? 80 : 20; }
+
+  _tapSlot(id) {
+    this.setState(s => {
+      const sel = Object.assign({}, s.selected);
+      if (sel[id]) { delete sel[id]; }
+      else { sel[id] = 'choosing'; }
+      return { selected: sel };
+    });
+  }
+  _setMode(id, mode) {
+    this.setState(s => { const sel = Object.assign({}, s.selected); sel[id] = mode; return { selected: sel }; });
+  }
+  _clear(id) {
+    this.setState(s => { const sel = Object.assign({}, s.selected); delete sel[id]; return { selected: sel }; });
+  }
+  _confirm() {
+    const doConfirm = () => {
+      const dates = this._dates();
+      const entries = Object.entries(this.state.selected).filter(([, v]) => v === 'share' || v === 'full');
+      if (!entries.length) return;
+      entries.forEach(([k, mode]) => {
+        const [di, ci, ti] = k.split('|').map(Number);
+        const d = dates[di]; const court = 'Court ' + (ci + 1); const time = this._times()[ti];
+        const modeLabel = mode === 'full' ? 'Full court' : 'Share';
+        const raw = this._price(mode);
+        const item = { name: court + ' · ' + time, sub: d.dow + ' ' + d.dayNum + ' ' + d.month + ' · ' + modeLabel, price: raw + ' DT', _raw: raw, kind: 'booking' };
+        if (window.takeOffAuth) window.takeOffAuth.recordBooking(item);
+        if (window.takeOffCart) window.takeOffCart.add(item);
+      });
+      this.setState({ selected: {} });
+    };
+    if (window.takeOffAuth) { window.takeOffAuth.requireAuth(doConfirm); } else { doConfirm(); }
+  }
+  _addProduct(p) {
+    if (window.takeOffCart) window.takeOffCart.add({ name: p.name, sub: p.cat, price: p.price + ' DT', _raw: p.price, kind: 'product' });
+  }
+  _signupTournament(t) {
+    const doSignup = () => {
+      const item = { name: 'Tournament: ' + t.title, sub: t.date + ' · ' + t.format, price: '80 DT', _raw: 80, kind: 'booking' };
+      if (window.takeOffAuth) window.takeOffAuth.recordBooking(item);
+      if (window.takeOffCart) window.takeOffCart.add(item);
+    };
+    if (window.takeOffAuth) { window.takeOffAuth.requireAuth(doSignup); } else { doSignup(); }
+  }
+  _buyPack(pack) {
+    const doBuy = () => {
+      if (window.takeOffCart) window.takeOffCart.add({
+        name: 'Pack: ' + pack.name,
+        sub: pack.feats[0],
+        price: pack.rawPrice + ' DT',
+        _raw: pack.rawPrice,
+        kind: 'pack',
+        _packMeta: { id: pack.id, name: pack.name, total: pack.matches, months: pack.months },
+      });
+    };
+    if (window.takeOffAuth) { window.takeOffAuth.requireAuth(doBuy); } else { doBuy(); }
+  }
+  _toggleCours(key) {
+    this.setState(s => {
+      const cs = Object.assign({}, s.coursSelected);
+      cs[key] = !cs[key];
+      return { coursSelected: cs };
+    });
+  }
+  _toggleAvail(key) {
+    this.setState(s => {
+      const ag = Object.assign({}, s.availGrid);
+      ag[key] = !ag[key];
+      return { availGrid: ag };
+    });
+  }
+  _submitCoachForm() {
+    const nom = (document.getElementById('cf-nom') || {}).value || '';
+    const prenom = (document.getElementById('cf-prenom') || {}).value || '';
+    const tel = (document.getElementById('cf-tel') || {}).value || '';
+    const email = (document.getElementById('cf-email') || {}).value || '';
+    const entry = { nom, prenom, tel, email, cours: this.state.coursSelected, avail: this.state.availGrid, ts: new Date().toISOString() };
+    try {
+      const existing = JSON.parse(localStorage.getItem('takeOffCoachingRequests') || '[]');
+      existing.push(entry);
+      localStorage.setItem('takeOffCoachingRequests', JSON.stringify(existing));
+    } catch (e) {}
+    this.setState({ coachFormDone: true });
+  }
+
+  renderVals() {
+    const dates = this._dates();
+    const di = this.state.dateIdx;
+    const NAVY = '#0a1733', LIME = '#c4ef3f';
+
+    const dateVals = dates.map((d, i) => ({
+      dow: d.dow, dayNum: d.dayNum, month: d.month,
+      bg: i === di ? LIME : '#0f1f44', fg: i === di ? NAVY : '#f4f5ee', bd: i === di ? LIME : 'rgba(196,239,63,.18)',
+      pick: () => this.setState({ dateIdx: i }),
+    }));
+
+    const times = this._times();
+    const courts = [0, 1].map(ci => ({
+      name: 'Court ' + (ci + 1), surface: ci === 0 ? 'PANORAMIC GLASS' : 'CLASSIC',
+      slots: times.map((t, ti) => {
+        const id = di + '|' + ci + '|' + ti;
+        const booked = this._booked(di, ci, ti);
+        const mode = this.state.selected[id];
+        const isChoosing = mode === 'choosing';
+        let bg, fg, bd, cursor = 'pointer', deco = 'none', hasBadge = null, badge = '', badgeFg = LIME, span = '1';
+        if (booked) {
+          bg = 'rgba(244,245,238,.05)'; fg = 'rgba(244,245,238,.3)'; bd = 'transparent'; cursor = 'not-allowed'; deco = 'line-through';
+        } else if (isChoosing) {
+          span = 'span 2'; bg = NAVY; fg = '#f4f5ee'; bd = LIME;
+        } else if (mode === 'share') {
+          bg = LIME; fg = NAVY; bd = LIME; hasBadge = true; badge = '20 DT'; badgeFg = NAVY;
+        } else if (mode === 'full') {
+          bg = NAVY; fg = LIME; bd = LIME; hasBadge = true; badge = '80 DT'; badgeFg = LIME;
+        } else {
+          bg = 'transparent'; fg = '#f4f5ee'; bd = 'rgba(196,239,63,.35)';
+        }
+        return {
+          time: t, bg, fg, bd, cursor, deco, span, minW: isChoosing ? '160px' : '76px',
+          isChoosing: isChoosing ? true : null,
+          notChoosing: isChoosing ? null : true,
+          hasBadge, badge, badgeFg,
+          toggle: booked ? () => {} : () => this._tapSlot(id),
+          pickShare: () => this._setMode(id, 'share'),
+          pickFull: () => this._setMode(id, 'full'),
+        };
+      }),
+    }));
+
+    const selEntries = Object.entries(this.state.selected).filter(([, v]) => v === 'share' || v === 'full');
+    const selectionList = selEntries.map(([k, mode]) => {
+      const [sdi, ci, ti] = k.split('|').map(Number); const d = dates[sdi];
+      return {
+        court: 'Court ' + (ci + 1), time: times[ti],
+        day: d.dow + ' ' + d.dayNum + ' ' + d.month,
+        modeLabel: mode === 'full' ? 'Full court' : 'Share',
+        priceLabel: this._price(mode) + ' DT',
+        remove: () => this._clear(k),
+      };
+    });
+    const committedKeys = selEntries.length;
+    const selTotal = selEntries.reduce((acc, [, mode]) => acc + this._price(mode), 0);
+
+    const products = [
+      { name: 'TakeOff Pro Racket', cat: 'Rackets', price: 320, tag: 'BESTSELLER', slot: 'pad-prod-1' },
+      { name: 'Overgrip Pack ×3', cat: 'Grips', price: 24, tag: 'GRIP', slot: 'pad-prod-2' },
+      { name: 'Hand Protector', cat: 'Protection', price: 18, tag: 'PROTÈGE-MAIN', slot: 'pad-prod-3' },
+      { name: 'Pro Balls — Tube', cat: 'Balls', price: 15, tag: 'NEW', slot: 'pad-prod-4' },
+      { name: 'Court Racket Bag', cat: 'Bags', price: 145, tag: 'CARRY', slot: 'pad-prod-5' },
+      { name: 'Club Cap', cat: 'Apparel', price: 35, tag: 'LIFESTYLE', slot: 'pad-prod-6' },
+    ].map(p => Object.assign({}, p, { add: () => this._addProduct(p) }));
+
+    const cartCount = window.takeOffCart ? window.takeOffCart.getCount() : 0;
+
+    const tournData = [
+      { date: 'JUL 12-13', title: 'Summer Americano', format: 'AMERICANO · MIXED', prize: 'Trophy + 500 DT shop credit', filled: 22, total: 32, slot: 'pad-tourn-1' },
+      { date: 'AUG 02-04', title: 'Take Off Cup', format: 'KNOCKOUT · DOUBLES', prize: 'Cup + Pro racket prize pool', filled: 14, total: 32, slot: 'pad-tourn-2' },
+      { date: 'SEP 20', title: 'Night Mixed', format: 'AMERICANO · MIXED', prize: '300 DT cash + bottles', filled: 8, total: 24, slot: 'pad-tourn-3' },
+    ];
+    const tournaments = tournData.map(t => Object.assign({}, t, {
+      pct: Math.round(t.filled / t.total * 100),
+      signup: () => this._signupTournament(t),
+    }));
+
+    const authUser = window.takeOffAuth && window.takeOffAuth.user;
+
+    const ladderData = [
+      { rank: 1,  name: 'Yassine K.',  level: 6, wl: '24-3',  pts: 142 },
+      { rank: 2,  name: 'Mehdi B.',    level: 5, wl: '21-6',  pts: 128 },
+      { rank: 3,  name: 'Selim R.',    level: 6, wl: '19-5',  pts: 121 },
+      { rank: 4,  name: 'Karim T.',    level: 5, wl: '18-7',  pts: 110 },
+      { rank: 5,  name: 'Amine F.',    level: 4, wl: '17-8',  pts: 102 },
+      { rank: 6,  name: 'Oussama N.', level: 5, wl: '15-7',  pts: 96  },
+      { rank: 7,  name: 'Nadia S.',    level: 4, wl: '14-9',  pts: 88  },
+      { rank: 8,  name: 'Hatem L.',    level: 4, wl: '13-9',  pts: 81  },
+      { rank: 9,  name: 'Walid D.',    level: 3, wl: '12-10', pts: 74  },
+      { rank: 10, name: 'Skander Z.',  level: 4, wl: '11-10', pts: 70  },
+    ];
+
+    const userMatches = authUser ? (authUser.matches || []) : [];
+    const userWins  = userMatches.filter(m => m.result === 'W').length;
+    const userLoss  = userMatches.filter(m => m.result === 'L').length;
+
+    // Coaches with extended data
+    const coachesData = [
+      { first: 'COACH', last: 'RAFAEL ORTIZ', role: 'Head Performance Coach', spec: 'Advanced technique, power play & strategy', slot: 'pad-coach-1',
+        name: 'RAFAEL ORTIZ', bio: "Formé en Espagne et actif sur le circuit mondial, Rafael est l'architecte du jeu offensif de Take Off. Il analyse chaque échange avec une précision chirurgicale et transforme les failles en armes.", specs: ['Technique avancée', 'Power play', 'Stratégie de jeu'], achievements: ["Champion national Espagne U21", "10 ans d'expérience coaching pro", "70+ joueurs en tournoi depuis 2020"] },
+      { first: 'COACH', last: 'SOFIA MARTINEZ', role: 'Technique & Footwork', spec: 'Ball control, movement & accuracy drills', slot: 'pad-coach-2',
+        name: 'SOFIA MARTINEZ', bio: "Sofia est la spécialiste du mouvement et de la précision. Ancienne joueuse internationale, elle lit le jeu à une longueur d'avance et transmet cette vision à ses élèves.", specs: ['Contrôle de balle', 'Déplacements', 'Précision'], achievements: ["Top 50 mondial (WPT)", "Spécialiste drill & répétition", "Certifiée FPP niveau 3"] },
+      { first: 'COACH', last: 'MARCO ALVAREZ', role: 'Tactical & Fitness', spec: 'Endurance, agility & aggressive play', slot: 'pad-coach-3',
+        name: 'MARCO ALVAREZ', bio: "Marco combine préparation physique et intelligence tactique. Ses séances de fitness padel sont reconnues pour transformer la condition athlétique de ses joueurs en seulement quelques semaines.", specs: ['Endurance padel', 'Jeu agressif', 'Conditionnement'], achievements: ["Prépa physique équipes pros en Andalousie", "Coach FIP certifié", "Expert en jeu de volée haute intensité"] },
+      { first: 'COACH', last: 'EMMA LAURENT', role: 'Youth & Beginner', spec: 'Intro programs & confidence building', slot: 'pad-coach-4',
+        name: 'EMMA LAURENT', bio: "Emma a développé le programme jeunesse de Take Off de zéro. Son approche bienveillante et pédagogique permet aux débutants de progresser rapidement tout en prenant confiance.", specs: ['Programme débutant', 'Cours jeunes (8-16 ans)', 'Confiance & fun'], achievements: ["Directrice pédagogique Take Off Junior", "200+ élèves débutants formés", "Certifiée psychologie sportive"] },
+    ];
+    const coaches = coachesData.map((c, idx) => Object.assign({}, c, { open: () => this.setState({ openCoachIdx: idx }) }));
+
+    const openCoachIdx = this.state.openCoachIdx;
+    const coachModalOpen = openCoachIdx !== null && openCoachIdx >= 0 ? true : null;
+    const rawModal = (openCoachIdx !== null && openCoachIdx >= 0) ? coachesData[openCoachIdx] : { name: '', role: '', bio: '', specs: [], achievements: [], slot: 'pad-coach-1' };
+    const coachModal = Object.assign({}, rawModal);
+
+    // Packs plans
+    const packsData = [
+      { id: 'dropin', name: 'Drop-in', rawPrice: 20, matches: 1, months: 0, kicker: 'SANS ENGAGEMENT', price: '20', per: 'DT / match', accent: '#0a1733', bg: '#f4f5ee', fg: '#0a1733', bd: 'transparent', popular: null, feats: ['Un share, une session', 'Sans abonnement', 'Invités bienvenus', 'Matériel en location'], ctaLabel: 'Book now', btnBg: '#0a1733', btnFg: '#c4ef3f', href: '#book' },
+      { id: 'pack10', name: 'Pack 10', rawPrice: 190, matches: 10, months: 3, kicker: 'ÉCONOMISEZ 5%', price: '190', per: 'DT · 10 matchs', accent: '#c4ef3f', bg: '#0f1f44', fg: '#fff', bd: 'rgba(196,239,63,.3)', popular: true, feats: ['10 matchs · économisez 5%', 'Valable 3 mois', 'Priorité réservation', 'Rechargeable'], ctaLabel: 'Get the pack', btnBg: '#c4ef3f', btnFg: '#0a1733' },
+      { id: 'pack25', name: 'Pack 25', rawPrice: 450, matches: 25, months: 6, kicker: 'ÉCONOMISEZ 10%', price: '450', per: 'DT · 25 matchs', accent: '#c4ef3f', bg: '#0f1f44', fg: '#fff', bd: 'rgba(196,239,63,.2)', popular: null, feats: ['25 matchs · économisez 10%', 'Valable 6 mois', 'Coaching -10%', 'Transferrable une fois'], ctaLabel: 'Get the pack', btnBg: '#c4ef3f', btnFg: '#0a1733' },
+      { id: 'pack50', name: 'Pack 50', rawPrice: 800, matches: 50, months: 12, kicker: 'ÉCONOMISEZ 20%', price: '800', per: 'DT · 50 matchs', accent: '#c4ef3f', bg: '#0f1f44', fg: '#fff', bd: 'rgba(196,239,63,.2)', popular: null, feats: ['50 matchs · économisez 20%', 'Valable 12 mois', 'Coaching -15% · Shop -10%', 'Invite 1 guest / mois'], ctaLabel: 'Get the pack', btnBg: '#c4ef3f', btnFg: '#0a1733' },
+    ];
+    const plans = packsData.map(pk => Object.assign({}, pk, { cta: pk.href ? () => { window.location.hash = pk.href.slice(1); } : () => this._buyPack(pk) }));
+
+    // Coaching form
+    const coursTypes = [
+      { key: 'individuel', label: 'Cours individuel' },
+      { key: 'groupe', label: 'Cours de groupe' },
+    ].map(ct => Object.assign({}, ct, {
+      bg: this.state.coursSelected[ct.key] ? LIME : 'transparent',
+      fg: this.state.coursSelected[ct.key] ? NAVY : LIME,
+      toggle: () => this._toggleCours(ct.key),
+    }));
+    const showGroupField = this.state.coursSelected['groupe'] ? true : null;
+    const availSlots = ['8h–Midi', 'Midi–14h', '14h–16h', '16h–17h30'];
+    const dayLabels = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    const availDays = dayLabels.map((label, di) => ({
+      label,
+      cells: availSlots.map((sl, si) => {
+        const key = di + '|' + si;
+        const on = !!this.state.availGrid[key];
+        return { bg: on ? LIME : 'transparent', check: on ? '✓' : '', toggle: () => this._toggleAvail(key) };
+      }),
+    }));
+
+    // Partners
+    const partners = [
+      { slot: 'pad-partner-1', name: 'PARTENAIRE' },
+      { slot: 'pad-partner-2', name: 'PARTENAIRE' },
+      { slot: 'pad-partner-3', name: 'PARTENAIRE' },
+      { slot: 'pad-partner-4', name: 'PARTENAIRE' },
+      { slot: 'pad-partner-5', name: 'PARTENAIRE' },
+      { slot: 'pad-partner-6', name: 'PARTENAIRE' },
+      { slot: 'pad-partner-7', name: 'PARTENAIRE' },
+      { slot: 'pad-partner-8', name: 'PARTENAIRE' },
+    ];
+
+    return {
+      loaderRef: this.loaderRef,
+      heroStats: [
+        { big: '2', label: 'PRO COURTS · PANORAMIC GLASS' },
+        { big: '7/7', label: 'OPEN 7AM — 11PM' },
+      ],
+      dates: dateVals, courts,
+      hasSelection: committedKeys ? true : null, noSelection: committedKeys ? null : true,
+      selectionList, selCount: committedKeys, selTotal,
+      confirmBooking: () => this._confirm(),
+      confirmBg: committedKeys ? LIME : 'rgba(244,245,238,.1)', confirmFg: committedKeys ? NAVY : 'rgba(244,245,238,.4)',
+      formats: [
+        { n: '01', title: 'Book a court', desc: 'Share or buy the full court. Done in seconds.', slot: 'pad-fmt-1' },
+        { n: '02', title: 'Tournaments', desc: 'Compete in seasonal cups and americanos.', slot: 'pad-fmt-2' },
+        { n: '03', title: 'Ladder', desc: 'Log matches, climb the monthly leaderboard.', slot: 'pad-fmt-3', href: '#ladder' },
+        { n: '04', title: 'Coaching', desc: 'Private and group sessions with our pros.', slot: 'pad-fmt-4', href: '#coaching-form' },
+      ],
+      tournaments,
+      coaches,
+      coachModalOpen, coachModal,
+      closeCoachModal: () => this.setState({ openCoachIdx: null }),
+      stopCoachProp: (e) => { if (e && e.stopPropagation) e.stopPropagation(); },
+      products,
+      plans,
+      // coaching form
+      coachFormSubmitted: this.state.coachFormDone ? true : null,
+      coachFormNotSubmitted: this.state.coachFormDone ? null : true,
+      coursTypes, showGroupField,
+      availSlots, availDays,
+      submitCoachForm: () => this._submitCoachForm(),
+      // partners
+      partners,
+      // cart / nav
+      cartCount,
+      openCart: () => window.takeOffCart && window.takeOffCart.open(),
+      openTakeOffMenu: () => window.takeOffMenu && window.takeOffMenu.open('padel'),
+      authUser: authUser ? true : null,
+      noAuthUser: authUser ? null : true,
+      walletBal: authUser ? (authUser.wallet || 0) : 0,
+      userInitial: authUser ? (authUser.name || authUser.email || '?')[0].toUpperCase() : '',
+      openAccount: () => window.takeOffAuth && window.takeOffAuth.openAccount(),
+      openLogin: () => window.takeOffAuth && window.takeOffAuth.openLogin(),
+      ladderRows: ladderData,
+      ladderLoggedIn: authUser ? true : null,
+      ladderLoggedOut: authUser ? null : true,
+      ladderUserName: authUser ? (authUser.name || authUser.email) : '',
+      ladderUserLevel: authUser ? (authUser.padelLevel !== undefined ? authUser.padelLevel : 1) : 1,
+      ladderUserRank: userMatches.length ? '—' : '—',
+      ladderUserWL: userWins + '-' + userLoss,
+      openAccountMatches: () => window.takeOffAuth && window.takeOffAuth.openAccount('matches'),
+    };
+  }
+}
+</script>
+</body>
+</html>
+
