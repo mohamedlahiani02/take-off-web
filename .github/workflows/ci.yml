@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, staging]
+    branches: [dev, main, production]
   pull_request:
-    branches: [main, staging]
+    branches: [main, production]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -53,5 +53,5 @@ jobs:
       - name: Build
         run: pnpm build
         env:
-          NEXT_PUBLIC_API_URL: https://api.takeoff.tn
+          NEXT_PUBLIC_API_URL: https://staging.api.takeoff.tn
           NEXT_PUBLIC_SENTRY_DSN: ""
