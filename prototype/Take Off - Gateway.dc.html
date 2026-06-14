@@ -1,0 +1,254 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<script src="./menu.js" defer></script>
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ font-family:'Space Grotesk',sans-serif; background:#0c2350; overflow:hidden; }
+  @keyframes drawSig{ to{ stroke-dashoffset:0; } }
+  @keyframes travel{ from{ offset-distance:0%; } to{ offset-distance:100%; } }
+  @keyframes riseUp{ from{ transform:translateY(28px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes menuIn{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes glow{ 0%,100%{ box-shadow:0 0 0 5px rgba(196,239,63,.20),0 4px 18px rgba(0,0,0,.4); } 50%{ box-shadow:0 0 0 10px rgba(196,239,63,.07),0 4px 18px rgba(0,0,0,.4); } }
+  @keyframes floatGhost{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-14px); } }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @keyframes logoIn{ to{ opacity:1; transform:scale(1); } }
+  @keyframes particleRise{ 0%{ opacity:0; transform:translateY(0) scale(.6); } 12%{ opacity:1; } 88%{ opacity:1; } 100%{ opacity:0; transform:translateY(-100vh) scale(1); } }
+  @keyframes vScroll{ from{ transform:translateY(0); } to{ transform:translateY(-50%); } }
+  @keyframes orbPulse{ 0%,100%{ filter:drop-shadow(0 0 8px rgba(196,239,63,.7)) drop-shadow(0 0 26px rgba(196,239,63,.35)); } 50%{ filter:drop-shadow(0 0 14px rgba(196,239,63,.9)) drop-shadow(0 0 50px rgba(196,239,63,.5)); } }
+  @keyframes strokeShimmer{ 0%,100%{ opacity:.55; } 50%{ opacity:.9; } }
+  image-slot{ display:block; }
+</style>
+</helmet>
+
+<!-- ░░░░░░░░ LOADER ░░░░░░░░ -->
+<div ref="{{ loaderRef }}" style="position:fixed; inset:0; z-index:120; background:#0c2350; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px; transition:transform 1.1s cubic-bezier(.7,0,.2,1);">
+  <img src="./Logo/LOGO.svg" alt="Take Off" style="width:320px; height:auto; opacity:0; transform:scale(.7); animation:logoIn 1.4s cubic-bezier(.2,.7,.2,1) .15s forwards;">
+  <div style="display:flex; align-items:center; gap:11px; font-weight:700; font-size:19px; letter-spacing:.2em; color:#fff; white-space:nowrap; opacity:0; animation:fadeIn .9s ease 1.1s forwards;">
+    TAKE OFF <span style="flex:0 0 auto; width:13px; height:13px; border-radius:50%; background:#c4ef3f;"></span> CLUB
+  </div>
+  <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.5em; color:rgba(255,255,255,.4); opacity:0; animation:fadeIn .9s ease 1.5s forwards;">PADEL · PILATES</div>
+</div>
+
+<!-- ░░░░░░░░ GATEWAY ░░░░░░░░ -->
+<div ref="{{ containerRef }}" onMouseLeave="{{ onLeave }}" style="position:fixed; inset:0; display:flex; flex-direction:row; width:100vw; height:100vh; overflow:hidden;">
+
+  <!-- PADEL -->
+  <div ref="{{ padelRef }}" onMouseEnter="{{ onEnterPadel }}" style="flex:1 1 0; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:flex-start; background:#0c2350; transition:flex-grow .75s cubic-bezier(.45,0,.1,1), opacity .55s ease;">
+    <image-slot id="hero-padel" src="./photos/intense-padel-play-stockcake.webp" placeholder="Drop padel court photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+    <div style="position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg, rgba(8,24,62,.95) 8%, rgba(8,24,62,.7) 50%, rgba(8,24,62,.5));"></div>
+    <div style="position:absolute; right:6%; bottom:-7%; font-weight:700; font-size:30vh; line-height:.8; color:rgba(255,255,255,.05); pointer-events:none; animation:floatGhost 9s ease-in-out infinite;">01</div>
+
+    <div style="position:relative; z-index:3; padding:6vw 0 0 8vw; max-width:560px; opacity:1; animation:riseUp .9s cubic-bezier(.2,.7,.2,1) both;">
+      <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.34em; color:#c4ef3f; text-transform:uppercase;">01 — The Court</div>
+      <h1 style="margin:16px 0 0; font-weight:700; font-size:clamp(54px,8.2vw,148px); line-height:.9; letter-spacing:-.02em; color:#fff; text-shadow:0 8px 40px rgba(0,0,0,.4);">PADEL</h1>
+      <p style="margin:22px 0 0; font-size:clamp(15px,1.25vw,19px); line-height:1.55; color:rgba(255,255,255,.82); max-width:380px;">Floodlights, fast rallies and the crew. Reserve one of our two courts in seconds and bring the noise.</p>
+      <div onClick="{{ enterPadel }}" style="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#c4ef3f; color:#0c2350; font-weight:600; font-size:16px; cursor:pointer; transition:transform .25s ease, box-shadow .25s ease;" style-hover="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#d4ff52; color:#0c2350; font-weight:600; font-size:16px; cursor:pointer; transform:translateY(-3px); box-shadow:0 16px 34px rgba(196,239,63,.3);">Enter the courts <span style="font-size:18px;">→</span></div>
+      <div style="margin-top:30px; font-family:'Space Mono'; font-size:11px; letter-spacing:.26em; color:rgba(255,255,255,.45);">BOOK · LEAGUES · COACHING · SHOP</div>
+    </div>
+  </div>
+
+  <!-- ░ INVISIBLE-AT-REST MERIDIAN — fades in near cursor ░ -->
+  <div ref="{{ sepRef }}" style="flex:0 0 clamp(2px,.3vw,6px); position:relative; z-index:7; pointer-events:none; overflow:visible;">
+    <div ref="{{ hairlineRef }}" style="position:absolute; top:0; bottom:0; left:50%; width:1px; margin-left:-.5px; background:#c4ef3f; opacity:0; transition:opacity .35s ease;"></div>
+    <div ref="{{ dotRef }}" style="position:absolute; top:0; left:50%; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:#c4ef3f; opacity:0; transform:translate3d(0,50vh,0); transition:opacity .25s ease; box-shadow:0 0 16px rgba(196,239,63,.65);"></div>
+  </div>
+
+  <!-- PILATES -->
+  <div ref="{{ pilatesRef }}" onMouseEnter="{{ onEnterPilates }}" style="flex:1 1 0; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:flex-end; background:#f4f5ee; transition:flex-grow .75s cubic-bezier(.45,0,.1,1), opacity .55s ease;">
+    <image-slot id="hero-pilates" src="./photos/Reformer_pilates_pose.jpg" placeholder="Drop pilates studio photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+    <div style="position:absolute; inset:0; pointer-events:none; background:linear-gradient(245deg, rgba(244,245,238,.97) 8%, rgba(244,245,238,.74) 50%, rgba(244,245,238,.5));"></div>
+    <div style="position:absolute; left:6%; bottom:-7%; font-weight:700; font-size:30vh; line-height:.8; color:rgba(12,35,80,.055); pointer-events:none; animation:floatGhost 9s ease-in-out infinite; animation-delay:-3s;">02</div>
+
+    <div style="position:relative; z-index:3; padding:6vw 8vw 0 0; max-width:560px; text-align:right; opacity:1; animation:riseUp .9s cubic-bezier(.2,.7,.2,1) .12s both;">
+      <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.34em; color:#5f7d12; text-transform:uppercase;">02 — The Studio</div>
+      <h1 style="margin:16px 0 0; font-weight:700; font-size:clamp(54px,8.2vw,148px); line-height:.9; letter-spacing:-.02em; color:#0c2350;">PILATES</h1>
+      <p style="margin:22px 0 0; margin-left:auto; font-size:clamp(15px,1.25vw,19px); line-height:1.55; color:rgba(12,28,58,.7); max-width:380px;">Breathe, align, reset. Reformer and mat flows that build a stronger, calmer you — booked around your week.</p>
+      <div onClick="{{ enterPilates }}" style="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#0c2350; color:#f4f5ee; font-weight:600; font-size:16px; cursor:pointer; transition:transform .25s ease, box-shadow .25s ease;" style-hover="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#16387a; color:#f4f5ee; font-weight:600; font-size:16px; cursor:pointer; transform:translateY(-3px); box-shadow:0 16px 34px rgba(12,35,80,.28);">Enter the studio <span style="font-size:18px;">→</span></div>
+      <div style="margin-top:30px; font-family:'Space Mono'; font-size:11px; letter-spacing:.26em; color:rgba(12,28,58,.42);">CLASSES · PACKS · PRIVATE · SHOP</div>
+    </div>
+  </div>
+
+  <!-- BRAND LOCKUP (top-left, over navy) -->
+  <div style="position:absolute; top:32px; left:8vw; z-index:14; display:flex; flex-direction:column; gap:8px; pointer-events:none;">
+    <img src="./Logo/LOGO.svg" alt="Take Off" style="width:104px; height:auto; display:block;">
+    <div style="display:flex; align-items:center; gap:9px; font-weight:700; font-size:17px; letter-spacing:.16em; color:#fff; white-space:nowrap;">
+      TAKE OFF <span style="flex:0 0 auto; width:12px; height:12px; border-radius:50%; background:#c4ef3f; box-shadow:0 0 0 2px rgba(255,255,255,.25);"></span> CLUB
+    </div>
+  </div>
+
+  <!-- TOP-RIGHT NAV (over cream) -->
+  <div style="position:absolute; top:36px; right:8vw; z-index:14; display:flex; align-items:center; gap:26px; font-family:'Space Mono'; font-size:11px; letter-spacing:.2em; color:rgba(12,28,58,.78);">
+    <div onClick="{{ openMenu }}" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+      <div style="display:flex; flex-direction:column; gap:4px;"><span style="width:22px; height:2px; background:#0c2350;"></span><span style="width:22px; height:2px; background:#0c2350;"></span></div>
+      MENU
+    </div>
+    <span style="cursor:pointer;">PANIER (0)</span>
+  </div>
+
+  <!-- BOTTOM HINT -->
+  <div style="position:absolute; bottom:30px; left:50%; transform:translateX(-50%); z-index:14; font-family:'Space Mono'; font-size:11px; letter-spacing:.3em; color:#fff; display:flex; align-items:center; gap:14px; pointer-events:none; mix-blend-mode:difference;">
+    <span>◀</span> CHOOSE YOUR SIDE <span>▶</span>
+  </div>
+
+  <!-- ENTER TRANSITION -->
+  <sc-if value="{{ entering }}" hint-placeholder-val="">
+    <div style="position:fixed; inset:0; z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:{{ enterColor }}; animation:fadeIn .45s ease both;">
+      <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.4em; color:{{ enterFg }}; opacity:.7;">ENTERING</div>
+      <div style="font-weight:700; font-size:clamp(48px,9vw,128px); letter-spacing:-.02em; color:{{ enterFg }};">{{ enterLabel }}</div>
+    </div>
+  </sc-if>
+
+  <!-- Mega menu is rendered by ./menu.js (shared across all pages) -->
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  loaderRef = React.createRef();
+  sepRef = React.createRef();
+  hairlineRef = React.createRef();
+  dotRef = React.createRef();
+  padelRef = React.createRef();
+  pilatesRef = React.createRef();
+  containerRef = React.createRef();
+  state = { activeCat: 'padel', menuOpen: false, entering: null, sepW: 110, sepH: 900 };
+  _t = null;
+
+  componentDidMount() {
+    this._measure = () => {
+      const el = this.sepRef.current;
+      if (el) { const r = el.getBoundingClientRect(); this.setState({ sepW: Math.max(40, Math.round(r.width)), sepH: Math.max(200, Math.round(r.height)) }); }
+      const c = this.containerRef.current;
+      if (c) c.style.flexDirection = window.innerWidth < 820 ? 'column' : 'row';
+    };
+    window.addEventListener('resize', this._measure);
+    this._measure();
+    setTimeout(() => { const l = this.loaderRef.current; if (l) { l.style.transform = 'translateY(-105%)'; l.style.pointerEvents = 'none'; } }, 2500);
+
+    // Reveal-on-hover meridian — track cursor distance from seam centerline
+    this._onMove = (e) => {
+      const c = this.containerRef.current, s = this.sepRef.current;
+      if (!c || !s) return;
+      const cRect = c.getBoundingClientRect();
+      const sRect = s.getBoundingClientRect();
+      const sx = sRect.left + sRect.width / 2;
+      const dist = Math.abs(e.clientX - sx);
+      const THRESH = 130;
+      const op = Math.max(0, 1 - dist / THRESH);
+      const h = this.hairlineRef.current, d = this.dotRef.current;
+      if (h) { h.style.opacity = String(op * .85); h.style.boxShadow = op > .05 ? '0 0 ' + (10 * op).toFixed(1) + 'px ' + (3 * op).toFixed(1) + 'px rgba(196,239,63,' + (0.45 * op).toFixed(2) + ')' : 'none'; }
+      if (d) { d.style.opacity = String(op); d.style.transform = 'translate3d(0,' + (e.clientY - cRect.top) + 'px,0)'; }
+    };
+    this._onLeave = () => {
+      const h = this.hairlineRef.current, d = this.dotRef.current;
+      if (h) { h.style.opacity = '0'; h.style.boxShadow = 'none'; }
+      if (d) d.style.opacity = '0';
+    };
+    const c = this.containerRef.current;
+    if (c) { c.addEventListener('mousemove', this._onMove); c.addEventListener('mouseleave', this._onLeave); }
+  }
+  componentWillUnmount() {
+    window.removeEventListener('resize', this._measure);
+    clearTimeout(this._t);
+    const c = this.containerRef.current;
+    if (c) { c.removeEventListener('mousemove', this._onMove); c.removeEventListener('mouseleave', this._onLeave); }
+  }
+
+  _grow(which) {
+    const p = this.padelRef.current, q = this.pilatesRef.current;
+    if (!p || !q) return;
+    if (which === 'padel') { p.style.flexGrow = '1.85'; q.style.flexGrow = '0.72'; p.style.opacity = '1'; q.style.opacity = '0.6'; }
+    else if (which === 'pilates') { q.style.flexGrow = '1.85'; p.style.flexGrow = '0.72'; q.style.opacity = '1'; p.style.opacity = '0.6'; }
+    else { p.style.flexGrow = '1'; q.style.flexGrow = '1'; p.style.opacity = '1'; q.style.opacity = '1'; }
+  }
+
+  buildSignature(W, H, offset) {
+    const cx = W / 2 + (offset || 0);
+    const amp = Math.min(W * 0.45, 20);
+    const segs = Math.max(6, Math.round(H / 160));
+    let d = 'M ' + cx.toFixed(1) + ' 0';
+    for (let i = 0; i < segs; i++) {
+      const y0 = (i / segs) * H;
+      const y1 = ((i + 1) / segs) * H;
+      const dir = (i % 2 === 0) ? 1 : -1;
+      const localAmp = amp * (0.55 + 0.45 * Math.sin((i + 0.5) / segs * Math.PI));
+      const cx1 = cx + dir * localAmp;
+      const cy1 = y0 + (y1 - y0) * 0.35;
+      const cx2 = cx + dir * localAmp;
+      const cy2 = y0 + (y1 - y0) * 0.65;
+      d += ' C ' + cx1.toFixed(1) + ' ' + cy1.toFixed(1) + ' ' + cx2.toFixed(1) + ' ' + cy2.toFixed(1) + ' ' + cx.toFixed(1) + ' ' + y1.toFixed(1);
+    }
+    return d;
+  }
+
+  _enter(side) {
+    this.setState({ entering: side, menuOpen: false });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => {
+      window.location.href = side === 'padel' ? 'Take Off - Padel.dc.html' : 'Take Off - Pilates.dc.html';
+    }, 1150);
+  }
+
+  renderVals() {
+    const M = {
+      padel: { sections: [
+        { n: '01', title: 'Play', links: ['Book a court', 'Open matches', 'Leagues & cups', 'Coaching', 'Court rental'] },
+        { n: '02', title: 'Padel Shop', links: ['Rackets', 'Overgrips', 'Hand protectors', 'Balls', 'Bags', 'Apparel'] },
+      ], thumbs: [{ id: 'mm-padel-1', label: 'Book a court' }, { id: 'mm-padel-2', label: 'The pro shop' }] },
+      pilates: { sections: [
+        { n: '01', title: 'Classes', links: ['Reformer', 'Mat', 'Private', 'Duo', 'Prenatal'] },
+        { n: '02', title: 'Packs', links: ['Discovery pack', '10-class pack', 'Unlimited month', 'Student'] },
+        { n: '03', title: 'Pilates Shop', links: ['Grip socks', 'Towels', 'Resistance bands', 'Apparel'] },
+      ], thumbs: [{ id: 'mm-pil-1', label: 'The studio' }, { id: 'mm-pil-2', label: 'The shop' }] },
+      shop: { sections: [
+        { n: '01', title: 'Padel Gear', links: ['Rackets', 'Grips', 'Hand protectors', 'Balls', 'Bags'] },
+        { n: '02', title: 'Pilates Gear', links: ['Grip socks', 'Bands', 'Towels'] },
+        { n: '03', title: 'Lifestyle', links: ['Apparel', 'Bottles', 'Caps', 'Gift cards'] },
+      ], thumbs: [{ id: 'mm-shop-1', label: 'Bestsellers' }, { id: 'mm-shop-2', label: 'New in' }] },
+      membership: { sections: [
+        { n: '01', title: 'Plans', links: ['Padel pass', 'Pilates pass', 'All-access', 'Corporate'] },
+        { n: '02', title: 'Packs & credits', links: ['Court credits', 'Class packs', 'Family'] },
+      ], thumbs: [{ id: 'mm-mem-1', label: 'Memberships' }] },
+      club: { sections: [
+        { n: '01', title: 'Discover', links: ['Our story', 'The space', 'Coaches & instructors', 'Gallery'] },
+        { n: '02', title: 'Visit', links: ['Hours & location', 'Contact', 'FAQ', 'Careers'] },
+      ], thumbs: [{ id: 'mm-club-1', label: 'The space' }] },
+    };
+    const order = [['padel', 'Padel'], ['pilates', 'Pilates'], ['shop', 'Shop'], ['membership', 'Membership'], ['club', 'The Club']];
+    const active = this.state.activeCat;
+    const dest = { padel: 'Take Off - Padel.dc.html', pilates: 'Take Off - Pilates.dc.html' };
+    const cats = order.map(([key, label]) => ({
+      key, label,
+      color: key === active ? '#0c2350' : 'rgba(12,28,58,.28)',
+      hover: () => this.setState({ activeCat: key }),
+      go: () => { if (dest[key]) window.location.href = dest[key]; else this.setState({ activeCat: key }); },
+    }));
+    const s = this.state.entering;
+    return {
+      loaderRef: this.loaderRef, sepRef: this.sepRef, hairlineRef: this.hairlineRef, dotRef: this.dotRef, padelRef: this.padelRef, pilatesRef: this.pilatesRef, containerRef: this.containerRef,
+      onEnterPadel: () => this._grow('padel'), onEnterPilates: () => this._grow('pilates'), onLeave: () => this._grow(null),
+      enterPadel: () => this._enter('padel'), enterPilates: () => this._enter('pilates'),
+      openMenu: () => window.takeOffMenu && window.takeOffMenu.open(),
+      cats, activeMenu: M[active],
+      entering: s, enterColor: s === 'padel' ? '#0c2350' : '#c4ef3f', enterFg: s === 'padel' ? '#c4ef3f' : '#0c2350', enterLabel: s === 'padel' ? 'Padel' : 'Pilates',
+    };
+  }
+}
+</script>
+</body>
+</html>
+
