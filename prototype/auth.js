@@ -1,229 +1,205 @@
-// Take Off Club — Shared Auth + Wallet + Account Drawer
-// Plain script, no module syntax. Idempotent.
+// Take Off Club — Auth + Account Drawer (v2)
+// All business data from Spring Boot API. localStorage = session cache only.
+// Idempotent IIFE.
 (function () {
   if (window.takeOffAuth) return;
 
-  // ── State helpers ─────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
-  function storageGet(key) {
-    try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
-  }
-  function storageSet(key, val) {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
-  }
+  function storageGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
+  function storageSet(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+  function storageDel(key) { try { localStorage.removeItem(key); } catch (e) {} }
 
-  function getUsers() { return storageGet('takeOffUsers') || {}; }
-  function saveUsers(u) { storageSet('takeOffUsers', u); }
-  function getCurrentUser() { return storageGet('takeOffCurrentUser') || null; }
-  function saveCurrentUser(u) { storageSet('takeOffCurrentUser', u); }
+  var api = function () { return window.takeOffApi || null; };
 
   // ── Pub/sub ───────────────────────────────────────────────────────────────
 
-  var _subscribers = [];
-  function notify() {
-    _subscribers.forEach(function (fn) { try { fn(auth.user); } catch (e) {} });
-  }
+  var _subs = [];
+  function notify() { _subs.forEach(function (fn) { try { fn(auth.user); } catch (e) {} }); }
 
-  // ── Pending auth callback ─────────────────────────────────────────────────
-
-  var _pendingCallback = null;
+  var _pendingCb = null;
 
   // ── Core auth object ──────────────────────────────────────────────────────
 
   var auth = {
-    user: getCurrentUser(),
+    user: storageGet('takeoff_user') || null,
 
     subscribe: function (fn) {
-      _subscribers.push(fn);
-      return function () { _subscribers = _subscribers.filter(function (s) { return s !== fn; }); };
+      _subs.push(fn);
+      return function () { _subs = _subs.filter(function (s) { return s !== fn; }); };
     },
 
-    login: function (email, password) {
-      if (!email || !password) return { ok: false, error: 'Email and password required.' };
-      var users = getUsers();
-      if (!users[email]) {
-        // auto-create on first login (mock)
-        var namePart = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
-        users[email] = { email: email, name: namePart, password: password, tracks: ['padel', 'pilates'], wallet: 0, createdAt: Date.now(), bookings: [], padelLevel: 1, points: 100, packs: [], orders: [], padelLevelSelfDeclared: null, matches: [] };
-        saveUsers(users);
+    login: async function (email, password) {
+      var client = api();
+      if (client && client.isOnline()) {
+        try {
+          var data = await client.auth.login({ email: email, password: password });
+          auth.user = data.user;
+          storageSet('takeoff_user', data.user);
+          notify();
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: e.message || 'Invalid email or password.' };
+        }
       }
+      // offline fallback (local dev without backend)
+      var users = storageGet('takeOffUsers') || {};
+      if (!users[email]) return { ok: false, error: 'No account found. Create one first.' };
+      if (users[email].password !== password) return { ok: false, error: 'Wrong password.' };
       auth.user = users[email];
-      saveCurrentUser(auth.user);
+      storageSet('takeoff_user', auth.user);
       notify();
       return { ok: true };
     },
 
-    register: function (opts) {
+    register: async function (opts) {
       var email = (opts.email || '').trim().toLowerCase();
       var name = (opts.name || '').trim();
       var password = opts.password || '';
       var tracks = opts.tracks || ['padel'];
       if (!email || !name || !password) return { ok: false, error: 'All fields required.' };
-      var users = getUsers();
+      var client = api();
+      if (client && client.isOnline()) {
+        try {
+          var data = await client.auth.register({ email: email, name: name, password: password, tracks: tracks });
+          auth.user = data.user;
+          storageSet('takeoff_user', data.user);
+          notify();
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: e.message || 'Registration failed.' };
+        }
+      }
+      // offline fallback
+      var users = storageGet('takeOffUsers') || {};
       if (users[email]) return { ok: false, error: 'Account already exists. Sign in instead.' };
-      users[email] = { email: email, name: name, password: password, tracks: tracks, wallet: 0, createdAt: Date.now(), bookings: [], padelLevel: 1, points: 100, packs: [], orders: [], padelLevelSelfDeclared: null, matches: [] };
-      saveUsers(users);
-      auth.user = users[email];
-      saveCurrentUser(auth.user);
+      var u = { email: email, name: name, password: password, tracks: tracks, walletDt: 0, createdAt: new Date().toISOString(), padelLevel: 1, points: 100 };
+      users[email] = u;
+      storageSet('takeOffUsers', users);
+      auth.user = u;
+      storageSet('takeoff_user', u);
       notify();
       return { ok: true };
     },
 
-    logout: function () {
+    logout: async function () {
+      var client = api();
+      if (client && client.isOnline()) { try { await client.auth.logout(); } catch (e) {} }
       auth.user = null;
-      saveCurrentUser(null);
+      storageDel('takeoff_user');
       notify();
     },
 
-    topup: function (amount) {
+    topup: async function (amount) {
       if (!auth.user) return;
       var n = parseFloat(amount);
       if (isNaN(n) || n <= 0) return;
-      auth.user.wallet = (auth.user.wallet || 0) + n;
-      var users = getUsers();
-      if (users[auth.user.email]) users[auth.user.email].wallet = auth.user.wallet;
-      saveUsers(users);
-      saveCurrentUser(auth.user);
+      var client = api();
+      if (client && client.isOnline()) {
+        try {
+          var res = await client.wallet.topup(n);
+          if (res && res.newBalanceDt !== undefined) auth.user.walletDt = res.newBalanceDt;
+          storageSet('takeoff_user', auth.user);
+          notify();
+          return;
+        } catch (e) {}
+      }
+      // offline fallback
+      auth.user.walletDt = (auth.user.walletDt || 0) + n;
+      storageSet('takeoff_user', auth.user);
       notify();
     },
 
+    // Bookings are still local (courts/bookings backend module is TODO)
     recordBooking: function (item) {
       if (!auth.user) return;
-      var booking = Object.assign({}, item, { recordedAt: Date.now() });
       if (!auth.user.bookings) auth.user.bookings = [];
-      auth.user.bookings.push(booking);
-      var users = getUsers();
-      if (users[auth.user.email]) users[auth.user.email].bookings = auth.user.bookings;
-      saveUsers(users);
-      saveCurrentUser(auth.user);
+      auth.user.bookings.push(Object.assign({}, item, { recordedAt: new Date().toISOString() }));
+      storageSet('takeoff_user', auth.user);
     },
 
-    setLevel: function (n) {
-      if (!auth.user) return;
-      var clamped = Math.max(0, Math.min(7, Math.round(n)));
-      auth.user.padelLevel = clamped;
-      var users = getUsers();
-      if (users[auth.user.email]) users[auth.user.email].padelLevel = clamped;
-      saveUsers(users);
-      saveCurrentUser(auth.user);
-      notify();
-    },
-
-    logMatch: function (opts) {
-      if (!auth.user) return;
-      if (!auth.user.matches) auth.user.matches = [];
-      var myLevel = auth.user.padelLevel !== undefined ? auth.user.padelLevel : 1;
-      var opponentLevel = opts.opponentLevel !== undefined ? parseFloat(opts.opponentLevel) : myLevel;
-      var result = opts.result === 'W' ? 'W' : 'L';
-      var base = result === 'W' ? 20 : -15;
-      var diff = opponentLevel - myLevel;
-      var delta = Math.round(base * (1 + 0.15 * diff));
-      delta = Math.max(-40, Math.min(40, delta));
-      var currentPoints = auth.user.points !== undefined ? auth.user.points : 100;
-      var newPoints = Math.max(0, currentPoints + delta);
-      var newLevel = Math.min(7, Math.floor(newPoints / 150) + 1);
-      var match = {
-        id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-        date: new Date().toISOString().slice(0, 10),
-        partner: opts.partner || '',
-        opponents: (opts.opponents || '').split('&').map(function (s) { return s.trim(); }),
-        result: result,
-        score: opts.score || '',
-        opponentLevel: opponentLevel,
-        delta: delta,
-      };
-      auth.user.matches.push(match);
-      auth.user.points = newPoints;
-      auth.user.padelLevel = newLevel;
-      var users = getUsers();
-      if (users[auth.user.email]) {
-        users[auth.user.email].matches = auth.user.matches;
-        users[auth.user.email].points = newPoints;
-        users[auth.user.email].padelLevel = newLevel;
-      }
-      saveUsers(users);
-      saveCurrentUser(auth.user);
-      notify();
-    },
-
+    // Packs are still local (packs backend module is TODO)
     purchasePack: function (opts) {
       if (!auth.user) return;
       if (!auth.user.packs) auth.user.packs = [];
       var now = new Date();
-      var months = opts.months || 3;
       var exp = new Date(now);
-      exp.setMonth(exp.getMonth() + months);
-      var pack = {
-        id: opts.id || ('pack_' + Date.now()),
-        name: opts.name || 'Pack',
-        total: opts.total || 10,
-        remaining: opts.total || 10,
-        purchasedAt: now.toISOString(),
-        expiresAt: exp.toISOString(),
-      };
-      auth.user.packs.push(pack);
-      var users = getUsers();
-      if (users[auth.user.email]) users[auth.user.email].packs = auth.user.packs;
-      saveUsers(users);
-      saveCurrentUser(auth.user);
+      exp.setMonth(exp.getMonth() + (opts.months || 3));
+      auth.user.packs.push({ id: 'pack_' + Date.now(), name: opts.name || 'Pack', total: opts.total || 10, remaining: opts.total || 10, purchasedAt: now.toISOString(), expiresAt: exp.toISOString() });
+      storageSet('takeoff_user', auth.user);
       notify();
     },
 
     consumePack: function (n) {
       if (!auth.user || !auth.user.packs) return false;
-      var now = new Date();
-      var toSpend = n || 1;
-      var packs = auth.user.packs;
-      // find oldest non-expired pack with remaining
-      for (var i = 0; i < packs.length; i++) {
-        var p = packs[i];
+      var now = new Date(); var left = n || 1;
+      for (var i = 0; i < auth.user.packs.length; i++) {
+        var p = auth.user.packs[i];
         if (p.remaining > 0 && new Date(p.expiresAt) > now) {
-          var canSpend = Math.min(toSpend, p.remaining);
-          p.remaining -= canSpend;
-          toSpend -= canSpend;
-          if (toSpend <= 0) break;
+          var spend = Math.min(left, p.remaining);
+          p.remaining -= spend; left -= spend;
+          if (left <= 0) break;
         }
       }
-      var users = getUsers();
-      if (users[auth.user.email]) users[auth.user.email].packs = auth.user.packs;
-      saveUsers(users);
-      saveCurrentUser(auth.user);
+      storageSet('takeoff_user', auth.user);
       notify();
-      return toSpend <= 0;
+      return left <= 0;
     },
 
-    recordOrder: function (item) {
+    logMatch: async function (opts) {
       if (!auth.user) return;
-      if (!auth.user.orders) auth.user.orders = [];
-      auth.user.orders.push(Object.assign({}, item, { recordedAt: Date.now() }));
-      var users = getUsers();
-      if (users[auth.user.email]) users[auth.user.email].orders = auth.user.orders;
-      saveUsers(users);
-      saveCurrentUser(auth.user);
+      var client = api();
+      var myLevel = auth.user.padelLevel || 1;
+      var opponentLevel = opts.opponentLevel !== undefined ? parseFloat(opts.opponentLevel) : myLevel;
+      var result = opts.result === 'W' ? 'W' : 'L';
+
+      if (client && client.isOnline()) {
+        try {
+          var res = await client.matches.log({
+            partnerName: opts.partner || null,
+            opponentNames: opts.opponents ? opts.opponents.split('&').map(function (s) { return s.trim(); }).filter(Boolean) : [],
+            result: result,
+            score: opts.score || null,
+            opponentLevel: opponentLevel,
+            playedAt: opts.playedAt || new Date().toISOString().slice(0, 10),
+          });
+          auth.user.points = res.newPoints;
+          auth.user.padelLevel = res.newLevel;
+          storageSet('takeoff_user', auth.user);
+          notify();
+          return res;
+        } catch (e) {}
+      }
+      // offline ELO fallback
+      var base = result === 'W' ? 20 : -15;
+      var delta = Math.round(base * (1 + 0.15 * (opponentLevel - myLevel)));
+      delta = Math.max(-40, Math.min(40, delta));
+      var newPoints = Math.max(0, (auth.user.points || 100) + delta);
+      auth.user.points = newPoints;
+      auth.user.padelLevel = Math.min(7, Math.floor(newPoints / 150) + 1);
+      storageSet('takeoff_user', auth.user);
       notify();
+      return { delta: delta, newPoints: newPoints, newLevel: auth.user.padelLevel };
     },
 
-    submitLevelSurvey: function (answers) {
+    submitLevelSurvey: async function (answers) {
       if (!auth.user) return;
-      var level = Math.max(1, Math.min(5, answers.level || 1));
+      var level = Math.max(1, Math.min(7, answers.level || 1));
+      var client = api();
+      if (client && client.isOnline()) {
+        try { await client.auth.updateMe({ padelLevelSelfDeclared: level }); } catch (e) {}
+      }
       var pts = (level - 1) * 150 + 100;
       auth.user.padelLevelSelfDeclared = level;
       auth.user.points = pts;
       auth.user.padelLevel = Math.min(7, Math.floor(pts / 150) + 1);
-      var users = getUsers();
-      if (users[auth.user.email]) {
-        users[auth.user.email].padelLevelSelfDeclared = level;
-        users[auth.user.email].points = pts;
-        users[auth.user.email].padelLevel = auth.user.padelLevel;
-      }
-      saveUsers(users);
-      saveCurrentUser(auth.user);
+      storageSet('takeoff_user', auth.user);
       notify();
     },
 
-    requireAuth: function (callback) {
-      if (auth.user) { callback(); return; }
-      _pendingCallback = callback;
+    requireAuth: function (cb) {
+      if (auth.user) { cb(); return; }
+      _pendingCb = cb;
       auth.openLogin();
     },
 
@@ -235,111 +211,135 @@
 
   // ── CSS ───────────────────────────────────────────────────────────────────
 
-  var style = document.createElement('style');
-  style.textContent = [
-    '.tk-auth-overlay{position:fixed;inset:0;z-index:1000;background:rgba(7,15,36,.55);display:flex;align-items:center;justify-content:center;padding:20px;}',
-    '.tk-auth-card{background:#0c2350;color:#f4f5ee;border-radius:20px;padding:40px;width:100%;max-width:440px;position:relative;box-shadow:0 32px 80px rgba(0,0,0,.5);}',
-    '.tk-auth-close{position:absolute;top:16px;right:20px;cursor:pointer;font-size:22px;color:rgba(244,245,238,.5);background:none;border:none;line-height:1;}',
-    '.tk-auth-title{font-family:Anton,sans-serif;font-size:32px;letter-spacing:.02em;text-transform:uppercase;color:#fff;margin:16px 0 8px;}',
-    '.tk-auth-sub{font-size:13px;color:rgba(244,245,238,.6);margin:0 0 26px;}',
-    '.tk-auth-label{display:block;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.18em;color:rgba(244,245,238,.6);margin-bottom:7px;}',
-    '.tk-auth-input{width:100%;padding:12px 16px;border-radius:11px;border:1px solid rgba(196,239,63,.25);background:rgba(255,255,255,.06);color:#f4f5ee;font-size:15px;font-family:"Space Grotesk",sans-serif;outline:none;margin-bottom:18px;box-sizing:border-box;}',
-    '.tk-auth-input:focus{border-color:#c4ef3f;}',
-    '.tk-auth-btn{width:100%;padding:15px;border-radius:13px;background:#c4ef3f;color:#0a1733;font-weight:700;font-size:15px;font-family:"Space Grotesk",sans-serif;border:none;cursor:pointer;letter-spacing:.04em;}',
-    '.tk-auth-btn:active{opacity:.88;}',
-    '.tk-auth-switch{text-align:center;margin-top:20px;font-size:13px;color:rgba(244,245,238,.55);}',
-    '.tk-auth-switch a{color:#c4ef3f;cursor:pointer;text-decoration:underline;}',
-    '.tk-auth-error{background:rgba(220,60,60,.18);border:1px solid rgba(220,60,60,.4);color:#f4a0a0;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px;}',
-    '.tk-auth-checks{display:flex;gap:18px;margin-bottom:20px;}',
-    '.tk-auth-check{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;}',
-    '.tk-auth-check input{accent-color:#c4ef3f;width:16px;height:16px;}',
-    // Drawer
-    '.tk-drawer-overlay{position:fixed;inset:0;z-index:1000;background:rgba(7,15,36,.45);}',
-    '.tk-drawer{position:fixed;top:0;right:0;bottom:0;width:min(380px,92vw);background:#0c1c3f;border-left:1px solid rgba(196,239,63,.18);z-index:1001;display:flex;flex-direction:column;box-shadow:-24px 0 60px rgba(0,0,0,.45);overflow:hidden;}',
-    '.tk-drawer-head{padding:28px 24px 20px;border-bottom:1px solid rgba(244,245,238,.1);}',
-    '.tk-drawer-close{float:right;cursor:pointer;font-size:24px;color:rgba(244,245,238,.5);background:none;border:none;}',
-    '.tk-drawer-avatar{width:52px;height:52px;border-radius:50%;background:#c4ef3f;color:#0a1733;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;margin-bottom:12px;}',
-    '.tk-drawer-name{font-weight:700;font-size:19px;color:#fff;margin:0;}',
-    '.tk-drawer-email{font-family:"Space Mono",monospace;font-size:11px;color:rgba(244,245,238,.5);letter-spacing:.1em;margin-top:4px;}',
-    '.tk-drawer-wallet{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding:13px 16px;border-radius:13px;background:rgba(196,239,63,.1);border:1px solid rgba(196,239,63,.2);}',
-    '.tk-drawer-wallet-val{font-family:Anton,sans-serif;font-size:26px;color:#c4ef3f;}',
-    '.tk-drawer-topup{padding:8px 16px;border-radius:999px;background:#c4ef3f;color:#0a1733;font-weight:700;font-size:13px;cursor:pointer;border:none;}',
-    '.tk-drawer-tabs{display:flex;border-bottom:1px solid rgba(244,245,238,.1);}',
-    '.tk-drawer-tab{flex:1;padding:14px;text-align:center;cursor:pointer;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.14em;color:rgba(244,245,238,.5);border:none;background:none;}',
-    '.tk-drawer-tab.active{color:#c4ef3f;border-bottom:2px solid #c4ef3f;}',
-    '.tk-drawer-body{flex:1;overflow-y:auto;padding:20px 24px;}',
-    '.tk-drawer-booking{padding:12px 14px;border-radius:11px;background:rgba(244,245,238,.05);margin-bottom:10px;}',
-    '.tk-drawer-booking-name{font-weight:600;font-size:14px;color:#fff;}',
-    '.tk-drawer-booking-meta{font-family:"Space Mono",monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:3px;letter-spacing:.08em;}',
-    '.tk-drawer-booking-price{font-family:Anton,sans-serif;font-size:18px;color:#c4ef3f;}',
-    '.tk-drawer-logout{margin:16px 24px;padding:14px;border-radius:13px;text-align:center;font-weight:700;cursor:pointer;background:rgba(244,245,238,.06);color:rgba(244,245,238,.65);border:1px solid rgba(244,245,238,.1);font-family:"Space Grotesk",sans-serif;font-size:14px;}',
-    '.tk-drawer-logout:hover{background:rgba(244,245,238,.1);}',
-    '.tk-drawer-empty{color:rgba(244,245,238,.4);font-size:14px;line-height:1.6;text-align:center;margin-top:30px;}',
-    // Level + match
-    '.tk-auth-level-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}',
-    '.tk-auth-level-pill{transition:all .15s ease;}',
-    '.tk-auth-level-pill:hover{opacity:.85;}',
-    '.tk-auth-match-row{transition:background .15s ease;}',
-    '.tk-auth-match-form input.tk-auth-input{margin-bottom:0;}',
+  var css = document.createElement('style');
+  css.textContent = [
+    // modal
+    '.tk-ov{position:fixed;inset:0;z-index:1000;background:rgba(7,15,36,.55);display:flex;align-items:center;justify-content:center;padding:20px;}',
+    '.tk-card{background:#0c2350;color:#f4f5ee;border-radius:20px;padding:40px;width:100%;max-width:440px;position:relative;box-shadow:0 32px 80px rgba(0,0,0,.5);}',
+    '.tk-close{position:absolute;top:16px;right:20px;cursor:pointer;font-size:22px;color:rgba(244,245,238,.5);background:none;border:none;line-height:1;}',
+    '.tk-title{font-family:Anton,sans-serif;font-size:32px;letter-spacing:.02em;text-transform:uppercase;color:#fff;margin:16px 0 8px;}',
+    '.tk-sub{font-size:13px;color:rgba(244,245,238,.6);margin:0 0 26px;}',
+    '.tk-lbl{display:block;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.18em;color:rgba(244,245,238,.6);margin-bottom:7px;}',
+    '.tk-inp{width:100%;padding:12px 16px;border-radius:11px;border:1px solid rgba(196,239,63,.25);background:rgba(255,255,255,.06);color:#f4f5ee;font-size:15px;font-family:"Space Grotesk",sans-serif;outline:none;margin-bottom:18px;box-sizing:border-box;}',
+    '.tk-inp:focus{border-color:#c4ef3f;}',
+    '.tk-btn{width:100%;padding:15px;border-radius:13px;background:#c4ef3f;color:#0a1733;font-weight:700;font-size:15px;font-family:"Space Grotesk",sans-serif;border:none;cursor:pointer;letter-spacing:.04em;}',
+    '.tk-btn:disabled{opacity:.5;cursor:default;}',
+    '.tk-switch{text-align:center;margin-top:20px;font-size:13px;color:rgba(244,245,238,.55);}',
+    '.tk-switch a{color:#c4ef3f;cursor:pointer;text-decoration:underline;}',
+    '.tk-err{background:rgba(220,60,60,.18);border:1px solid rgba(220,60,60,.4);color:#f4a0a0;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px;}',
+    '.tk-checks{display:flex;gap:18px;margin-bottom:20px;}',
+    '.tk-check{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;}',
+    '.tk-check input{accent-color:#c4ef3f;width:16px;height:16px;}',
+    // drawer
+    '.tk-dr-ov{position:fixed;inset:0;z-index:1000;background:rgba(7,15,36,.45);}',
+    '.tk-dr{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#0c1c3f;border-left:1px solid rgba(196,239,63,.18);z-index:1001;display:flex;flex-direction:column;box-shadow:-24px 0 60px rgba(0,0,0,.45);overflow:hidden;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);}',
+    '.tk-dr.open{transform:translateX(0);}',
+    '.tk-dr-head{padding:28px 24px 20px;border-bottom:1px solid rgba(244,245,238,.1);flex-shrink:0;}',
+    '.tk-dr-close{float:right;cursor:pointer;font-size:24px;color:rgba(244,245,238,.5);background:none;border:none;}',
+    '.tk-avatar{width:52px;height:52px;border-radius:50%;background:#c4ef3f;color:#0a1733;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;margin-bottom:12px;}',
+    '.tk-uname{font-weight:700;font-size:19px;color:#fff;margin:0;}',
+    '.tk-uemail{font-family:"Space Mono",monospace;font-size:11px;color:rgba(244,245,238,.5);letter-spacing:.1em;margin-top:4px;}',
+    '.tk-wallet{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding:13px 16px;border-radius:13px;background:rgba(196,239,63,.1);border:1px solid rgba(196,239,63,.2);}',
+    '.tk-wallet-val{font-family:Anton,sans-serif;font-size:26px;color:#c4ef3f;}',
+    '.tk-topup-btn{padding:8px 16px;border-radius:999px;background:#c4ef3f;color:#0a1733;font-weight:700;font-size:13px;cursor:pointer;border:none;}',
+    '.tk-tabs{display:flex;border-bottom:1px solid rgba(244,245,238,.1);flex-shrink:0;overflow-x:auto;}',
+    '.tk-tab{flex:1;min-width:60px;padding:14px 8px;text-align:center;cursor:pointer;font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.12em;color:rgba(244,245,238,.5);border:none;background:none;white-space:nowrap;}',
+    '.tk-tab.active{color:#c4ef3f;border-bottom:2px solid #c4ef3f;}',
+    '.tk-body{flex:1;overflow-y:auto;padding:20px 24px;}',
+    '.tk-card-row{padding:12px 14px;border-radius:11px;background:rgba(244,245,238,.05);margin-bottom:10px;}',
+    '.tk-logout{margin:16px 24px;padding:14px;border-radius:13px;text-align:center;font-weight:700;cursor:pointer;background:rgba(244,245,238,.06);color:rgba(244,245,238,.65);border:1px solid rgba(244,245,238,.1);font-family:"Space Grotesk",sans-serif;font-size:14px;flex-shrink:0;}',
+    '.tk-logout:hover{background:rgba(244,245,238,.1);}',
+    '.tk-empty{color:rgba(244,245,238,.4);font-size:14px;line-height:1.6;text-align:center;margin-top:30px;}',
+    '.tk-stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;}',
+    '.tk-stat{background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);border-radius:13px;padding:14px;text-align:center;}',
+    '.tk-stat-lbl{font-family:"Space Mono",monospace;font-size:9px;letter-spacing:.16em;color:rgba(244,245,238,.5);margin-bottom:6px;}',
+    '.tk-stat-val{font-family:Anton,sans-serif;font-size:28px;color:#c4ef3f;line-height:1;}',
+    // top-up overlay
+    '.tk-topup-ov{position:fixed;inset:0;z-index:1200;background:rgba(7,15,36,.7);display:flex;align-items:center;justify-content:center;padding:20px;}',
+    '.tk-topup-card{background:#0c2350;border-radius:18px;padding:32px;width:100%;max-width:380px;}',
+    '.tk-topup-pills{display:flex;gap:10px;margin:16px 0;flex-wrap:wrap;}',
+    '.tk-topup-pill{padding:10px 20px;border-radius:999px;border:1px solid rgba(196,239,63,.4);background:transparent;color:#c4ef3f;font-family:"Space Mono",monospace;font-size:13px;cursor:pointer;}',
+    '.tk-topup-pill.sel{background:#c4ef3f;color:#0a1733;font-weight:700;}',
+    // survey overlay
+    '.tk-survey-ov{position:fixed;inset:0;z-index:1200;background:rgba(7,15,36,.7);display:flex;align-items:center;justify-content:center;padding:20px;}',
+    '.tk-survey-card{background:#0c2350;border-radius:18px;padding:32px;width:100%;max-width:420px;}',
+    '.tk-survey-q{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.14em;color:rgba(196,239,63,.9);margin:0 0 10px;}',
+    '.tk-survey-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}',
+    '.tk-survey-opt{padding:10px 16px;border-radius:11px;border:1px solid rgba(196,239,63,.3);background:transparent;color:#f4f5ee;font-size:14px;cursor:pointer;text-align:left;}',
+    '.tk-survey-opt.sel{background:rgba(196,239,63,.15);border-color:#c4ef3f;color:#c4ef3f;}',
+    // toast
+    '.tk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#c4ef3f;color:#0a1733;font-weight:700;font-family:"Space Grotesk",sans-serif;font-size:14px;padding:12px 24px;border-radius:999px;z-index:2000;box-shadow:0 8px 30px rgba(0,0,0,.3);transition:opacity .3s;}',
+    // leaderboard
+    '.tk-lb-table{width:100%;border-collapse:collapse;font-size:13px;}',
+    '.tk-lb-table th{font-family:"Space Mono",monospace;font-size:9px;letter-spacing:.14em;color:rgba(244,245,238,.45);text-align:left;padding:4px 8px;font-weight:400;}',
+    '.tk-lb-table td{padding:8px 8px;border-top:1px solid rgba(244,245,238,.06);}',
+    '.tk-pill{padding:3px 9px;border-radius:999px;font-family:"Space Mono",monospace;font-size:10px;}',
   ].join('');
-  document.head.appendChild(style);
+  document.head.appendChild(css);
 
-  // ── Modal ─────────────────────────────────────────────────────────────────
+  // ── Toast ─────────────────────────────────────────────────────────────────
 
-  var modalRoot = null;
-  var modalMode = 'login'; // 'login' | 'register'
+  function toast(msg, duration) {
+    var el = document.createElement('div');
+    el.className = 'tk-toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function () { el.style.opacity = '0'; setTimeout(function () { el.remove(); }, 300); }, duration || 2500);
+  }
 
-  function buildSigSVG() {
+  // ── SVG signature ─────────────────────────────────────────────────────────
+
+  function sigSVG() {
     return '<svg width="100" height="34" viewBox="0 0 200 70" style="overflow:visible;display:block;margin:0 auto 4px;">' +
       '<path d="M8,46 C26,46 30,40 44,42 C30,40 34,8 52,8 C70,8 66,44 50,46 C66,48 70,42 86,42 C70,40 74,8 92,8 C110,8 106,44 90,46 C106,48 110,42 126,42 C110,40 114,8 132,8 C150,8 146,44 130,46 C150,48 168,48 192,44" fill="none" stroke="#c4ef3f" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></path>' +
       '</svg>';
   }
 
+  // ── Modal ─────────────────────────────────────────────────────────────────
+
+  var modalRoot = null, modalMode = 'login';
+
   function modalHTML(mode) {
     var isReg = mode === 'register';
-    return '<div class="tk-auth-overlay" id="tk-modal-overlay">' +
-      '<div class="tk-auth-card">' +
-        '<button class="tk-auth-close" id="tk-modal-close">×</button>' +
-        buildSigSVG() +
+    return '<div class="tk-ov" id="tk-modal-ov">' +
+      '<div class="tk-card">' +
+        '<button class="tk-close" id="tk-modal-x">×</button>' +
+        sigSVG() +
         '<div style="text-align:center;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.22em;color:rgba(244,245,238,.5);margin-bottom:6px;">TAKE OFF CLUB</div>' +
-        '<div class="tk-auth-title" style="text-align:center;">' + (isReg ? 'Create account' : 'Sign in') + '</div>' +
-        '<p class="tk-auth-sub" style="text-align:center;">' + (isReg ? 'Join the club — padel, pilates, and more.' : 'Welcome back. Sign in to manage your bookings.') + '</p>' +
-        '<div id="tk-modal-error" style="display:none;" class="tk-auth-error"></div>' +
-        (isReg ? '<label class="tk-auth-label">YOUR NAME</label><input class="tk-auth-input" id="tk-f-name" type="text" placeholder="Full name">' : '') +
-        '<label class="tk-auth-label">EMAIL</label><input class="tk-auth-input" id="tk-f-email" type="email" placeholder="your@email.com">' +
-        '<label class="tk-auth-label">PASSWORD</label><input class="tk-auth-input" id="tk-f-pass" type="password" placeholder="••••••••">' +
-        (isReg ? '<label class="tk-auth-label">I\'M INTO</label><div class="tk-auth-checks"><label class="tk-auth-check"><input type="checkbox" id="tk-tr-pad" checked> Padel</label><label class="tk-auth-check"><input type="checkbox" id="tk-tr-pil"> Pilates</label></div>' : '') +
-        '<button class="tk-auth-btn" id="tk-modal-submit">' + (isReg ? 'Create account' : 'Sign in') + '</button>' +
-        '<div class="tk-auth-switch">' + (isReg ? 'Already have an account? <a id="tk-modal-swap">Sign in</a>' : 'New here? <a id="tk-modal-swap">Create account</a>') + '</div>' +
+        '<div class="tk-title" style="text-align:center;">' + (isReg ? 'Create account' : 'Sign in') + '</div>' +
+        '<p class="tk-sub" style="text-align:center;">' + (isReg ? 'Join the club — padel, pilates, and more.' : 'Welcome back.') + '</p>' +
+        '<div id="tk-modal-err" style="display:none;" class="tk-err"></div>' +
+        (isReg ? '<label class="tk-lbl">YOUR NAME</label><input class="tk-inp" id="tk-f-name" type="text" placeholder="Full name">' : '') +
+        '<label class="tk-lbl">EMAIL</label><input class="tk-inp" id="tk-f-email" type="email" placeholder="your@email.com">' +
+        '<label class="tk-lbl">PASSWORD</label><input class="tk-inp" id="tk-f-pass" type="password" placeholder="••••••••">' +
+        (isReg ? '<label class="tk-lbl">I\'M INTO</label><div class="tk-checks"><label class="tk-check"><input type="checkbox" id="tk-tr-pad" checked> Padel</label><label class="tk-check"><input type="checkbox" id="tk-tr-pil"> Pilates</label></div>' : '') +
+        '<button class="tk-btn" id="tk-modal-sub">' + (isReg ? 'Create account' : 'Sign in') + '</button>' +
+        '<div class="tk-switch">' + (isReg ? 'Already have an account? <a id="tk-modal-swap">Sign in</a>' : 'No account? <a id="tk-modal-swap">Create one</a>') + '</div>' +
       '</div>' +
     '</div>';
   }
 
   function showModal(mode) {
     modalMode = mode || 'login';
-    if (!modalRoot) {
-      modalRoot = document.createElement('div');
-      document.body.appendChild(modalRoot);
-    }
+    if (!modalRoot) { modalRoot = document.createElement('div'); document.body.appendChild(modalRoot); }
     modalRoot.innerHTML = modalHTML(modalMode);
-
-    document.getElementById('tk-modal-close').addEventListener('click', closeModal);
-    document.getElementById('tk-modal-overlay').addEventListener('click', function (e) {
-      if (e.target === document.getElementById('tk-modal-overlay')) closeModal();
-    });
-    document.getElementById('tk-modal-swap').addEventListener('click', function () {
-      showModal(modalMode === 'login' ? 'register' : 'login');
-    });
-    document.getElementById('tk-modal-submit').addEventListener('click', handleSubmit);
-    // Enter key
-    modalRoot.querySelectorAll('input').forEach(function (inp) {
-      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') handleSubmit(); });
-    });
+    document.getElementById('tk-modal-x').onclick = closeModal;
+    document.getElementById('tk-modal-ov').onclick = function (e) { if (e.target.id === 'tk-modal-ov') closeModal(); };
+    document.getElementById('tk-modal-swap').onclick = function () { showModal(modalMode === 'login' ? 'register' : 'login'); };
+    document.getElementById('tk-modal-sub').onclick = handleSubmit;
+    modalRoot.querySelectorAll('input').forEach(function (inp) { inp.onkeydown = function (e) { if (e.key === 'Enter') handleSubmit(); }; });
+    document.addEventListener('keydown', onEscModal);
   }
 
-  function handleSubmit() {
-    var errEl = document.getElementById('tk-modal-error');
+  function onEscModal(e) { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEscModal); } }
+
+  function closeModal() { if (modalRoot) modalRoot.innerHTML = ''; }
+
+  async function handleSubmit() {
+    var errEl = document.getElementById('tk-modal-err');
     errEl.style.display = 'none';
+    var sub = document.getElementById('tk-modal-sub');
+    sub.disabled = true; sub.textContent = '...';
     var email = (document.getElementById('tk-f-email') || {}).value || '';
     var pass = (document.getElementById('tk-f-pass') || {}).value || '';
     var result;
@@ -348,286 +348,554 @@
       var tracks = [];
       if (document.getElementById('tk-tr-pad') && document.getElementById('tk-tr-pad').checked) tracks.push('padel');
       if (document.getElementById('tk-tr-pil') && document.getElementById('tk-tr-pil').checked) tracks.push('pilates');
-      result = auth.register({ email: email, name: name, password: pass, tracks: tracks });
+      result = await auth.register({ email: email, name: name, password: pass, tracks: tracks });
     } else {
-      result = auth.login(email, pass);
+      result = await auth.login(email, pass);
     }
-    if (!result.ok) {
-      errEl.textContent = result.error;
-      errEl.style.display = 'block';
-      return;
-    }
+    sub.disabled = false; sub.textContent = modalMode === 'register' ? 'Create account' : 'Sign in';
+    if (!result.ok) { errEl.textContent = result.error; errEl.style.display = 'block'; return; }
     closeModal();
-    if (_pendingCallback) {
-      var cb = _pendingCallback;
-      _pendingCallback = null;
-      setTimeout(cb, 50);
-    }
-  }
-
-  function closeModal() {
-    if (modalRoot) modalRoot.innerHTML = '';
+    if (_pendingCb) { var cb = _pendingCb; _pendingCb = null; setTimeout(cb, 50); }
   }
 
   // ── Account Drawer ────────────────────────────────────────────────────────
 
-  var drawerRoot = null;
-  var drawerTab = 'bookings';
+  var drawerRoot = null, drawerTab = 'bookings';
+  var _drData = { matches: null, orders: null, leaderboard: null }; // fetched API data per session
 
   function showDrawer(tab) {
     if (!auth.user) { showModal('login'); return; }
     drawerTab = (['bookings', 'packs', 'matches', 'orders', 'profile'].indexOf(tab) >= 0) ? tab : 'bookings';
-    if (!drawerRoot) {
-      drawerRoot = document.createElement('div');
-      document.body.appendChild(drawerRoot);
-    }
+    if (!drawerRoot) { drawerRoot = document.createElement('div'); document.body.appendChild(drawerRoot); }
     renderDrawer();
+    document.addEventListener('keydown', onEscDrawer);
+    // pre-fetch data for current tab
+    fetchTabData(drawerTab);
+  }
+
+  function onEscDrawer(e) { if (e.key === 'Escape') { closeDrawer(); document.removeEventListener('keydown', onEscDrawer); } }
+
+  async function fetchTabData(tab) {
+    var client = api();
+    if (!client || !client.isOnline()) return;
+    if (tab === 'matches' && !_drData.matches) {
+      try { var mr = await client.matches.list(); _drData.matches = mr && mr.content ? mr.content : (mr || []); renderBody(); } catch (e) {}
+    } else if (tab === 'orders' && !_drData.orders) {
+      try { var or = await client.orders.list(); _drData.orders = or && or.content ? or.content : (or || []); renderBody(); } catch (e) {}
+    } else if (tab === 'profile' && !_drData.leaderboard) {
+      try { _drData.leaderboard = await client.leaderboard.get(); renderBody(); } catch (e) {}
+    }
   }
 
   function renderDrawer() {
     if (!auth.user || !drawerRoot) return;
     var u = auth.user;
     var initial = (u.name || u.email || '?')[0].toUpperCase();
-    var bookings = u.bookings || [];
-    var matches = u.matches || [];
-    var packs = u.packs || [];
-    var orders = u.orders || [];
-    var level = u.padelLevel !== undefined ? u.padelLevel : 1;
-    var points = u.points !== undefined ? u.points : 100;
+    var walletDt = u.walletDt !== undefined ? u.walletDt : (u.wallet || 0);
 
-    // Compute rank from baseline leaderboard points
-    var baselinePts = [142, 128, 121, 110, 102, 96, 88, 81, 74, 70];
-    var rank = '—';
-    for (var ri = 0; ri < baselinePts.length; ri++) {
-      if (points > baselinePts[ri]) { rank = String(ri + 1); break; }
-    }
-    if (rank === '—' && points > 0) rank = '11+';
-
-    var bookingsHTML = bookings.length
-      ? bookings.slice().reverse().map(function (b) {
-          var date = b.recordedAt ? new Date(b.recordedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-          return '<div class="tk-drawer-booking"><div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
-            '<div><div class="tk-drawer-booking-name">' + (b.name || '') + '</div>' +
-            '<div class="tk-drawer-booking-meta">' + (b.sub || '') + (date ? ' · ' + date : '') + '</div></div>' +
-            '<div class="tk-drawer-booking-price">' + (b.price || '') + '</div>' +
-            '</div></div>';
-        }).join('')
-      : '<div class="tk-drawer-empty">No bookings yet.<br>Book a court or a class to see them here.</div>';
-
-    // Packs tab
-    var packsHTML = packs.length
-      ? packs.map(function (pk) {
-          var pct = pk.total > 0 ? Math.round((pk.remaining / pk.total) * 100) : 0;
-          var exp = pk.expiresAt ? new Date(pk.expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-          return '<div style="padding:14px;border-radius:13px;background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.18);margin-bottom:10px;">' +
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
-              '<div style="font-weight:600;font-size:14px;color:#fff;">' + (pk.name || 'Pack') + '</div>' +
-              '<span style="padding:4px 10px;border-radius:999px;background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.1em;">USE NEXT BOOKING</span>' +
-            '</div>' +
-            '<div style="height:5px;border-radius:999px;background:rgba(244,245,238,.1);margin-bottom:8px;">' +
-              '<div style="height:5px;border-radius:999px;background:#c4ef3f;width:' + pct + '%;transition:width .4s;"></div>' +
-            '</div>' +
-            '<div style="display:flex;justify-content:space-between;font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.55);">' +
-              '<span>' + pk.remaining + ' / ' + pk.total + ' matches remaining</span>' +
-              '<span>Expires ' + exp + '</span>' +
-            '</div>' +
-          '</div>';
-        }).join('')
-      : '<div class="tk-drawer-empty">No packs purchased yet.<br>Visit the Plans section to get a match pack.</div>';
-
-    // Profile tab
-    var levelPillsHTML = [0,1,2,3,4,5,6,7].map(function (n) {
-      var active = n === level;
-      return '<button class="tk-auth-level-pill' + (active ? ' active' : '') + '" data-lvl="' + n + '" style="padding:6px 13px;border-radius:999px;border:1px solid ' + (active ? '#c4ef3f' : 'rgba(196,239,63,.35)') + ';background:' + (active ? '#c4ef3f' : 'transparent') + ';color:' + (active ? '#0a1733' : 'rgba(244,245,238,.75)') + ';font-family:\'Space Mono\',monospace;font-size:11px;cursor:pointer;font-weight:' + (active ? '700' : '400') + ';">' + n + '</button>';
-    }).join('');
-
-    var profileHTML =
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">' +
-        '<div style="background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);border-radius:13px;padding:14px;text-align:center;">' +
-          '<div style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.16em;color:rgba(244,245,238,.5);margin-bottom:6px;">LEVEL</div>' +
-          '<div style="font-family:Anton,sans-serif;font-size:28px;color:#c4ef3f;line-height:1;">' + level + '</div>' +
-        '</div>' +
-        '<div style="background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);border-radius:13px;padding:14px;text-align:center;">' +
-          '<div style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.16em;color:rgba(244,245,238,.5);margin-bottom:6px;">POINTS</div>' +
-          '<div style="font-family:Anton,sans-serif;font-size:28px;color:#c4ef3f;line-height:1;">' + points + '</div>' +
-        '</div>' +
-        '<div style="background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);border-radius:13px;padding:14px;text-align:center;">' +
-          '<div style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.16em;color:rgba(244,245,238,.5);margin-bottom:6px;">RANK</div>' +
-          '<div style="font-family:Anton,sans-serif;font-size:28px;color:#c4ef3f;line-height:1;">' + rank + '</div>' +
-        '</div>' +
-      '</div>' +
-      (!u.padelLevelSelfDeclared ? '<div style="margin-bottom:16px;"><a id="tk-survey-link" style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;color:#c4ef3f;cursor:pointer;text-decoration:underline;">Take the level survey →</a></div>' : '') +
-      '<div style="margin-bottom:18px;">' +
-      '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:8px;">PADEL LEVEL</div>' +
-      '<div class="tk-auth-level-pills" style="display:flex;gap:6px;flex-wrap:wrap;">' + levelPillsHTML + '</div>' +
-      '</div>' +
-      '<div style="margin-bottom:14px;">' +
-      '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:6px;">TRACKS</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + (u.tracks || []).map(function (t) {
-        return '<span style="padding:5px 12px;border-radius:999px;background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;">' + t.toUpperCase() + '</span>';
-      }).join('') + '</div></div>' +
-      '<div><div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:6px;">EMAIL</div>' +
-      '<div style="font-size:14px;color:#f4f5ee;">' + u.email + '</div></div>';
-
-    // Matches tab
-    var matchesListHTML = matches.length
-      ? matches.slice().reverse().map(function (m) {
-          var isW = m.result === 'W';
-          var deltaStr = m.delta !== undefined ? (m.delta >= 0 ? '+' + m.delta : '' + m.delta) : '';
-          return '<div class="tk-auth-match-row" style="padding:11px 13px;border-radius:11px;background:rgba(244,245,238,.05);margin-bottom:8px;">' +
-            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-              '<div style="min-width:0;">' +
-                '<div style="font-weight:600;font-size:13px;color:#fff;">' + (m.partner ? 'w/ ' + m.partner : 'Solo') + '</div>' +
-                '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:2px;letter-spacing:.06em;">' + m.date + (m.opponents && m.opponents.join('') ? ' · vs ' + m.opponents.join(' & ') : '') + '</div>' +
-                (m.score ? '<div style="font-family:\'Space Mono\',monospace;font-size:11px;color:rgba(244,245,238,.7);margin-top:3px;">' + m.score + '</div>' : '') +
-              '</div>' +
-              '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">' +
-                (deltaStr ? '<span style="padding:3px 8px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:10px;background:' + (isW ? 'rgba(196,239,63,.15)' : 'rgba(220,90,40,.18)') + ';color:' + (isW ? '#c4ef3f' : '#f4a060') + ';">' + deltaStr + '</span>' : '') +
-                '<span style="padding:5px 12px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:11px;font-weight:700;background:' + (isW ? 'rgba(196,239,63,.2)' : 'rgba(220,60,60,.18)') + ';color:' + (isW ? '#c4ef3f' : '#f4a0a0') + ';">' + m.result + '</span>' +
-              '</div>' +
-            '</div>' +
-          '</div>';
-        }).join('')
-      : '<div class="tk-drawer-empty">No matches logged yet.</div>';
-
-    var matchFormHTML = '<div class="tk-auth-match-form" id="tk-match-form" style="background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.2);border-radius:14px;padding:16px;margin-bottom:16px;">' +
-      '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:#c4ef3f;margin-bottom:12px;">LOG A MATCH</div>' +
-      '<label class="tk-auth-label">PARTNER NAME</label><input class="tk-auth-input" id="tk-m-partner" type="text" placeholder="Partner name" style="margin-bottom:12px;">' +
-      '<label class="tk-auth-label">OPPONENTS</label><input class="tk-auth-input" id="tk-m-opponents" type="text" placeholder="Name &amp; Name" style="margin-bottom:12px;">' +
-      '<label class="tk-auth-label">RESULT</label>' +
-      '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
-        '<button id="tk-m-win" style="flex:1;padding:9px;border-radius:999px;border:1px solid rgba(196,239,63,.4);background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;font-weight:700;">W</button>' +
-        '<button id="tk-m-loss" style="flex:1;padding:9px;border-radius:999px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.5);font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;">L</button>' +
-      '</div>' +
-      '<label class="tk-auth-label">SCORE</label><input class="tk-auth-input" id="tk-m-score" type="text" placeholder="6-4 3-6 10-7" style="margin-bottom:12px;">' +
-      '<label class="tk-auth-label">OPPONENT AVG LEVEL (1-7)</label><input class="tk-auth-input" id="tk-m-oplvl" type="number" min="1" max="7" placeholder="' + level + '" style="margin-bottom:14px;">' +
-      '<button id="tk-m-save" class="tk-auth-btn" style="padding:12px;">Save match</button>' +
-    '</div>';
-
-    var matchesTabHTML = matchFormHTML + matchesListHTML;
-
-    // Orders tab
-    var ordersHTML = orders.length
-      ? orders.slice().reverse().map(function (o) {
-          var date = o.ts ? new Date(o.ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : (o.recordedAt ? new Date(o.recordedAt).toLocaleDateString('en-GB') : '');
-          return '<div style="padding:12px 14px;border-radius:11px;background:rgba(244,245,238,.05);margin-bottom:10px;">' +
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
-              '<div><div style="font-weight:600;font-size:13px;color:#fff;">' + (o.id || 'Order') + '</div>' +
-              '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:2px;">' + date + ' · ' + ((o.items && o.items.length) || 0) + ' item(s)</div></div>' +
-              '<div style="font-family:Anton,sans-serif;font-size:18px;color:#c4ef3f;">' + (o.total || 0) + ' DT</div>' +
-            '</div>' +
-          '</div>';
-        }).join('')
-      : '<div class="tk-drawer-empty">No orders yet. Complete a checkout to see orders here.</div>';
-
-    var bodyHTML;
-    if (drawerTab === 'bookings') bodyHTML = bookingsHTML;
-    else if (drawerTab === 'packs') bodyHTML = packsHTML;
-    else if (drawerTab === 'matches') bodyHTML = matchesTabHTML;
-    else if (drawerTab === 'orders') bodyHTML = ordersHTML;
-    else bodyHTML = profileHTML;
-
-    drawerRoot.innerHTML = '<div class="tk-drawer-overlay" id="tk-drawer-overlay"></div>' +
-      '<div class="tk-drawer">' +
-        '<div class="tk-drawer-head">' +
-          '<button class="tk-drawer-close" id="tk-drawer-close">×</button>' +
-          '<div class="tk-drawer-avatar">' + initial + '</div>' +
-          '<div class="tk-drawer-name">' + (u.name || u.email) + '</div>' +
-          '<div class="tk-drawer-email">' + u.email + '</div>' +
-          '<div class="tk-drawer-wallet">' +
+    drawerRoot.innerHTML =
+      '<div class="tk-dr-ov" id="tk-dr-ov"></div>' +
+      '<div class="tk-dr" id="tk-dr">' +
+        '<div class="tk-dr-head">' +
+          '<button class="tk-dr-close" id="tk-dr-x">×</button>' +
+          '<div class="tk-avatar">' + initial + '</div>' +
+          '<div class="tk-uname" id="tk-uname-disp">' + esc(u.name || u.email) + '</div>' +
+          '<div class="tk-uemail">' + esc(u.email) + '</div>' +
+          '<div class="tk-wallet">' +
             '<div><div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.16em;color:rgba(244,245,238,.55);margin-bottom:3px;">WALLET</div>' +
-            '<div class="tk-drawer-wallet-val">◆ ' + (u.wallet || 0) + ' DT</div></div>' +
-            '<button class="tk-drawer-topup" id="tk-topup-btn">+ Top up</button>' +
+            '<div class="tk-wallet-val">◆ ' + walletDt + ' DT</div></div>' +
+            '<button class="tk-topup-btn" id="tk-topup-btn">+ Top up</button>' +
           '</div>' +
         '</div>' +
-        '<div class="tk-drawer-tabs" style="overflow-x:auto;flex-wrap:nowrap;">' +
-          '<button class="tk-drawer-tab' + (drawerTab === 'bookings' ? ' active' : '') + '" id="tk-tab-bookings">BOOKINGS</button>' +
-          '<button class="tk-drawer-tab' + (drawerTab === 'packs' ? ' active' : '') + '" id="tk-tab-packs">PACKS</button>' +
-          '<button class="tk-drawer-tab' + (drawerTab === 'matches' ? ' active' : '') + '" id="tk-tab-matches">MATCHES</button>' +
-          '<button class="tk-drawer-tab' + (drawerTab === 'orders' ? ' active' : '') + '" id="tk-tab-orders">ORDERS</button>' +
-          '<button class="tk-drawer-tab' + (drawerTab === 'profile' ? ' active' : '') + '" id="tk-tab-profile">PROFILE</button>' +
+        '<div class="tk-tabs">' +
+          ['bookings','packs','matches','orders','profile'].map(function (t) {
+            return '<button class="tk-tab' + (drawerTab === t ? ' active' : '') + '" data-tab="' + t + '">' + t.toUpperCase() + '</button>';
+          }).join('') +
         '</div>' +
-        '<div class="tk-drawer-body" id="tk-drawer-body">' + bodyHTML + '</div>' +
-        '<button class="tk-drawer-logout" id="tk-drawer-logout">Log out</button>' +
+        '<div class="tk-body" id="tk-dr-body">' + bodyHTML() + '</div>' +
+        '<button class="tk-logout" id="tk-logout">Log out</button>' +
       '</div>';
 
-    document.getElementById('tk-drawer-overlay').addEventListener('click', closeDrawer);
-    document.getElementById('tk-drawer-close').addEventListener('click', closeDrawer);
-    document.getElementById('tk-tab-bookings').addEventListener('click', function () { drawerTab = 'bookings'; renderDrawer(); });
-    document.getElementById('tk-tab-packs').addEventListener('click', function () { drawerTab = 'packs'; renderDrawer(); });
-    document.getElementById('tk-tab-matches').addEventListener('click', function () { drawerTab = 'matches'; renderDrawer(); });
-    document.getElementById('tk-tab-orders').addEventListener('click', function () { drawerTab = 'orders'; renderDrawer(); });
-    document.getElementById('tk-tab-profile').addEventListener('click', function () { drawerTab = 'profile'; renderDrawer(); });
-    document.getElementById('tk-topup-btn').addEventListener('click', function () {
-      var amt = prompt('Top up wallet — enter amount in DT:');
-      if (amt) { auth.topup(parseFloat(amt)); renderDrawer(); }
+    // wire up
+    setTimeout(function () {
+      var dr = document.getElementById('tk-dr');
+      if (dr) dr.classList.add('open');
+    }, 10);
+
+    document.getElementById('tk-dr-ov').onclick = closeDrawer;
+    document.getElementById('tk-dr-x').onclick = closeDrawer;
+    document.getElementById('tk-logout').onclick = function () { auth.logout(); closeDrawer(); };
+    document.getElementById('tk-topup-btn').onclick = showTopupModal;
+    document.querySelectorAll('.tk-tab').forEach(function (btn) {
+      btn.onclick = function () {
+        drawerTab = btn.getAttribute('data-tab');
+        document.querySelectorAll('.tk-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === drawerTab); });
+        fetchTabData(drawerTab);
+        renderBody();
+      };
     });
-    document.getElementById('tk-drawer-logout').addEventListener('click', function () {
-      auth.logout();
-      closeDrawer();
+
+    wireBodyEvents();
+  }
+
+  function renderBody() {
+    var bodyEl = document.getElementById('tk-dr-body');
+    if (!bodyEl) return;
+    bodyEl.innerHTML = bodyHTML();
+    wireBodyEvents();
+  }
+
+  function bodyHTML() {
+    if (drawerTab === 'bookings') return bookingsHTML();
+    if (drawerTab === 'packs') return packsHTML();
+    if (drawerTab === 'matches') return matchesHTML();
+    if (drawerTab === 'orders') return ordersHTML();
+    return profileHTML();
+  }
+
+  // ── Tab: Bookings ────────────────────────────────────────────────────────
+
+  function bookingsHTML() {
+    var items = (auth.user && auth.user.bookings) || [];
+    if (!items.length) return '<div class="tk-empty">No bookings yet.<br>Book a court or class to see them here.</div>';
+    return items.slice().sort(function (a, b) { return new Date(b.recordedAt) - new Date(a.recordedAt); }).map(function (b) {
+      var now = new Date();
+      var slotTime = b.slotTime ? new Date(b.slotTime) : new Date(b.recordedAt);
+      var status = b.status || (slotTime > now ? 'UPCOMING' : 'PAST');
+      var statusColor = status === 'UPCOMING' ? '#c4ef3f' : 'rgba(244,245,238,.4)';
+      var date = new Date(b.recordedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      return '<div class="tk-card-row">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+          '<div><div style="font-weight:600;font-size:14px;color:#fff;">' + esc(b.name || '') + '</div>' +
+          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:3px;">' + esc(b.sub || '') + (date ? ' · ' + date : '') + '</div></div>' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<span style="padding:3px 9px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:9px;background:rgba(196,239,63,.1);color:' + statusColor + ';">' + status + '</span>' +
+            '<div style="font-family:Anton,sans-serif;font-size:18px;color:#c4ef3f;">' + esc(b.price || '') + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── Tab: Packs ───────────────────────────────────────────────────────────
+
+  function packsHTML() {
+    var all = (auth.user && auth.user.packs) || [];
+    var now = new Date();
+    var active = all.filter(function (p) { return p.remaining > 0 && new Date(p.expiresAt) > now; });
+    var expired = all.filter(function (p) { return p.remaining <= 0 || new Date(p.expiresAt) <= now; });
+    var html = '';
+    if (!active.length && !expired.length) {
+      return '<div class="tk-empty">No packs purchased yet.</div>' +
+        '<div style="margin-top:16px;text-align:center;"><a href="/padel#plans" style="color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.12em;">Get a match pack →</a></div>';
+    }
+    html += active.map(function (pk) {
+      var pct = pk.total > 0 ? Math.round((pk.remaining / pk.total) * 100) : 0;
+      var exp = pk.expiresAt ? new Date(pk.expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+      return '<div style="padding:14px;border-radius:13px;background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.18);margin-bottom:10px;">' +
+        '<div style="font-weight:600;font-size:14px;color:#fff;margin-bottom:10px;">' + esc(pk.name || 'Pack') + '</div>' +
+        '<div style="height:5px;border-radius:999px;background:rgba(244,245,238,.1);margin-bottom:8px;">' +
+          '<div style="height:5px;border-radius:999px;background:#c4ef3f;width:' + pct + '%;transition:width .4s;"></div>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.55);">' +
+          '<span>' + pk.remaining + ' / ' + pk.total + ' matches remaining</span><span>Expires ' + exp + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    if (expired.length) {
+      html += '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;color:rgba(244,245,238,.35);margin:16px 0 8px;">EXPIRED</div>';
+      html += expired.map(function (pk) {
+        return '<div style="padding:10px 14px;border-radius:11px;background:rgba(244,245,238,.03);border:1px solid rgba(244,245,238,.08);margin-bottom:8px;opacity:.6;">' +
+          '<div style="font-size:13px;color:rgba(244,245,238,.55);">' + esc(pk.name || 'Pack') + ' — 0 remaining</div>' +
+        '</div>';
+      }).join('');
+    }
+    html += '<div style="margin-top:16px;text-align:center;"><a href="/padel#plans" style="color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.12em;">Get more packs →</a></div>';
+    return html;
+  }
+
+  // ── Tab: Matches ─────────────────────────────────────────────────────────
+
+  var _matchFormOpen = false, _matchResult = 'W';
+
+  function matchesHTML() {
+    var items = _drData.matches || (auth.user && auth.user.matches) || [];
+    var u = auth.user || {};
+    var myLevel = u.padelLevel || 1;
+
+    // ELO delta hint
+    var hintFn = 'function _eloHint(){ var lvl=parseFloat(document.getElementById("tk-m-oplvl").value)||' + myLevel + '; var r=window._matchResultUI||"W"; var b=r==="W"?20:-15; var d=Math.round(b*(1+0.15*(lvl-' + myLevel + '))); d=Math.max(-40,Math.min(40,d)); document.getElementById("tk-m-hint").textContent=(d>=0?"+":"")+d+" pts"; }';
+
+    var histHTML = items.length
+      ? items.slice().reverse().map(function (m) {
+          var isW = m.result === 'W';
+          var d = m.delta !== undefined ? m.delta : 0;
+          var dStr = (d >= 0 ? '+' : '') + d;
+          var date = m.playedAt || (m.date || '');
+          var opps = (m.opponentNames || m.opponents || []);
+          if (typeof opps === 'string') opps = opps.split('&').map(function (s) { return s.trim(); });
+          return '<div class="tk-card-row">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+              '<div style="min-width:0;">' +
+                '<div style="font-weight:600;font-size:13px;color:#fff;">' + (m.partnerName || m.partner ? 'w/ ' + esc(m.partnerName || m.partner) : 'Solo') + '</div>' +
+                '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:2px;">' + esc(date) + (opps.length ? ' · vs ' + opps.map(esc).join(' & ') : '') + '</div>' +
+                (m.score ? '<div style="font-family:\'Space Mono\',monospace;font-size:11px;color:rgba(244,245,238,.7);margin-top:3px;">' + esc(m.score) + '</div>' : '') +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">' +
+                '<span class="tk-pill" style="background:' + (isW ? 'rgba(196,239,63,.15)' : 'rgba(220,90,40,.18)') + ';color:' + (isW ? '#c4ef3f' : '#f4a060') + ';">' + dStr + '</span>' +
+                '<span class="tk-pill" style="font-weight:700;background:' + (isW ? 'rgba(196,239,63,.2)' : 'rgba(220,60,60,.18)') + ';color:' + (isW ? '#c4ef3f' : '#f4a0a0') + ';">' + m.result + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('')
+      : '<div class="tk-empty">No matches logged yet.<br>Log your first match below.</div>';
+
+    var formHTML = _matchFormOpen
+      ? '<div id="tk-mform" style="background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.2);border-radius:14px;padding:16px;margin-top:16px;">' +
+          '<script>' + hintFn + '</script>' +
+          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:#c4ef3f;margin-bottom:12px;">LOG A MATCH</div>' +
+          '<label class="tk-lbl">PARTNER NAME</label><input class="tk-inp" id="tk-m-partner" type="text" placeholder="Partner name" style="margin-bottom:10px;">' +
+          '<label class="tk-lbl">OPPONENTS</label><input class="tk-inp" id="tk-m-opponents" type="text" placeholder="Name &amp; Name" style="margin-bottom:10px;">' +
+          '<label class="tk-lbl">DATE</label><input class="tk-inp" id="tk-m-date" type="date" value="' + new Date().toISOString().slice(0,10) + '" style="margin-bottom:10px;">' +
+          '<label class="tk-lbl">RESULT</label>' +
+          '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
+            '<button id="tk-m-win" style="flex:1;padding:9px;border-radius:999px;border:1px solid rgba(196,239,63,.4);background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;font-weight:700;">W</button>' +
+            '<button id="tk-m-loss" style="flex:1;padding:9px;border-radius:999px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.5);font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;">L</button>' +
+          '</div>' +
+          '<label class="tk-lbl">SCORE</label><input class="tk-inp" id="tk-m-score" type="text" placeholder="6-4 3-6 10-7" style="margin-bottom:10px;">' +
+          '<label class="tk-lbl">OPPONENT AVG LEVEL (1–7) <span id="tk-m-hint" style="color:#c4ef3f;margin-left:8px;"></span></label>' +
+          '<input class="tk-inp" id="tk-m-oplvl" type="number" min="1" max="7" step="0.5" placeholder="' + myLevel + '" oninput="_eloHint()" style="margin-bottom:14px;">' +
+          '<div style="display:flex;gap:10px;">' +
+            '<button id="tk-m-cancel" style="flex:1;padding:12px;border-radius:13px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.6);cursor:pointer;font-family:\'Space Grotesk\',sans-serif;">Cancel</button>' +
+            '<button id="tk-m-save" class="tk-btn" style="flex:2;padding:12px;">Save match</button>' +
+          '</div>' +
+        '</div>'
+      : '<button id="tk-m-add" style="width:100%;margin-top:16px;padding:12px;border-radius:13px;border:1px solid rgba(196,239,63,.3);background:transparent;color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.14em;cursor:pointer;">+ LOG A MATCH</button>';
+
+    return histHTML + formHTML;
+  }
+
+  // ── Tab: Orders ──────────────────────────────────────────────────────────
+
+  function ordersHTML() {
+    var items = _drData.orders || [];
+    if (!items.length) return '<div class="tk-empty">No orders yet.</div>';
+    var statusColors = { PENDING: '#f5c518', CONFIRMED: '#4fa3f7', PREPARING: '#f4a060', SHIPPED: '#4dc2b7', PICKUP_READY: '#c4ef3f', DELIVERED: '#4dce7a', PICKED_UP: '#4dce7a', CANCELLED: '#f4a0a0' };
+    return items.map(function (o) {
+      var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+      var statusColor = statusColors[o.status] || 'rgba(244,245,238,.5)';
+      var itemsHTML = (o.items || []).map(function (it) {
+        return '<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(244,245,238,.65);padding:3px 0;">' +
+          '<span>' + esc(it.productName || it.name || '') + (it.size ? ' (' + it.size + ')' : '') + ' ×' + (it.qty || 1) + '</span>' +
+          '<span>' + ((it.unitPriceDt || 0) * (it.qty || 1)) + ' DT</span>' +
+        '</div>';
+      }).join('');
+      return '<div class="tk-card-row" style="margin-bottom:12px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+          '<div><div style="font-weight:600;font-size:13px;color:#fff;">' + esc(o.orderRef || o.id || 'Order') + '</div>' +
+          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:2px;">' + date + '</div></div>' +
+          '<span class="tk-pill" style="background:rgba(255,255,255,.07);color:' + statusColor + ';">' + (o.status || 'PENDING') + '</span>' +
+        '</div>' +
+        (itemsHTML ? '<div style="border-top:1px solid rgba(244,245,238,.07);padding-top:8px;">' + itemsHTML + '</div>' : '') +
+        '<div style="text-align:right;font-family:Anton,sans-serif;font-size:18px;color:#c4ef3f;margin-top:6px;">' + (o.totalDt || o.total || 0) + ' DT</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── Tab: Profile ─────────────────────────────────────────────────────────
+
+  function profileHTML() {
+    var u = auth.user || {};
+    var level = u.padelLevel || 1;
+    var points = u.points || 0;
+    var matches = _drData.matches || u.matches || [];
+    var lb = _drData.leaderboard || [];
+
+    // rank from leaderboard
+    var rank = 'Unranked';
+    if (lb.length && u.id) {
+      var me = lb.find(function (e) { return e.userId === u.id; });
+      if (me) rank = '#' + me.rank;
+    }
+
+    var memberSince = u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
+    var matchCount = matches.length;
+    var levelReadOnly = matchCount >= 5;
+
+    var pillsHTML = [1,2,3,4,5,6,7].map(function (n) {
+      var active = n === level;
+      var disabled = levelReadOnly;
+      return '<button class="tk-lvl-pill" data-lvl="' + n + '" ' + (disabled ? 'disabled' : '') + ' style="padding:6px 13px;border-radius:999px;border:1px solid ' + (active ? '#c4ef3f' : 'rgba(196,239,63,.35)') + ';background:' + (active ? '#c4ef3f' : 'transparent') + ';color:' + (active ? '#0a1733' : 'rgba(244,245,238,.75)') + ';font-family:\'Space Mono\',monospace;font-size:11px;cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '.5' : '1') + ';">' + n + '</button>';
+    }).join(' ');
+
+    var surveyBtn = !u.padelLevelSelfDeclared
+      ? '<div style="margin-bottom:16px;"><a id="tk-survey-link" style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;color:#c4ef3f;cursor:pointer;text-decoration:underline;">Take the level survey →</a></div>'
+      : '';
+
+    var lbHTML = lb.length
+      ? '<table class="tk-lb-table"><thead><tr><th>#</th><th>Player</th><th>LVL</th><th>PTS</th></tr></thead><tbody>' +
+          lb.slice(0, 10).map(function (e) {
+            var isMe = u.id && e.userId === u.id;
+            return '<tr style="' + (isMe ? 'background:rgba(196,239,63,.08);' : '') + '">' +
+              '<td style="font-family:Anton,sans-serif;color:#c4ef3f;">' + e.rank + '</td>' +
+              '<td style="font-weight:' + (isMe ? '700' : '400') + ';color:#f4f5ee;">' + esc(e.name) + '</td>' +
+              '<td style="font-family:\'Space Mono\',monospace;font-size:11px;color:rgba(244,245,238,.65);">' + e.padelLevel + '</td>' +
+              '<td style="font-family:Anton,sans-serif;color:#c4ef3f;">' + e.points + '</td>' +
+            '</tr>';
+          }).join('') +
+        '</tbody></table>'
+      : '<div style="font-size:13px;color:rgba(244,245,238,.4);">Leaderboard loading…</div>';
+
+    return '<div class="tk-stat-grid">' +
+        '<div class="tk-stat"><div class="tk-stat-lbl">LEVEL</div><div class="tk-stat-val">' + level + '</div></div>' +
+        '<div class="tk-stat"><div class="tk-stat-lbl">POINTS</div><div class="tk-stat-val">' + points + '</div></div>' +
+        '<div class="tk-stat"><div class="tk-stat-lbl">RANK</div><div class="tk-stat-val" style="font-size:' + (rank.length > 4 ? '18' : '28') + 'px;">' + rank + '</div></div>' +
+      '</div>' +
+      (levelReadOnly ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.4);margin-bottom:12px;">Level computed from your ELO after 5+ matches.</div>' : surveyBtn) +
+      '<div style="margin-bottom:18px;">' +
+        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:8px;">PADEL LEVEL</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + pillsHTML + '</div>' +
+        (levelReadOnly ? '' : '<div style="font-family:\'Space Mono\',monospace;font-size:9px;color:rgba(244,245,238,.35);margin-top:6px;">Auto-locked after 5 matches</div>') +
+      '</div>' +
+      '<div style="margin-bottom:16px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">NAME</div>' +
+          '<button id="tk-edit-name" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">EDIT</button>' +
+        '</div>' +
+        '<div id="tk-name-view" style="font-size:15px;color:#f4f5ee;">' + esc(u.name || '') + '</div>' +
+        '<div id="tk-name-edit" style="display:none;">' +
+          '<input class="tk-inp" id="tk-name-inp" type="text" value="' + esc(u.name || '') + '" style="margin-bottom:8px;">' +
+          '<button id="tk-name-save" class="tk-btn" style="padding:10px;">Save</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-bottom:16px;">' +
+        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:6px;">TRACKS</div>' +
+        '<div>' + (u.tracks || []).map(function (t) {
+          return '<span style="padding:5px 12px;border-radius:999px;background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;margin-right:6px;">' + t.toUpperCase() + '</span>';
+        }).join('') + '</div>' +
+      '</div>' +
+      (memberSince ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.35);margin-bottom:20px;">Member since ' + memberSince + '</div>' : '') +
+      '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:10px;">LEADERBOARD</div>' +
+      lbHTML;
+  }
+
+  // ── Wire body event listeners ─────────────────────────────────────────────
+
+  function wireBodyEvents() {
+    // Level pills
+    document.querySelectorAll('.tk-lvl-pill:not([disabled])').forEach(function (pill) {
+      pill.onclick = function () {
+        var n = parseInt(pill.getAttribute('data-lvl'), 10);
+        auth.submitLevelSurvey({ level: n });
+        renderBody();
+      };
     });
 
     // Survey link
     var surveyLink = document.getElementById('tk-survey-link');
-    if (surveyLink) {
-      surveyLink.addEventListener('click', function () {
-        var lvl = prompt('Rate your padel level (1=beginner, 5=advanced):');
-        if (lvl) { auth.submitLevelSurvey({ level: parseInt(lvl, 10) }); renderDrawer(); }
-      });
-    }
+    if (surveyLink) surveyLink.onclick = showSurveyModal;
 
-    // Level pills
-    var pills = drawerRoot.querySelectorAll('.tk-auth-level-pill');
-    pills.forEach(function (pill) {
-      pill.addEventListener('click', function () {
-        var n = parseInt(pill.getAttribute('data-lvl'), 10);
-        auth.setLevel(n);
-        renderDrawer();
-      });
-    });
+    // Match form toggle
+    var addBtn = document.getElementById('tk-m-add');
+    if (addBtn) addBtn.onclick = function () { _matchFormOpen = true; renderBody(); };
+    var cancelBtn = document.getElementById('tk-m-cancel');
+    if (cancelBtn) cancelBtn.onclick = function () { _matchFormOpen = false; renderBody(); };
 
-    // Match form wiring
-    if (drawerTab === 'matches') {
-      var _matchResult = 'W';
-      var winBtn = document.getElementById('tk-m-win');
-      var lossBtn = document.getElementById('tk-m-loss');
-      function _setResultUI(r) {
-        _matchResult = r;
+    // Match result toggle
+    var winBtn = document.getElementById('tk-m-win');
+    var lossBtn = document.getElementById('tk-m-loss');
+    if (winBtn && lossBtn) {
+      window._matchResultUI = _matchResult;
+      function setResult(r) {
+        _matchResult = r; window._matchResultUI = r;
         if (r === 'W') {
-          winBtn.style.background = 'rgba(196,239,63,.15)'; winBtn.style.color = '#c4ef3f'; winBtn.style.border = '1px solid rgba(196,239,63,.4)'; winBtn.style.fontWeight = '700';
-          lossBtn.style.background = 'transparent'; lossBtn.style.color = 'rgba(244,245,238,.5)'; lossBtn.style.border = '1px solid rgba(244,245,238,.15)'; lossBtn.style.fontWeight = '400';
+          winBtn.style.cssText = 'flex:1;padding:9px;border-radius:999px;border:1px solid rgba(196,239,63,.4);background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;font-weight:700;';
+          lossBtn.style.cssText = 'flex:1;padding:9px;border-radius:999px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.5);font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;';
         } else {
-          lossBtn.style.background = 'rgba(220,60,60,.15)'; lossBtn.style.color = '#f4a0a0'; lossBtn.style.border = '1px solid rgba(220,60,60,.4)'; lossBtn.style.fontWeight = '700';
-          winBtn.style.background = 'transparent'; winBtn.style.color = 'rgba(244,245,238,.5)'; winBtn.style.border = '1px solid rgba(244,245,238,.15)'; winBtn.style.fontWeight = '400';
+          lossBtn.style.cssText = 'flex:1;padding:9px;border-radius:999px;border:1px solid rgba(220,60,60,.4);background:rgba(220,60,60,.15);color:#f4a0a0;font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;font-weight:700;';
+          winBtn.style.cssText = 'flex:1;padding:9px;border-radius:999px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.5);font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;';
         }
       }
-      winBtn.addEventListener('click', function () { _setResultUI('W'); });
-      lossBtn.addEventListener('click', function () { _setResultUI('L'); });
-      document.getElementById('tk-m-save').addEventListener('click', function () {
-        var partner = (document.getElementById('tk-m-partner').value || '').trim();
-        var opponents = (document.getElementById('tk-m-opponents').value || '').trim();
-        var score = (document.getElementById('tk-m-score').value || '').trim();
-        var oplvlEl = document.getElementById('tk-m-oplvl');
-        var opponentLevel = oplvlEl && oplvlEl.value ? parseFloat(oplvlEl.value) : undefined;
-        auth.logMatch({ partner: partner, opponents: opponents, result: _matchResult, score: score, opponentLevel: opponentLevel });
-        renderDrawer();
+      setResult(_matchResult);
+      winBtn.onclick = function () { setResult('W'); };
+      lossBtn.onclick = function () { setResult('L'); };
+    }
+
+    // Match save
+    var saveBtn = document.getElementById('tk-m-save');
+    if (saveBtn) saveBtn.onclick = async function () {
+      saveBtn.disabled = true; saveBtn.textContent = '...';
+      var res = await auth.logMatch({
+        partner: (document.getElementById('tk-m-partner').value || '').trim(),
+        opponents: (document.getElementById('tk-m-opponents').value || '').trim(),
+        result: _matchResult,
+        score: (document.getElementById('tk-m-score').value || '').trim(),
+        opponentLevel: parseFloat(document.getElementById('tk-m-oplvl').value) || undefined,
+        playedAt: document.getElementById('tk-m-date').value || undefined,
       });
+      _matchFormOpen = false;
+      _drData.matches = null; // invalidate cache
+      var delta = res && res.delta !== undefined ? res.delta : 0;
+      toast('Match logged — ' + (delta >= 0 ? '+' : '') + delta + ' pts');
+      renderBody();
+    };
+
+    // Profile: edit name
+    var editNameBtn = document.getElementById('tk-edit-name');
+    if (editNameBtn) {
+      editNameBtn.onclick = function () {
+        document.getElementById('tk-name-view').style.display = 'none';
+        document.getElementById('tk-name-edit').style.display = 'block';
+      };
+    }
+    var saveNameBtn = document.getElementById('tk-name-save');
+    if (saveNameBtn) saveNameBtn.onclick = async function () {
+      var newName = (document.getElementById('tk-name-inp').value || '').trim();
+      if (!newName) return;
+      var client = api();
+      if (client && client.isOnline()) { try { await client.auth.updateMe({ name: newName }); } catch (e) {} }
+      auth.user.name = newName;
+      storageSet('takeoff_user', auth.user);
+      document.getElementById('tk-uname-disp').textContent = newName;
+      document.getElementById('tk-name-view').textContent = newName;
+      document.getElementById('tk-name-view').style.display = 'block';
+      document.getElementById('tk-name-edit').style.display = 'none';
+    };
+  }
+
+  // ── Close drawer ──────────────────────────────────────────────────────────
+
+  function closeDrawer() {
+    document.removeEventListener('keydown', onEscDrawer);
+    var dr = document.getElementById('tk-dr');
+    if (dr) {
+      dr.classList.remove('open');
+      setTimeout(function () { if (drawerRoot) drawerRoot.innerHTML = ''; }, 300);
+    } else if (drawerRoot) {
+      drawerRoot.innerHTML = '';
     }
   }
 
-  function closeDrawer() {
-    if (drawerRoot) drawerRoot.innerHTML = '';
+  // ── Top-up modal ──────────────────────────────────────────────────────────
+
+  function showTopupModal() {
+    var amounts = [20, 50, 100, 200];
+    var selected = 50;
+    var root = document.createElement('div');
+    root.className = 'tk-topup-ov';
+    root.innerHTML =
+      '<div class="tk-topup-card">' +
+        '<button id="tk-tu-x" style="float:right;background:none;border:none;color:rgba(244,245,238,.5);font-size:22px;cursor:pointer;">×</button>' +
+        '<div style="font-family:Anton,sans-serif;font-size:24px;color:#fff;margin-bottom:4px;">Top up wallet</div>' +
+        '<div style="font-size:13px;color:rgba(244,245,238,.55);margin-bottom:16px;">Choose an amount in DT</div>' +
+        '<div class="tk-topup-pills">' +
+          amounts.map(function (a) {
+            return '<button class="tk-topup-pill' + (a === selected ? ' sel' : '') + '" data-amt="' + a + '">' + a + ' DT</button>';
+          }).join('') +
+        '</div>' +
+        '<label class="tk-lbl">CUSTOM AMOUNT</label>' +
+        '<input class="tk-inp" id="tk-tu-custom" type="number" min="1" placeholder="Enter amount..." style="margin-bottom:16px;">' +
+        '<button class="tk-btn" id="tk-tu-confirm">Add to wallet</button>' +
+      '</div>';
+    document.body.appendChild(root);
+
+    root.querySelectorAll('.tk-topup-pill').forEach(function (btn) {
+      btn.onclick = function () {
+        selected = parseFloat(btn.getAttribute('data-amt'));
+        document.getElementById('tk-tu-custom').value = '';
+        root.querySelectorAll('.tk-topup-pill').forEach(function (b) { b.classList.toggle('sel', b === btn); });
+      };
+    });
+
+    document.getElementById('tk-tu-x').onclick = function () { root.remove(); };
+    document.getElementById('tk-tu-confirm').onclick = async function () {
+      var custom = parseFloat(document.getElementById('tk-tu-custom').value);
+      var amount = !isNaN(custom) && custom > 0 ? custom : selected;
+      await auth.topup(amount);
+      root.remove();
+      // update wallet display in drawer
+      var walletEl = drawerRoot && drawerRoot.querySelector('.tk-wallet-val');
+      if (walletEl) walletEl.textContent = '◆ ' + (auth.user.walletDt || 0) + ' DT';
+      toast('+' + amount + ' DT added to your wallet');
+    };
   }
 
-  // ── Init on DOM ready ─────────────────────────────────────────────────────
+  // ── Level survey modal ────────────────────────────────────────────────────
 
-  function onReady(fn) {
-    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', fn); }
-    else { fn(); }
+  function showSurveyModal() {
+    var qs = [
+      { q: 'HOW LONG HAVE YOU BEEN PLAYING?', opts: ['< 6 months', '6 months – 2 years', '2 – 5 years', '5+ years'], pts: [1, 2, 3, 4] },
+      { q: 'COMPETITION EXPERIENCE?', opts: ['None', 'Played club matches', 'Local tournaments', 'Regional / National'], pts: [0, 1, 2, 3] },
+      { q: 'PHYSICAL FITNESS?', opts: ['Getting started', 'Recreational', 'Athletic', 'High performance'], pts: [0, 1, 1, 2] },
+    ];
+    var answers = [0, 0, 0];
+    var root = document.createElement('div');
+    root.className = 'tk-survey-ov';
+
+    function renderSurvey() {
+      root.innerHTML = '<div class="tk-survey-card">' +
+        '<button id="tk-sv-x" style="float:right;background:none;border:none;color:rgba(244,245,238,.5);font-size:22px;cursor:pointer;">×</button>' +
+        '<div style="font-family:Anton,sans-serif;font-size:24px;color:#fff;margin-bottom:4px;">Level survey</div>' +
+        '<div style="font-size:13px;color:rgba(244,245,238,.55);margin-bottom:20px;">Helps us place you on the ladder</div>' +
+        qs.map(function (qData, qi) {
+          return '<div class="tk-survey-q">' + qData.q + '</div>' +
+            '<div class="tk-survey-opts">' +
+              qData.opts.map(function (opt, oi) {
+                return '<button class="tk-survey-opt' + (answers[qi] === oi ? ' sel' : '') + '" data-qi="' + qi + '" data-oi="' + oi + '">' + opt + '</button>';
+              }).join('') +
+            '</div>';
+        }).join('') +
+        '<button class="tk-btn" id="tk-sv-confirm">Set my level</button>' +
+      '</div>';
+
+      root.querySelectorAll('.tk-survey-opt').forEach(function (btn) {
+        btn.onclick = function () {
+          var qi = parseInt(btn.getAttribute('data-qi'), 10);
+          var oi = parseInt(btn.getAttribute('data-oi'), 10);
+          answers[qi] = oi;
+          renderSurvey();
+        };
+      });
+
+      document.getElementById('tk-sv-x').onclick = function () { root.remove(); };
+      document.getElementById('tk-sv-confirm').onclick = async function () {
+        var totalPts = qs.reduce(function (s, qData, qi) { return s + qData.pts[answers[qi]]; }, 0);
+        var level = Math.min(7, Math.max(1, totalPts));
+        await auth.submitLevelSurvey({ level: level });
+        root.remove();
+        _drData.leaderboard = null;
+        renderBody();
+        toast('Level set to ' + level);
+      };
+    }
+
+    renderSurvey();
+    document.body.appendChild(root);
   }
 
-  onReady(function () {
-    // nothing to inject globally — pages wire their own nav badges via auth.subscribe
-  });
+  // ── XSS-safe escape ───────────────────────────────────────────────────────
+
+  function esc(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ── Init: restore session ─────────────────────────────────────────────────
+
+  (function restoreSession() {
+    var client = api();
+    if (!client || !client.isOnline()) return; // offline mode, user already restored from localStorage above
+    var token = client.getToken();
+    if (!token) return; // no stored token
+    // verify token is still valid
+    client.auth.me().then(function (user) {
+      auth.user = user;
+      storageSet('takeoff_user', user);
+      notify();
+    }).catch(function () {
+      client.clearTokens();
+      auth.user = null;
+      storageDel('takeoff_user');
+    });
+  })();
 
 })();

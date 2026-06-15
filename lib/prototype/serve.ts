@@ -26,7 +26,12 @@ const mimeTypes: Record<string, string> = {
 
 export async function prototypeHtml(fileName: keyof typeof htmlRoutes) {
   const filePath = path.join(prototypeRoot, fileName)
-  const html = await fs.readFile(filePath, 'utf8')
+  let html = await fs.readFile(filePath, 'utf8')
+
+  // Inject API base URL before all other scripts
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+  const apiScript = `<script>window.TAKEOFF_API_URL="${apiUrl}";</script>`
+  html = html.replace('<script src="./support.js"></script>', apiScript + '\n<script src="./support.js"></script>')
 
   return new Response(rewritePrototypeHtml(html), {
     headers: {
@@ -65,6 +70,7 @@ function rewritePrototypeHtml(html: string) {
   return out
     .replaceAll('./support.js', '/prototype-assets/support.js')
     .replaceAll('./image-slot.js', '/prototype-assets/image-slot.js')
+    .replaceAll('./api-client.js', '/prototype-assets/api-client.js')
     .replaceAll('./auth.js', '/prototype-assets/auth.js')
     .replaceAll('./menu.js', '/prototype-assets/menu.js')
     .replaceAll('./cart.js', '/prototype-assets/cart.js')
