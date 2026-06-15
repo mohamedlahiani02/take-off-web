@@ -17,6 +17,7 @@
 
   // Checkout persistent state
   var _step = 1;
+  var _orderId = null;
   var _d = { name:'', email:'', phone:'', delivery:'pickup', address:'', city:'Tunis', notes:'', pay:'cod', d17:'', cardNum:'', cardExp:'', cardCvc:'' };
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -301,7 +302,7 @@
     var inner = '';
 
     if (_step === 'success') {
-      var orderId = 'TKO-'+Date.now().toString(36).toUpperCase();
+      var orderId = _orderId || ('TKO-'+Date.now().toString(36).toUpperCase());
       var delivInfo = _d.delivery==='pickup'
         ? 'Pick up at Take Off Club · Ready in 24–48h'
         : esc(_d.address)+', '+esc(_d.city)+(_d.notes?' ('+esc(_d.notes)+')':'');
@@ -514,16 +515,38 @@
 
     if (_step === 4) {
       document.getElementById('tk-back').addEventListener('click', function(){ _step=3; renderCheckout(); });
-      document.getElementById('tk-next').addEventListener('click', function(){
-        var u2=window.takeOffAuth&&window.takeOffAuth.user;
-        var its=cart.getItems();
-        if (u2) {
-          its.forEach(function(it){ if(it.kind==='pack'&&it._packMeta&&window.takeOffAuth.purchasePack) window.takeOffAuth.purchasePack(it._packMeta); });
-          var oid='TKO-'+Date.now().toString(36).toUpperCase();
-          if (window.takeOffAuth.recordOrder) window.takeOffAuth.recordOrder({id:oid,items:its,total:cart.getTotal(),delivery:_d.delivery,address:_d.delivery==='deliver'?{addr:_d.address,city:_d.city,notes:_d.notes}:null,pay:_d.pay,ts:new Date().toISOString()});
+      document.getElementById('tk-next').addEventListener('click', async function(){
+        var btn = document.getElementById('tk-next');
+        if (btn) { btn.disabled = true; btn.textContent = '...'; }
+        var its = cart.getItems();
+
+        // purchase any packs locally (packs backend module is TODO)
+        its.forEach(function(it){ if(it.kind==='pack'&&it._packMeta&&window.takeOffAuth&&window.takeOffAuth.purchasePack) window.takeOffAuth.purchasePack(it._packMeta); });
+
+        var client = window.takeOffApi;
+        if (client && client.isOnline()) {
+          try {
+            var payload = {
+              deliveryMethod: _d.delivery === 'pickup' ? 'PICKUP' : 'DELIVER',
+              deliveryAddress: _d.delivery === 'deliver' ? { addr: _d.address, city: _d.city, notes: _d.notes || '' } : null,
+              paymentMethod: (_d.pay || 'cod').toUpperCase(),
+              contact: { name: _d.name, email: _d.email, phone: _d.phone },
+              items: its.filter(function(it){ return it.kind !== 'pack'; }).map(function(it){
+                return { productName: it.name || it.n, qty: it.qty || 1, size: it.size || null, unitPriceDt: it.price || 0 };
+              }),
+            };
+            var order = await client.orders.place(payload);
+            _orderId = order && order.orderRef ? order.orderRef : ('TKO-' + Date.now().toString(36).toUpperCase());
+          } catch (e) {
+            // fall through to offline success
+            _orderId = 'TKO-' + Date.now().toString(36).toUpperCase();
+          }
+        } else {
+          _orderId = 'TKO-' + Date.now().toString(36).toUpperCase();
         }
+
         cart.clear();
-        _step='success'; renderCheckout();
+        _step = 'success'; renderCheckout();
       });
     }
   }
