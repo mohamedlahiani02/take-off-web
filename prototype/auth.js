@@ -12,6 +12,14 @@
 
   var api = function () { return window.takeOffApi || null; };
 
+  // Normalize a Tunisian phone to canonical +216XXXXXXXX (accepts spaces, 00216/216, bare 8 digits)
+  function normalizePhone(input) {
+    var d = String(input || '').trim().replace(/[\s-]/g, '').replace(/^\+/, '');
+    if (d.indexOf('00216') === 0) d = d.slice(5);
+    else if (d.indexOf('216') === 0) d = d.slice(3);
+    return (/^[0-9]{8}$/.test(d)) ? '+216' + d : String(input || '').trim();
+  }
+
   // ── Pub/sub ───────────────────────────────────────────────────────────────
 
   var _subs = [];
@@ -29,24 +37,28 @@
       return function () { _subs = _subs.filter(function (s) { return s !== fn; }); };
     },
 
-    login: async function (email, password) {
+    login: async function (identifier, password) {
+      var id = (identifier || '').trim();
       var client = api();
       if (client && client.isOnline()) {
         try {
-          var data = await client.auth.login({ email: email, password: password });
+          var data = await client.auth.login({ identifier: id, password: password });
           auth.user = data.user;
           storageSet('takeoff_user', data.user);
           notify();
           return { ok: true };
         } catch (e) {
-          return { ok: false, error: e.message || 'Invalid email or password.' };
+          return { ok: false, error: e.message || 'Invalid credentials.' };
         }
       }
-      // offline fallback (local dev without backend)
+      // offline fallback (local dev without backend): match by email or phone
       var users = storageGet('takeOffUsers') || {};
-      if (!users[email]) return { ok: false, error: 'No account found. Create one first.' };
-      if (users[email].password !== password) return { ok: false, error: 'Wrong password.' };
-      auth.user = users[email];
+      var key = id.toLowerCase();
+      var u = users[key] || Object.keys(users).map(function (k) { return users[k]; })
+        .filter(function (x) { return x.phone === id || x.email === key; })[0];
+      if (!u) return { ok: false, error: 'No account found. Create one first.' };
+      if (u.password !== password) return { ok: false, error: 'Wrong password.' };
+      auth.user = u;
       storageSet('takeoff_user', auth.user);
       notify();
       return { ok: true };
@@ -55,13 +67,15 @@
     register: async function (opts) {
       var email = (opts.email || '').trim().toLowerCase();
       var name = (opts.name || '').trim();
+      var phone = normalizePhone(opts.phone || '');
       var password = opts.password || '';
       var tracks = opts.tracks || ['padel'];
       if (!email || !name || !password) return { ok: false, error: 'All fields required.' };
+      if (!/^\+216[0-9]{8}$/.test(phone)) return { ok: false, error: 'Enter a valid phone (+216 followed by 8 digits).' };
       var client = api();
       if (client && client.isOnline()) {
         try {
-          var data = await client.auth.register({ email: email, name: name, password: password, tracks: tracks });
+          var data = await client.auth.register({ email: email, name: name, phone: phone, password: password, tracks: tracks });
           auth.user = data.user;
           storageSet('takeoff_user', data.user);
           notify();
@@ -73,7 +87,7 @@
       // offline fallback
       var users = storageGet('takeOffUsers') || {};
       if (users[email]) return { ok: false, error: 'Account already exists. Sign in instead.' };
-      var u = { email: email, name: name, password: password, tracks: tracks, walletDt: 0, createdAt: new Date().toISOString(), padelLevel: 1, points: 100 };
+      var u = { email: email, name: name, phone: phone, password: password, tracks: tracks, walletDt: 0, createdAt: new Date().toISOString(), padelLevel: 1, points: 100 };
       users[email] = u;
       storageSet('takeOffUsers', users);
       auth.user = u;
@@ -310,7 +324,10 @@
         '<p class="tk-sub" style="text-align:center;">' + (isReg ? 'Join the club — padel, pilates, and more.' : 'Welcome back.') + '</p>' +
         '<div id="tk-modal-err" style="display:none;" class="tk-err"></div>' +
         (isReg ? '<label class="tk-lbl">YOUR NAME</label><input class="tk-inp" id="tk-f-name" type="text" placeholder="Full name">' : '') +
-        '<label class="tk-lbl">EMAIL</label><input class="tk-inp" id="tk-f-email" type="email" placeholder="your@email.com">' +
+        (isReg
+          ? '<label class="tk-lbl">EMAIL</label><input class="tk-inp" id="tk-f-email" type="email" placeholder="your@email.com">' +
+            '<label class="tk-lbl">PHONE</label><input class="tk-inp" id="tk-f-phone" type="tel" inputmode="numeric" placeholder="+216 XX XXX XXX">'
+          : '<label class="tk-lbl">EMAIL OR PHONE</label><input class="tk-inp" id="tk-f-email" type="text" placeholder="your@email.com or +216...">') +
         '<label class="tk-lbl">PASSWORD</label><input class="tk-inp" id="tk-f-pass" type="password" placeholder="••••••••">' +
         (isReg ? '<label class="tk-lbl">I\'M INTO</label><div class="tk-checks"><label class="tk-check"><input type="checkbox" id="tk-tr-pad" checked> Padel</label><label class="tk-check"><input type="checkbox" id="tk-tr-pil"> Pilates</label></div>' : '') +
         '<button class="tk-btn" id="tk-modal-sub">' + (isReg ? 'Create account' : 'Sign in') + '</button>' +
@@ -345,10 +362,11 @@
     var result;
     if (modalMode === 'register') {
       var name = (document.getElementById('tk-f-name') || {}).value || '';
+      var phone = (document.getElementById('tk-f-phone') || {}).value || '';
       var tracks = [];
       if (document.getElementById('tk-tr-pad') && document.getElementById('tk-tr-pad').checked) tracks.push('padel');
       if (document.getElementById('tk-tr-pil') && document.getElementById('tk-tr-pil').checked) tracks.push('pilates');
-      result = await auth.register({ email: email, name: name, password: pass, tracks: tracks });
+      result = await auth.register({ email: email, name: name, phone: phone, password: pass, tracks: tracks });
     } else {
       result = await auth.login(email, pass);
     }
