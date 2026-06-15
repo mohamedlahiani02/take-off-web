@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="./image-slot.js"></script>
+<script src="./api-client.js" defer></script>
 <script src="./auth.js" defer></script>
 <script src="./menu.js" defer></script>
 <script src="./cart.js" defer></script>
@@ -303,7 +304,15 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   loaderRef = React.createRef();
-  state = { openCoachIdx: null, _authTick: 0, _cartTick: 0 };
+  state = {
+    openCoachIdx: null,
+    _authTick: 0,
+    _cartTick: 0,
+    _formSent: false,
+    _submitting: false,
+    _lessonTypes: { individual: false, group: false },
+    _availGrid: {},   // key: "Mon|Morning" → true
+  };
 
   componentDidMount() {
     setTimeout(() => { const l = this.loaderRef.current; if (l) { l.style.opacity = '0'; l.style.visibility = 'hidden'; } }, 1500);
@@ -350,6 +359,71 @@ class Component extends DCLogic {
     const coachModalOpen = openIdx !== null && openIdx >= 0 ? true : null;
     const modal = (openIdx !== null && openIdx >= 0) ? raw[openIdx] : { name: '', role: '', bio: '', specs: [], achievements: [], slot: 'coa-coach-1' };
 
+    // ── Coaching form ───────────────────────────────────────────────────────
+    const { _formSent, _submitting, _lessonTypes, _availGrid } = this.state;
+
+    const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const SLOTS = ['Morning','Noon','Afternoon','Evening'];
+
+    const coursTypes = [
+      { label: 'Individual', key: 'individual' },
+      { label: 'Group',      key: 'group' },
+    ].map(ct => ({
+      label: ct.label,
+      bg: _lessonTypes[ct.key] ? '#c4ef3f' : 'transparent',
+      fg: _lessonTypes[ct.key] ? '#0a1733' : '#c4ef3f',
+      toggle: () => this.setState(s => ({ _lessonTypes: Object.assign({}, s._lessonTypes, { [ct.key]: !s._lessonTypes[ct.key] }) })),
+    }));
+
+    const availDays = DAYS.map(day => ({
+      label: day.slice(0, 3).toUpperCase(),
+      cells: SLOTS.map(slot => {
+        const k = day + '|' + slot;
+        const on = !!_availGrid[k];
+        return {
+          bg: on ? '#c4ef3f' : 'transparent',
+          check: on ? '✓' : '',
+          toggle: () => this.setState(s => {
+            const g = Object.assign({}, s._availGrid);
+            if (g[k]) delete g[k]; else g[k] = true;
+            return { _availGrid: g };
+          }),
+        };
+      }),
+    }));
+
+    const submitCoachForm = async () => {
+      if (_submitting) return;
+      const nom    = (document.getElementById('cf-nom')    || {}).value || '';
+      const prenom = (document.getElementById('cf-prenom') || {}).value || '';
+      const tel    = (document.getElementById('cf-tel')    || {}).value || '';
+      const email  = (document.getElementById('cf-email')  || {}).value || '';
+      if (!nom.trim() || !tel.trim()) {
+        alert('Please fill in your name and phone number.');
+        return;
+      }
+      this.setState({ _submitting: true });
+      const lang = (() => { const r = document.querySelector('input[name="cf-lang"]:checked'); return r ? r.value : 'fr'; })();
+      const payload = {
+        name: (prenom + ' ' + nom).trim(),
+        phone: tel,
+        email: email,
+        lessonTypes: Object.keys(_lessonTypes).filter(k => _lessonTypes[k]),
+        availabilityGrid: Object.keys(_availGrid),
+        availabilityNotes: (document.getElementById('cf-dispos') || {}).value || '',
+        groupDetails: (document.getElementById('cf-groupe') || {}).value || '',
+        level: (document.getElementById('cf-niveau') || {}).value || 'NA',
+        language: lang,
+        motivations: (document.getElementById('cf-pourquoi') || {}).value || '',
+        notes: (document.getElementById('cf-info') || {}).value || '',
+      };
+      const client = window.takeOffApi;
+      if (client && client.isOnline()) {
+        try { await client.coaching.submit(payload); } catch (e) {}
+      }
+      this.setState({ _formSent: true, _submitting: false });
+    };
+
     return {
       loaderRef: this.loaderRef,
       coaches,
@@ -361,10 +435,18 @@ class Component extends DCLogic {
       openTakeOffMenu: () => window.takeOffMenu && window.takeOffMenu.open('padel'),
       authUser: authUser ? true : null,
       noAuthUser: authUser ? null : true,
-      walletBal: authUser ? (authUser.wallet || 0) : 0,
+      walletBal: authUser ? (authUser.walletDt || authUser.wallet || 0) : 0,
       userInitial: authUser ? (authUser.name || authUser.email || '?')[0].toUpperCase() : '',
       openAccount: () => window.takeOffAuth && window.takeOffAuth.openAccount(),
       openLogin: () => window.takeOffAuth && window.takeOffAuth.openLogin(),
+      // coaching form
+      coachFormSubmitted: _formSent ? true : null,
+      coachFormNotSubmitted: _formSent ? null : true,
+      coursTypes,
+      availDays,
+      availSlots: SLOTS,
+      showGroupField: _lessonTypes.group ? true : null,
+      submitCoachForm,
     };
   }
 }
