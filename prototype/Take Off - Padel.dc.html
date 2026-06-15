@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="./image-slot.js"></script>
+<script src="./api-client.js" defer></script>
 <script src="./auth.js" defer></script>
 <script src="./menu.js" defer></script>
 <script src="./cart.js" defer></script>
@@ -50,12 +51,11 @@
     <div style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
       <div onClick="{{ openTakeOffMenu }}" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:rgba(244,245,238,.85);">
         <div style="display:flex; flex-direction:column; gap:4px;"><span style="width:20px; height:2px; background:#c4ef3f;"></span><span style="width:20px; height:2px; background:#c4ef3f;"></span></div>
-        MENU
+        MORE
       </div>
       <a href="#book" style="color:rgba(244,245,238,.75);">BOOK</a>
-      <a href="#play" style="color:rgba(244,245,238,.75);">PLAY</a>
-      <a href="#coaches" style="color:rgba(244,245,238,.75);">COACHES</a>
-      <a href="#shop" style="color:rgba(244,245,238,.75);">SHOP</a>
+      <a href="Take Off - Coaches.dc.html" style="color:rgba(244,245,238,.75);">COACHING</a>
+      <a href="Take Off - Store.dc.html" style="color:rgba(244,245,238,.75);">SHOP</a>
       <a href="#plans" style="color:rgba(244,245,238,.75);">PLANS</a>
       <div onClick="{{ openCart }}" style="display:flex; align-items:center; gap:8px; padding:9px 16px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; letter-spacing:.08em; cursor:pointer;">CART · {{ cartCount }}</div>
       <sc-if value="{{ authUser }}" hint-placeholder-val="">
@@ -83,7 +83,6 @@
         <p style="margin:26px 0 0; font-size:clamp(16px,1.4vw,21px); line-height:1.5; color:rgba(244,245,238,.82); max-width:480px; animation:upP .8s .45s both;">Two pro courts under the lights. Grab your crew, book in seconds, bring the noise.</p>
         <div style="margin-top:34px; display:flex; gap:14px; flex-wrap:wrap; animation:upP .8s .6s both;">
           <a href="#book" style="display:inline-flex; align-items:center; gap:14px; padding:16px 16px 16px 28px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:16px;" class="lift">Book a court <span style="display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
-          <a href="#play" style="display:inline-flex; align-items:center; padding:16px 28px; border-radius:999px; border:1px solid rgba(244,245,238,.35); color:#fff; font-weight:600; font-size:16px;" class="lift">Explore play</a>
         </div>
       </div>
       <div style="display:flex; flex-direction:column; gap:20px; animation:upP .8s .7s both; max-width:340px;">
@@ -232,6 +231,23 @@
         </div>
       </sc-for>
     </div>
+  </div>
+
+  <!-- ░ PARTNERS ░ -->
+  <div id="partenaires" style="padding:9vh 5vw; background:#eceadf; color:#0a1733;">
+    <div style="text-align:center; margin-bottom:42px;">
+      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16; margin-bottom:14px;">03 — OUR PARTNERS</div>
+      <h2 class="anton" style="margin:0; font-size:clamp(36px,5.5vw,76px); line-height:.9;">Trusted by</h2>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
+      <sc-for list="{{ partners }}" as="pt" hint-placeholder-count="8">
+        <div class="lift" style="background:#dddbd0; border-radius:14px; height:120px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
+          <image-slot id="{{ pt.slot }}" placeholder="Partner logo" style="position:absolute; inset:0; width:100%; height:100%; filter:grayscale(1) opacity(.55); transition:filter .3s;"></image-slot>
+          <div style="position:relative; z-index:1; font-family:'Space Mono'; font-size:11px; letter-spacing:.14em; color:rgba(10,23,51,.4);">{{ pt.name }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="text-align:center; font-family:'Space Mono'; font-size:11px; letter-spacing:.12em; color:rgba(10,23,51,.45);">Want to become a partner? Contact the club.</div>
   </div>
 
   <!-- ░ TOURNAMENTS ░ -->
@@ -409,6 +425,9 @@
         </div>
       </sc-for>
     </div>
+    <div style="margin-top:36px; text-align:center;">
+      <a href="Take Off - Store.dc.html" style="display:inline-flex; align-items:center; gap:12px; padding:15px 16px 15px 28px; border-radius:999px; background:#0a1733; color:#c4ef3f; font-weight:700; font-size:15px;" class="lift">Explore all products <span style="display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:#c4ef3f; color:#0a1733;">↗</span></a>
+    </div>
   </div>
 
   <!-- ░ PACKS ░ -->
@@ -438,167 +457,6 @@
         </div>
       </sc-for>
     </div>
-  </div>
-
-  <!-- ░ COACHING FORM ░ -->
-  <div id="coaching-form" style="padding:9vh 5vw; background:#0a1733;">
-    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">05 — COACHING INQUIRY</div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:start; margin-bottom:48px;">
-      <div>
-        <h2 class="anton" style="margin:0 0 18px; font-size:clamp(36px,5.5vw,78px); line-height:.9; color:#fff;">Envie de progresser<br>au padel<span style="color:#c4ef3f;">?</span></h2>
-        <p style="font-size:15px; line-height:1.65; color:rgba(244,245,238,.65); margin:0;">Nos coachs proposent des cours individuels et en groupe, sur rendez-vous. En semaine, les créneaux sont disponibles de 9h à 17h30. Le week-end, de 9h à midi et de 14h à 17h30. Pendant l'été, les cours se déroulent tôt le matin ou en soirée après 18h pour votre confort. Remplissez le formulaire — nous vous recontactons sous 24h par téléphone ou WhatsApp.</p>
-      </div>
-      <div>
-        <div style="background:rgba(255,255,255,.04); border:1px solid rgba(196,239,63,.15); border-radius:16px; padding:20px;">
-          <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:#c4ef3f; margin-bottom:8px;">CONTACT DIRECT</div>
-          <div class="anton" style="font-size:28px; color:#fff; margin-bottom:6px;">+216 27 314 100</div>
-          <div style="font-size:13px; color:rgba(244,245,238,.55);">Téléphone & WhatsApp · Lun–Dim 7h–23h</div>
-        </div>
-      </div>
-    </div>
-
-    <sc-if value="{{ coachFormSubmitted }}" hint-placeholder-val="">
-      <div style="background:rgba(196,239,63,.1); border:1px solid rgba(196,239,63,.3); border-radius:18px; padding:40px; text-align:center;">
-        <div style="font-size:48px; margin-bottom:18px;">✓</div>
-        <div class="anton" style="font-size:32px; color:#c4ef3f; margin-bottom:10px;">Merci !</div>
-        <div style="font-size:15px; color:rgba(244,245,238,.7); line-height:1.6;">Nous vous recontactons très vite.<br><span style="color:#c4ef3f;">+216 27 314 100</span> · WhatsApp disponible.</div>
-      </div>
-    </sc-if>
-
-    <sc-if value="{{ coachFormNotSubmitted }}" hint-placeholder-val="">
-      <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.16); border-radius:22px; padding:32px;">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px;">
-          <div>
-            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">NOM</label>
-            <input id="cf-nom" type="text" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="Ben Ahmed">
-          </div>
-          <div>
-            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">PRÉNOM</label>
-            <input id="cf-prenom" type="text" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="Sami">
-          </div>
-          <div>
-            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">TÉLÉPHONE</label>
-            <input id="cf-tel" type="tel" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="+216 XX XXX XXX">
-            <div style="font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.4); margin-top:5px;">Nous vous contactons par téléphone ou WhatsApp</div>
-          </div>
-          <div>
-            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">EMAIL</label>
-            <input id="cf-email" type="email" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="vous@email.com">
-            <div style="font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.4); margin-top:5px;">Pour la confirmation</div>
-          </div>
-        </div>
-
-        <!-- Type de cours -->
-        <div style="margin-top:20px;">
-          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:10px;">TYPE DE COURS SOUHAITÉ</label>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <sc-for list="{{ coursTypes }}" as="ct" hint-placeholder-count="2">
-              <div onClick="{{ ct.toggle }}" style="padding:9px 18px; border-radius:999px; cursor:pointer; border:1px solid rgba(196,239,63,.4); background:{{ ct.bg }}; color:{{ ct.fg }}; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em; transition:all .15s;">{{ ct.label }}</div>
-            </sc-for>
-          </div>
-        </div>
-
-        <!-- Groupe pré-formé (sc-if) -->
-        <sc-if value="{{ showGroupField }}" hint-placeholder-val="">
-          <div style="margin-top:16px;">
-            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">GROUPE PRÉ-FORMÉ (noms, niveau)</label>
-            <textarea id="cf-groupe" rows="3" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Ex: Amine (niveau 3), Yassine (niveau 2)..."></textarea>
-          </div>
-        </sc-if>
-
-        <!-- Disponibilités grid -->
-        <div style="margin-top:20px;">
-          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:12px;">DISPONIBILITÉS</label>
-          <div style="overflow-x:auto;">
-            <table style="border-collapse:collapse; font-size:12px; font-family:'Space Grotesk',sans-serif; min-width:420px;">
-              <thead>
-                <tr>
-                  <th style="padding:8px 12px; font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; color:rgba(244,245,238,.4); text-align:left; font-weight:400;"></th>
-                  <sc-for list="{{ availSlots }}" as="sl" hint-placeholder-count="4">
-                    <th style="padding:8px 10px; font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.5); text-align:center; font-weight:400; white-space:nowrap;">{{ sl }}</th>
-                  </sc-for>
-                </tr>
-              </thead>
-              <tbody>
-                <sc-for list="{{ availDays }}" as="ad" hint-placeholder-count="7">
-                  <tr>
-                    <td style="padding:8px 12px; font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.7); white-space:nowrap;">{{ ad.label }}</td>
-                    <sc-for list="{{ ad.cells }}" as="cell" hint-placeholder-count="4">
-                      <td style="padding:6px 10px; text-align:center;">
-                        <div onClick="{{ cell.toggle }}" style="width:24px; height:24px; border-radius:6px; border:1px solid rgba(196,239,63,.35); background:{{ cell.bg }}; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; color:#0a1733; margin:0 auto; transition:all .15s;">{{ cell.check }}</div>
-                      </td>
-                    </sc-for>
-                  </tr>
-                </sc-for>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- More fields -->
-        <div style="margin-top:16px;">
-          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">PRÉCISIONS DISPONIBILITÉS</label>
-          <textarea id="cf-dispos" rows="2" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Ex: libre le matin en semaine sauf mercredi..."></textarea>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px; margin-top:16px;">
-          <div>
-            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">NIVEAU PADEL</label>
-            <select id="cf-niveau" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box; appearance:none;">
-              <option value="NA">N/A — aucun sport de raquette</option>
-              <option value="0">0 — Débutant total</option>
-              <option value="1">1 — J'ai essayé quelques fois</option>
-              <option value="2">2 — Joueur occasionnel</option>
-              <option value="3">3 — Joueur régulier</option>
-              <option value="4">4 — Joueur compétitif local</option>
-              <option value="5">5 — Niveau tournoi</option>
-              <option value="6">6 — Semi-pro</option>
-              <option value="7">7 — Pro</option>
-            </select>
-          </div>
-          <div>
-            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">LANGUE PRÉFÉRÉE</label>
-            <div style="display:flex; gap:10px; padding-top:4px;">
-              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:14px; color:#f4f5ee;"><input type="radio" name="cf-lang" value="fr" checked style="accent-color:#c4ef3f;"> Français</label>
-              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:14px; color:#f4f5ee;"><input type="radio" name="cf-lang" value="en" style="accent-color:#c4ef3f;"> English</label>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:16px;">
-          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">POURQUOI PRENDRE DES COURS ?</label>
-          <textarea id="cf-pourquoi" rows="3" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Améliorer mon coup droit, préparer un tournoi, découvrir le padel..."></textarea>
-        </div>
-
-        <div style="margin-top:16px;">
-          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">INFORMATIONS COMPLÉMENTAIRES</label>
-          <textarea id="cf-info" rows="2" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Blessure, contrainte particulière, questions..."></textarea>
-        </div>
-
-        <div style="margin-top:18px; font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.35); line-height:1.6;">
-          Vos données sont utilisées uniquement pour organiser vos cours et vous recontacter. Elles ne sont pas partagées avec des tiers.
-        </div>
-
-        <div onClick="{{ submitCoachForm }}" style="margin-top:22px; padding:15px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:15px; cursor:pointer; display:inline-block;" class="lift">Envoyer la demande →</div>
-      </div>
-    </sc-if>
-  </div>
-
-  <!-- ░ PARTENAIRES ░ -->
-  <div id="partenaires" style="padding:9vh 5vw; background:#eceadf; color:#0a1733;">
-    <div style="text-align:center; margin-bottom:42px;">
-      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16; margin-bottom:14px;">06 — NOS PARTENAIRES</div>
-      <h2 class="anton" style="margin:0; font-size:clamp(36px,5.5vw,76px); line-height:.9;">Avec la confiance de</h2>
-    </div>
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
-      <sc-for list="{{ partners }}" as="pt" hint-placeholder-count="8">
-        <div class="lift" style="background:#dddbd0; border-radius:14px; height:120px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
-          <image-slot id="{{ pt.slot }}" placeholder="Logo partenaire" style="position:absolute; inset:0; width:100%; height:100%; filter:grayscale(1) opacity(.55); transition:filter .3s;"></image-slot>
-          <div style="position:relative; z-index:1; font-family:'Space Mono'; font-size:11px; letter-spacing:.14em; color:rgba(10,23,51,.4);">{{ pt.name }}</div>
-        </div>
-      </sc-for>
-    </div>
-    <div style="text-align:center; font-family:'Space Mono'; font-size:11px; letter-spacing:.12em; color:rgba(10,23,51,.45);">Vous voulez devenir partenaire ? Contactez le club.</div>
   </div>
 
   <!-- ░ CTA ░ -->
