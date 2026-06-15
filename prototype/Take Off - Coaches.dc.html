@@ -51,7 +51,7 @@
         MENU
       </div>
       <a href="Take Off - Padel.dc.html#book" style="color:rgba(244,245,238,.75);">BOOK</a>
-      <a href="Take Off - Padel.dc.html#coaching-form" style="color:rgba(244,245,238,.75);">COACHING</a>
+      <a href="#coaching-form" style="color:rgba(244,245,238,.75);">COACHING</a>
       <a href="Take Off - Store.dc.html" style="color:rgba(244,245,238,.75);">STORE</a>
       <div onClick="{{ openCart }}" style="display:flex; align-items:center; gap:8px; padding:9px 16px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; letter-spacing:.08em; cursor:pointer;">CART · {{ cartCount }}</div>
       <sc-if value="{{ authUser }}" hint-placeholder-val="">
@@ -70,12 +70,12 @@
   <div style="padding:18vh 5vw 9vh; background:#0a1733; position:relative; overflow:hidden;">
     <div style="position:absolute; inset:0; background:radial-gradient(80% 60% at 80% 20%, rgba(43,107,240,.25), transparent 60%); pointer-events:none;"></div>
     <div style="position:relative; z-index:1;">
-      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:22px; animation:upP .7s .2s both;">TAKE OFF CLUB — L'ÉQUIPE DE COACHING</div>
+      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:22px; animation:upP .7s .2s both;">TAKE OFF CLUB — THE COACHING TEAM</div>
       <h1 class="anton" style="margin:0 0 24px; font-size:clamp(56px,10vw,140px); line-height:.86; color:#fff; animation:upP .8s .3s both;">Behind every<br>great match<span style="color:#c4ef3f;">.</span></h1>
-      <p style="max-width:560px; font-size:clamp(16px,1.4vw,20px); line-height:1.55; color:rgba(244,245,238,.72); animation:upP .8s .45s both;">Huit coachs certifiés, des méthodes forged on the world circuit, et une seule mission : vous faire gagner chaque centimètre de terrain. Choisissez votre coach, réservez une session, prenez le jeu en main.</p>
+      <p style="max-width:560px; font-size:clamp(16px,1.4vw,20px); line-height:1.55; color:rgba(244,245,238,.72); animation:upP .8s .45s both;">Eight certified coaches, methods forged on the world circuit, and one mission: help you win every inch of the court. Pick your coach, book a session, take the game into your own hands.</p>
       <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:34px; animation:upP .8s .6s both;">
-        <a href="Take Off - Padel.dc.html#coaching-form" style="display:inline-flex; align-items:center; gap:12px; padding:16px 28px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:16px;" class="lift">Réserver une session ↗</a>
-        <a href="#coaches-grid" style="display:inline-flex; align-items:center; padding:16px 28px; border-radius:999px; border:1px solid rgba(244,245,238,.3); color:#fff; font-weight:600; font-size:16px;" class="lift">Voir les coachs</a>
+        <a href="#coaching-form" style="display:inline-flex; align-items:center; gap:12px; padding:16px 28px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:16px;" class="lift">Book a session ↗</a>
+        <a href="#coaches-grid" style="display:inline-flex; align-items:center; padding:16px 28px; border-radius:999px; border:1px solid rgba(244,245,238,.3); color:#fff; font-weight:600; font-size:16px;" class="lift">Meet the coaches</a>
       </div>
     </div>
   </div>
@@ -135,11 +135,151 @@
     </div>
   </sc-if>
 
+  <!-- ░ COACHING FORM ░ -->
+  <div id="coaching-form" style="padding:9vh 5vw; background:#0a1733;">
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">02 — COACHING INQUIRY</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:start; margin-bottom:48px;">
+      <div>
+        <h2 class="anton" style="margin:0 0 18px; font-size:clamp(36px,5.5vw,78px); line-height:.9; color:#fff;">Want to improve<br>your game<span style="color:#c4ef3f;">?</span></h2>
+        <p style="font-size:15px; line-height:1.65; color:rgba(244,245,238,.65); margin:0;">Our coaches offer individual and group lessons, by appointment. Weekdays slots run from 9am to 5:30pm. Weekends from 9am to noon and 2pm to 5:30pm. In summer, sessions move to early morning or evening after 6pm for your comfort. Fill the form — we'll get back to you within 24h by phone or WhatsApp.</p>
+      </div>
+      <div>
+        <div style="background:rgba(255,255,255,.04); border:1px solid rgba(196,239,63,.15); border-radius:16px; padding:20px;">
+          <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:#c4ef3f; margin-bottom:8px;">DIRECT CONTACT</div>
+          <div class="anton" style="font-size:28px; color:#fff; margin-bottom:6px;">+216 27 314 100</div>
+          <div style="font-size:13px; color:rgba(244,245,238,.55);">Phone & WhatsApp · Mon–Sun 7am–11pm</div>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ coachFormSubmitted }}" hint-placeholder-val="">
+      <div style="background:rgba(196,239,63,.1); border:1px solid rgba(196,239,63,.3); border-radius:18px; padding:40px; text-align:center;">
+        <div style="font-size:48px; margin-bottom:18px;">✓</div>
+        <div class="anton" style="font-size:32px; color:#c4ef3f; margin-bottom:10px;">Request sent!</div>
+        <div style="font-size:15px; color:rgba(244,245,238,.7); line-height:1.6;">We'll be in touch very soon.<br><span style="color:#c4ef3f;">+216 27 314 100</span> · WhatsApp available.</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ coachFormNotSubmitted }}" hint-placeholder-val="">
+      <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.16); border-radius:22px; padding:32px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px;">
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">LAST NAME</label>
+            <input id="cf-nom" type="text" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="Ben Ahmed">
+          </div>
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">FIRST NAME</label>
+            <input id="cf-prenom" type="text" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="Sami">
+          </div>
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">PHONE</label>
+            <input id="cf-tel" type="tel" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="+216 XX XXX XXX">
+            <div style="font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.4); margin-top:5px;">We'll contact you by phone or WhatsApp</div>
+          </div>
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">EMAIL</label>
+            <input id="cf-email" type="email" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="you@email.com">
+            <div style="font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.4); margin-top:5px;">For booking confirmation</div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:10px;">TYPE OF LESSON</label>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <sc-for list="{{ coursTypes }}" as="ct" hint-placeholder-count="2">
+              <div onClick="{{ ct.toggle }}" style="padding:9px 18px; border-radius:999px; cursor:pointer; border:1px solid rgba(196,239,63,.4); background:{{ ct.bg }}; color:{{ ct.fg }}; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em; transition:all .15s;">{{ ct.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ showGroupField }}" hint-placeholder-val="">
+          <div style="margin-top:16px;">
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">PRE-FORMED GROUP (names, levels)</label>
+            <textarea id="cf-groupe" rows="3" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="E.g. Amine (level 3), Yassine (level 2)..."></textarea>
+          </div>
+        </sc-if>
+
+        <div style="margin-top:20px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:12px;">AVAILABILITY</label>
+          <div style="overflow-x:auto;">
+            <table style="border-collapse:collapse; font-size:12px; font-family:'Space Grotesk',sans-serif; min-width:420px;">
+              <thead>
+                <tr>
+                  <th style="padding:8px 12px; font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; color:rgba(244,245,238,.4); text-align:left; font-weight:400;"></th>
+                  <sc-for list="{{ availSlots }}" as="sl" hint-placeholder-count="4">
+                    <th style="padding:8px 10px; font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.5); text-align:center; font-weight:400; white-space:nowrap;">{{ sl }}</th>
+                  </sc-for>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ availDays }}" as="ad" hint-placeholder-count="7">
+                  <tr>
+                    <td style="padding:8px 12px; font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.7); white-space:nowrap;">{{ ad.label }}</td>
+                    <sc-for list="{{ ad.cells }}" as="cell" hint-placeholder-count="4">
+                      <td style="padding:6px 10px; text-align:center;">
+                        <div onClick="{{ cell.toggle }}" style="width:24px; height:24px; border-radius:6px; border:1px solid rgba(196,239,63,.35); background:{{ cell.bg }}; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; color:#0a1733; margin:0 auto; transition:all .15s;">{{ cell.check }}</div>
+                      </td>
+                    </sc-for>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">AVAILABILITY NOTES</label>
+          <textarea id="cf-dispos" rows="2" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="E.g. free weekday mornings except Wednesday..."></textarea>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px; margin-top:16px;">
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">PADEL LEVEL</label>
+            <select id="cf-niveau" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box; appearance:none;">
+              <option value="NA">N/A — no racket sport background</option>
+              <option value="0">0 — Complete beginner</option>
+              <option value="1">1 — Tried a few times</option>
+              <option value="2">2 — Occasional player</option>
+              <option value="3">3 — Regular player</option>
+              <option value="4">4 — Competitive local player</option>
+              <option value="5">5 — Tournament level</option>
+              <option value="6">6 — Semi-pro</option>
+              <option value="7">7 — Pro</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">PREFERRED LANGUAGE</label>
+            <div style="display:flex; gap:10px; padding-top:4px;">
+              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:14px; color:#f4f5ee;"><input type="radio" name="cf-lang" value="fr" checked style="accent-color:#c4ef3f;"> Français</label>
+              <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:14px; color:#f4f5ee;"><input type="radio" name="cf-lang" value="en" style="accent-color:#c4ef3f;"> English</label>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">WHY DO YOU WANT COACHING?</label>
+          <textarea id="cf-pourquoi" rows="3" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Improve my backhand, prepare for a tournament, discover padel..."></textarea>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">ADDITIONAL INFORMATION</label>
+          <textarea id="cf-info" rows="2" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="Injury, specific constraints, questions..."></textarea>
+        </div>
+
+        <div style="margin-top:18px; font-family:'Space Mono'; font-size:9px; letter-spacing:.1em; color:rgba(244,245,238,.35); line-height:1.6;">
+          Your data is used solely to organise your lessons and contact you. It is never shared with third parties.
+        </div>
+
+        <div onClick="{{ submitCoachForm }}" style="margin-top:22px; padding:15px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:15px; cursor:pointer; display:inline-block;" class="lift">Send request →</div>
+      </div>
+    </sc-if>
+  </div>
+
   <!-- CTA -->
   <div style="padding:11vh 5vw; background:#0f1f44; text-align:center;">
-    <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.28em; color:#c4ef3f; margin-bottom:18px;">PRÊT À PROGRESSER ?</div>
-    <h2 class="anton" style="margin:0 0 24px; font-size:clamp(40px,7vw,100px); line-height:.88; color:#fff;">Pas encore décidé ?<br><span style="color:#c4ef3f;">Remplissez le formulaire.</span></h2>
-    <a href="Take Off - Padel.dc.html#coaching-form" style="display:inline-flex; align-items:center; gap:14px; padding:17px 16px 17px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:17px;" class="lift">Demande de coaching <span style="display:grid; place-items:center; width:36px; height:36px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
+    <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.28em; color:#c4ef3f; margin-bottom:18px;">READY TO LEVEL UP?</div>
+    <h2 class="anton" style="margin:0 0 24px; font-size:clamp(40px,7vw,100px); line-height:.88; color:#fff;">Not sure yet?<br><span style="color:#c4ef3f;">Fill the form above.</span></h2>
+    <a href="#coaching-form" style="display:inline-flex; align-items:center; gap:14px; padding:17px 16px 17px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:17px;" class="lift">Coaching inquiry <span style="display:grid; place-items:center; width:36px; height:36px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
   </div>
 
   <!-- FOOTER -->
