@@ -108,7 +108,7 @@
             </div>
             <div style="display:flex; align-items:center; justify-content:space-between;">
               <span class="anton" style="font-size:24px; color:#c4ef3f;">{{ p.price }} DT</span>
-              <div onClick="{{ p.add }}" style="padding:9px 16px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap;" class="lift">+ Add</div>
+              <div onClick="{{ p.add }}" style="padding:9px 16px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap;" class="lift">{{ p.addLabel }}</div>
             </div>
           </div>
         </div>
@@ -125,13 +125,13 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:start;">
           <!-- Image area -->
           <div>
-            <div style="aspect-ratio:1/1; border-radius:18px; overflow:hidden; position:relative; margin-bottom:12px;">
-              <image-slot id="{{ modalProduct.mainSlot }}" placeholder="Product image" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+            <div style="aspect-ratio:1/1; border-radius:18px; overflow:hidden; position:relative; margin-bottom:12px; border:1px solid rgba(196,239,63,.12);">
+              <image-slot id="{{ modalProduct.activeSlot }}" placeholder="Product image" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
             </div>
             <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
               <sc-for list="{{ modalProduct.thumbSlots }}" as="ts" hint-placeholder-count="3">
-                <div style="aspect-ratio:1/1; border-radius:10px; overflow:hidden; position:relative; border:1px solid rgba(196,239,63,.15);">
-                  <image-slot id="{{ ts }}" placeholder="Thumb" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+                <div onClick="{{ ts.pick }}" style="aspect-ratio:1/1; border-radius:10px; overflow:hidden; position:relative; border:{{ ts.border }}; cursor:pointer; transition:border-color .15s;">
+                  <image-slot id="{{ ts.slot }}" placeholder="Thumb" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
                 </div>
               </sc-for>
             </div>
@@ -145,7 +145,12 @@
             <!-- Size selector -->
             <sc-if value="{{ modalProduct.hasSizes }}" hint-placeholder-val="">
               <div style="margin-bottom:20px;">
-                <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:rgba(244,245,238,.55); margin-bottom:10px;">SIZE</div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                  <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:rgba(244,245,238,.55);">SIZE</div>
+                  <sc-if value="{{ needsSizeWarn }}" hint-placeholder-val="">
+                    <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:#ff6b6b;">← Pick a size first</div>
+                  </sc-if>
+                </div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                   <sc-for list="{{ sizeOptions }}" as="sz" hint-placeholder-count="4">
                     <div onClick="{{ sz.pick }}" style="padding:7px 14px; border-radius:8px; cursor:pointer; border:1px solid {{ sz.bd }}; background:{{ sz.bg }}; color:{{ sz.fg }}; font-family:'Space Mono'; font-size:11px; transition:all .15s;">{{ sz.label }}</div>
@@ -195,7 +200,7 @@ class Component extends DCLogic {
   loaderRef = React.createRef();
   state = {
     activeCat: 'all', searchQuery: '', openProductIdx: null,
-    qty: 1, selectedSize: 'M',
+    qty: 1, selectedSize: null, activeThumbIdx: 0,
     _authTick: 0, _cartTick: 0,
   };
 
@@ -203,7 +208,6 @@ class Component extends DCLogic {
     setTimeout(() => { const l = this.loaderRef.current; if (l) { l.style.opacity = '0'; l.style.visibility = 'hidden'; } }, 1500);
     if (window.takeOffAuth) window.takeOffAuth.subscribe(() => this.setState(s => ({ _authTick: s._authTick + 1 })));
     if (window.takeOffCart) window.takeOffCart.subscribe(() => this.setState(s => ({ _cartTick: s._cartTick + 1 })));
-    // Read ?cat= from URL
     try {
       const params = new URLSearchParams(window.location.search);
       const cat = params.get('cat');
@@ -214,28 +218,25 @@ class Component extends DCLogic {
 
   _allProducts() {
     return [
-      { id: 1, name: 'TakeOff Pro Racket', cat: 'rackets', catLabel: 'RACKETS', price: 320, tag: 'BESTSELLER', desc: 'Racket haute performance conçue avec les pros. Balance optimale, cadre carbone, grip anatomique. Disponible en 3 poids.', sizes: true, slot: 'st-prod-1', slot2: 'st-prod-1b', slot3: 'st-prod-1c' },
-      { id: 2, name: 'Overgrip Pack ×3', cat: 'accessories', catLabel: 'ACCESSORIES', price: 24, tag: 'GRIP', desc: 'Trois overgrips ultra-absorbants en coton premium. Compatibles toutes raquettes. Format prédécoupé.', sizes: false, slot: 'st-prod-2', slot2: 'st-prod-2b', slot3: 'st-prod-2c' },
-      { id: 3, name: 'Hand Protector', cat: 'accessories', catLabel: 'ACCESSORIES', price: 18, tag: 'PROTÈGE-MAIN', desc: 'Notre signature protège-main en néoprène 4mm. Maintien parfait, anti-cloques, lavable à 30°.', sizes: true, slot: 'st-prod-3', slot2: 'st-prod-3b', slot3: 'st-prod-3c' },
-      { id: 4, name: 'Pro Balls — Tube', cat: 'accessories', catLabel: 'ACCESSORIES', price: 15, tag: 'NEW', desc: 'Tube de 3 balles pression standard FIP. Rebond constant, durabilité maximale pour les sessions intenses.', sizes: false, slot: 'st-prod-4', slot2: 'st-prod-4b', slot3: 'st-prod-4c' },
-      { id: 5, name: 'Court Racket Bag', cat: 'accessories', catLabel: 'ACCESSORIES', price: 145, tag: 'CARRY', desc: 'Sac raquette 2 compartiments. Poche isotherme pour balles + espace chaussures séparé. Coloris Take Off.', sizes: false, slot: 'st-prod-5', slot2: 'st-prod-5b', slot3: 'st-prod-5c' },
-      { id: 6, name: 'Club Cap', cat: 'lifestyle', catLabel: 'LIFESTYLE', price: 35, tag: 'LIFESTYLE', desc: 'Casquette Take Off snapback en coton bio brossé. Broderie logo avant, bande intérieure éponge.', sizes: false, slot: 'st-prod-6', slot2: 'st-prod-6b', slot3: 'st-prod-6c' },
-      { id: 7, name: 'Grip Socks Studio', cat: 'pilates', catLabel: 'PILATES', price: 28, tag: 'MUST-HAVE', desc: 'Chaussettes antidérapantes pour reformer et mat. Semelle silicone intégrale, maille respirante.', sizes: true, slot: 'st-prod-7', slot2: 'st-prod-7b', slot3: 'st-prod-7c' },
-      { id: 8, name: 'Studio Towel', cat: 'towels', catLabel: 'TOWELS', price: 34, tag: 'SOFT', desc: 'Serviette microfibre 85×45cm. Séchage rapide, ultra-compacte, coloris Take Off exclusif.', sizes: false, slot: 'st-prod-8', slot2: 'st-prod-8b', slot3: 'st-prod-8c' },
-      { id: 9, name: 'Performance Tee', cat: 'padelwear', catLabel: 'PADELWEAR', price: 75, tag: 'NEW', desc: 'T-shirt technique polyester recyclé 200g. Coupe ajustée, gestion de l\'humidité, coutures plates.', sizes: true, slot: 'st-prod-9', slot2: 'st-prod-9b', slot3: 'st-prod-9c' },
-      { id: 10, name: 'Resistance Band Set', cat: 'pilates', catLabel: 'PILATES', price: 45, tag: 'SET DE 3', desc: 'Set 3 élastiques résistance légère/moyenne/forte. Latex naturel, poignées textiles. Idéal Pilates et prépa physique.', sizes: false, slot: 'st-prod-10', slot2: 'st-prod-10b', slot3: 'st-prod-10c' },
-      { id: 11, name: 'Padel Shorts', cat: 'padelwear', catLabel: 'PADELWEAR', price: 89, tag: 'SAVE 15%', desc: 'Short technique 4-way stretch. Poche zippée, ceinture élastique large, longueur genou.', sizes: true, slot: 'st-prod-11', slot2: 'st-prod-11b', slot3: 'st-prod-11c' },
-      { id: 12, name: 'Seamless Leggings', cat: 'pilates', catLabel: 'PILATES', price: 120, tag: 'BESTSELLER', desc: 'Legging sans couture haute compression. Second-skin fit, résistant aux machines, coloris crème exclusif.', sizes: true, slot: 'st-prod-12', slot2: 'st-prod-12b', slot3: 'st-prod-12c' },
-      { id: 13, name: 'Take Off Water Bottle', cat: 'lifestyle', catLabel: 'LIFESTYLE', price: 48, tag: 'ECO', desc: 'Gourde 750ml inox double paroi. Maintien froid 24h/chaud 12h. Logo gravé laser.', sizes: false, slot: 'st-prod-13', slot2: 'st-prod-13b', slot3: 'st-prod-13c' },
-      { id: 14, name: 'Studio Tote Bag', cat: 'lifestyle', catLabel: 'LIFESTYLE', price: 52, tag: 'CARRY', desc: 'Tote bag toile canvas 380g. Anses renforcées, poche intérieure zippée, dimensions 40×38cm.', sizes: false, slot: 'st-prod-14', slot2: 'st-prod-14b', slot3: 'st-prod-14c' },
+      { id: 1,  name: 'TakeOff Pro Racket',    cat: 'rackets',     catLabel: 'RACKETS',     price: 320, tag: 'BESTSELLER', desc: 'High-performance racket designed with the pros. Optimal balance, carbon frame, anatomical grip. Available in 3 weights.',                              sizes: true,  slot: 'st-prod-1',  slot2: 'st-prod-1b',  slot3: 'st-prod-1c'  },
+      { id: 2,  name: 'Overgrip Pack ×3',       cat: 'accessories', catLabel: 'ACCESSORIES', price: 24,  tag: 'GRIP',       desc: 'Three ultra-absorbent premium cotton overgrips. Compatible with all rackets. Pre-cut format.',                                                   sizes: false, slot: 'st-prod-2',  slot2: 'st-prod-2b',  slot3: 'st-prod-2c'  },
+      { id: 3,  name: 'Hand Protector',         cat: 'accessories', catLabel: 'ACCESSORIES', price: 18,  tag: 'ESSENTIAL',  desc: 'Our signature 4mm neoprene hand protector. Perfect hold, blister-free, machine washable at 30°.',                                              sizes: true,  slot: 'st-prod-3',  slot2: 'st-prod-3b',  slot3: 'st-prod-3c'  },
+      { id: 4,  name: 'Pro Balls — Tube',       cat: 'accessories', catLabel: 'ACCESSORIES', price: 15,  tag: 'NEW',        desc: 'Tube of 3 standard FIP pressure balls. Consistent bounce, maximum durability for intense sessions.',                                            sizes: false, slot: 'st-prod-4',  slot2: 'st-prod-4b',  slot3: 'st-prod-4c'  },
+      { id: 5,  name: 'Court Racket Bag',       cat: 'accessories', catLabel: 'ACCESSORIES', price: 145, tag: 'CARRY',      desc: '2-compartment racket bag. Insulated ball pocket + separate shoe space. Take Off colourway.',                                                    sizes: false, slot: 'st-prod-5',  slot2: 'st-prod-5b',  slot3: 'st-prod-5c'  },
+      { id: 6,  name: 'Club Cap',               cat: 'lifestyle',   catLabel: 'LIFESTYLE',   price: 35,  tag: 'LIFESTYLE',  desc: 'Take Off brushed organic cotton snapback. Embroidered front logo, terry sweatband.',                                                           sizes: false, slot: 'st-prod-6',  slot2: 'st-prod-6b',  slot3: 'st-prod-6c'  },
+      { id: 7,  name: 'Grip Socks Studio',      cat: 'pilates',     catLabel: 'PILATES',     price: 28,  tag: 'MUST-HAVE',  desc: 'Non-slip socks for reformer and mat work. Full-sole silicone grip, breathable mesh.',                                                           sizes: true,  slot: 'st-prod-7',  slot2: 'st-prod-7b',  slot3: 'st-prod-7c'  },
+      { id: 8,  name: 'Studio Towel',           cat: 'towels',      catLabel: 'TOWELS',      price: 34,  tag: 'SOFT',       desc: '85×45cm microfibre towel. Quick-dry, ultra-compact, exclusive Take Off colourway.',                                                            sizes: false, slot: 'st-prod-8',  slot2: 'st-prod-8b',  slot3: 'st-prod-8c'  },
+      { id: 9,  name: 'Performance Tee',        cat: 'padelwear',   catLabel: 'PADELWEAR',   price: 75,  tag: 'NEW',        desc: 'Recycled polyester 200g technical tee. Slim fit, moisture management, flat seams.',                                                            sizes: true,  slot: 'st-prod-9',  slot2: 'st-prod-9b',  slot3: 'st-prod-9c'  },
+      { id: 10, name: 'Resistance Band Set',    cat: 'pilates',     catLabel: 'PILATES',     price: 45,  tag: 'SET OF 3',   desc: 'Set of 3 resistance bands: light / medium / strong. Natural latex, fabric handles. Ideal for Pilates and physical prep.',                       sizes: false, slot: 'st-prod-10', slot2: 'st-prod-10b', slot3: 'st-prod-10c' },
+      { id: 11, name: 'Padel Shorts',           cat: 'padelwear',   catLabel: 'PADELWEAR',   price: 89,  tag: 'SAVE 15%',   desc: '4-way stretch technical shorts. Zipped pocket, wide elastic waistband, knee length.',                                                           sizes: true,  slot: 'st-prod-11', slot2: 'st-prod-11b', slot3: 'st-prod-11c' },
+      { id: 12, name: 'Seamless Leggings',      cat: 'pilates',     catLabel: 'PILATES',     price: 120, tag: 'BESTSELLER', desc: 'High-compression seamless leggings. Second-skin fit, machine-resistant, exclusive cream colour.',                                              sizes: true,  slot: 'st-prod-12', slot2: 'st-prod-12b', slot3: 'st-prod-12c' },
+      { id: 13, name: 'Take Off Water Bottle',  cat: 'lifestyle',   catLabel: 'LIFESTYLE',   price: 48,  tag: 'ECO',        desc: '750ml double-wall stainless steel. Cold 24h / hot 12h. Laser-engraved logo.',                                                                  sizes: false, slot: 'st-prod-13', slot2: 'st-prod-13b', slot3: 'st-prod-13c' },
+      { id: 14, name: 'Studio Tote Bag',        cat: 'lifestyle',   catLabel: 'LIFESTYLE',   price: 52,  tag: 'CARRY',      desc: '380g canvas tote bag. Reinforced handles, interior zip pocket, 40×38cm.',                                                                       sizes: false, slot: 'st-prod-14', slot2: 'st-prod-14b', slot3: 'st-prod-14c' },
     ];
   }
 
-  _addToCart(p, qty) {
-    const n = qty || 1;
-    for (let i = 0; i < n; i++) {
-      if (window.takeOffCart) window.takeOffCart.add({ name: p.name, sub: p.catLabel, price: p.price + ' DT', _raw: p.price, kind: 'product' });
-    }
+  _cartItem(p, qty, size) {
+    return { name: p.name, sub: p.catLabel, price: p.price + ' DT', _raw: p.price, kind: 'product', cat: p.cat, size: size || null, qty: qty || 1 };
   }
 
   renderVals() {
@@ -244,13 +245,13 @@ class Component extends DCLogic {
     const LIME = '#c4ef3f', NAVY = '#0a1733';
 
     const catDefs = [
-      { key: 'all', label: 'All' },
-      { key: 'rackets', label: 'Rackets' },
-      { key: 'accessories', label: 'Accessories' },
-      { key: 'padelwear', label: 'Padelwear' },
-      { key: 'towels', label: 'Towels' },
-      { key: 'pilates', label: 'Pilates' },
-      { key: 'lifestyle', label: 'Lifestyle' },
+      { key: 'all',        label: 'All' },
+      { key: 'rackets',    label: 'Rackets' },
+      { key: 'accessories',label: 'Accessories' },
+      { key: 'padelwear',  label: 'Padelwear' },
+      { key: 'towels',     label: 'Towels' },
+      { key: 'pilates',    label: 'Pilates' },
+      { key: 'lifestyle',  label: 'Lifestyle' },
     ];
     const cats = catDefs.map(c => ({
       label: c.label,
@@ -266,26 +267,43 @@ class Component extends DCLogic {
       return catMatch && searchMatch;
     });
 
-    const products = filtered.map((p, idx) => Object.assign({}, p, {
-      openModal: () => this.setState({ openProductIdx: p.id, qty: 1, selectedSize: 'M' }),
-      add: () => this._addToCart(p, 1),
+    const products = filtered.map(p => Object.assign({}, p, {
+      openModal: () => this.setState({ openProductIdx: p.id, qty: 1, selectedSize: null, activeThumbIdx: 0 }),
+      // sized products must go through modal for size selection
+      add: p.sizes
+        ? () => this.setState({ openProductIdx: p.id, qty: 1, selectedSize: null, activeThumbIdx: 0 })
+        : () => { if (window.takeOffCart) window.takeOffCart.add(this._cartItem(p, 1, null)); },
+      addLabel: p.sizes ? 'Choose size' : '+ Add',
     }));
 
     const openId = this.state.openProductIdx;
     const rawModal = openId ? (allProds.find(p => p.id === openId) || null) : null;
     const modalOpen = rawModal ? true : null;
+
+    // Thumbnail slots array with active state
+    const allThumbSlots = rawModal ? [rawModal.slot, rawModal.slot2, rawModal.slot3] : ['st-prod-1','st-prod-1b','st-prod-1c'];
+    const activeThumbIdx = this.state.activeThumbIdx || 0;
+    const thumbSlots = allThumbSlots.map((sl, i) => ({
+      slot: sl,
+      border: i === activeThumbIdx ? '2px solid #c4ef3f' : '1px solid rgba(196,239,63,.18)',
+      pick: () => this.setState({ activeThumbIdx: i }),
+    }));
+
     const modalProduct = rawModal ? Object.assign({}, rawModal, {
-      mainSlot: rawModal.slot,
-      thumbSlots: [rawModal.slot2, rawModal.slot3, rawModal.slot],
+      activeSlot: allThumbSlots[activeThumbIdx] || rawModal.slot,
+      thumbSlots,
       hasSizes: rawModal.sizes ? true : null,
-    }) : { name: '', catLabel: '', price: 0, desc: '', mainSlot: 'st-prod-1', thumbSlots: ['st-prod-1b','st-prod-1c','st-prod-1'], hasSizes: null };
+    }) : { name: '', catLabel: '', price: 0, desc: '', activeSlot: 'st-prod-1', thumbSlots: [], hasSizes: null };
+
+    const selectedSize = this.state.selectedSize;
+    const needsSize = rawModal && rawModal.sizes && !selectedSize;
 
     const sizes = ['S', 'M', 'L', 'XL'];
     const sizeOptions = sizes.map(s => ({
       label: s,
-      bg: s === this.state.selectedSize ? LIME : 'transparent',
-      fg: s === this.state.selectedSize ? NAVY : 'rgba(244,245,238,.75)',
-      bd: s === this.state.selectedSize ? LIME : 'rgba(196,239,63,.3)',
+      bg: s === selectedSize ? LIME : 'transparent',
+      fg: s === selectedSize ? NAVY : 'rgba(244,245,238,.75)',
+      bd: s === selectedSize ? LIME : 'rgba(196,239,63,.3)',
       pick: () => this.setState({ selectedSize: s }),
     }));
 
@@ -302,24 +320,34 @@ class Component extends DCLogic {
       closeModal: () => this.setState({ openProductIdx: null }),
       stopProp: (e) => { if (e && e.stopPropagation) e.stopPropagation(); },
       addModalToCart: () => {
-        if (rawModal) { this._addToCart(rawModal, this.state.qty); this.setState({ openProductIdx: null }); }
+        if (!rawModal) return;
+        if (rawModal.sizes && !selectedSize) {
+          // flash size selector — handled via needsSizeWarn
+          this.setState({ _sizeWarn: true });
+          return;
+        }
+        if (window.takeOffCart) window.takeOffCart.add(this._cartItem(rawModal, this.state.qty, selectedSize));
+        this.setState({ openProductIdx: null, _sizeWarn: false });
       },
+      needsSizeWarn: this.state._sizeWarn && needsSize ? true : null,
       buyNow: () => {
-        if (rawModal) {
-          this._addToCart(rawModal, this.state.qty);
-          this.setState({ openProductIdx: null });
-          setTimeout(() => { if (window.takeOffCart) { window.takeOffCart.close(); window.takeOffCart.openCheckout(); } }, 100);
+        if (!rawModal) return;
+        if (rawModal.sizes && !selectedSize) { this.setState({ _sizeWarn: true }); return; }
+        if (window.takeOffCart) {
+          window.takeOffCart.add(this._cartItem(rawModal, this.state.qty, selectedSize));
+          this.setState({ openProductIdx: null, _sizeWarn: false });
+          setTimeout(() => { window.takeOffCart.close(); window.takeOffCart.openCheckout(); }, 120);
         }
       },
       cartCount,
-      openCart: () => window.takeOffCart && window.takeOffCart.open(),
+      openCart:        () => window.takeOffCart && window.takeOffCart.open(),
       openTakeOffMenu: () => window.takeOffMenu && window.takeOffMenu.open('shop'),
-      authUser: authUser ? true : null,
-      noAuthUser: authUser ? null : true,
-      walletBal: authUser ? (authUser.wallet || 0) : 0,
+      authUser:    authUser ? true : null,
+      noAuthUser:  authUser ? null : true,
+      walletBal:   authUser ? (authUser.wallet || 0) : 0,
       userInitial: authUser ? (authUser.name || authUser.email || '?')[0].toUpperCase() : '',
       openAccount: () => window.takeOffAuth && window.takeOffAuth.openAccount(),
-      openLogin: () => window.takeOffAuth && window.takeOffAuth.openLogin(),
+      openLogin:   () => window.takeOffAuth && window.takeOffAuth.openLogin(),
     };
   }
 }
