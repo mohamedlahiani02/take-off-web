@@ -125,21 +125,6 @@
       },
     },
 
-    matches: {
-      log: function (payload) {
-        return request('POST', '/api/v1/matches', payload);
-      },
-      list: function (page) {
-        return request('GET', '/api/v1/matches?page=' + (page || 0));
-      },
-    },
-
-    leaderboard: {
-      get: function () {
-        return request('GET', '/api/v1/leaderboard');
-      },
-    },
-
     wallet: {
       topup: function (amountDt) {
         return request('POST', '/api/v1/wallet/topup', { amountDt: amountDt });
