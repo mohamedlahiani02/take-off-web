@@ -147,6 +147,14 @@
         return request('GET', '/api/v1/products/' + id);
       },
     },
+
+    coaches: {
+      list: function (activity, preview) {
+        var qs = 'activity=' + encodeURIComponent((activity || 'PADEL').toUpperCase());
+        if (preview) qs += '&preview=true';
+        return request('GET', '/api/v1/coaches?' + qs, undefined, true);
+      },
+    },
   };
 
   window.takeOffApi = api;
