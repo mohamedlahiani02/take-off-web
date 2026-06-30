@@ -1952,10 +1952,174 @@ function mrPick(id,name){ _mrUserId=id; document.getElementById('mr-search').val
 async function regSet(regId,tid,status){ try{ await window.adminApi.tournaments.regStatus(regId,{status:status,refund:status==='CANCELLED'}); toast('Updated.','success'); openTournament(tid); }catch(e){ toast(e.message||'Failed.','error'); } }
 
 // ════════════════════════════════════════════════════════════════════════════
-// SITE CONTENT (Epic I)
+// SITE CONTENT (Epic I) — Padel page CMS by rubrique + global settings
 // ════════════════════════════════════════════════════════════════════════════
+var _cmsTab = 'padel';
+var _padel = {};                 // sectionKey -> content (merged defaults+saved)
+var _cmsRows = [], _cmsRender = null;
+var CINP = 'padding:9px;border-radius:7px;border:1px solid rgba(196,239,63,.22);background:var(--navy);color:var(--cream);font-size:13px;';
+
+var PADEL_DEFAULTS = {
+  hero: {
+    kicker: 'TAKE OFF CLUB — PADEL · TUNIS',
+    headline: 'Own the\nnight court.',
+    subtitle: 'Two pro courts under the lights. Grab your crew, book in seconds, bring the noise.',
+    ctaLabel: 'Book a court',
+    stats: [{ big: '2', label: 'PRO COURTS · PANORAMIC GLASS' }, { big: '7/7', label: 'OPEN 7AM — 11PM' }],
+  },
+  more_than_a_match: {
+    kicker: '02 — PLAY YOUR WAY',
+    heading: 'More than a match',
+    cards: [
+      { n: '01', title: 'Book a court', desc: 'Share or buy the full court. Done in seconds.', photoUrl: '' },
+      { n: '02', title: 'Tournaments', desc: 'Compete in seasonal cups and americanos.', photoUrl: '' },
+      { n: '03', title: 'Coaching', desc: 'Private and group sessions with our pros.', photoUrl: '' },
+    ],
+  },
+  partners: {
+    kicker: '03 — OUR PARTNERS',
+    heading: 'Trusted by',
+    footer: 'Want to become a partner? Contact the club.',
+    items: [1,2,3,4,5,6,7,8].map(function () { return { name: 'PARTENAIRE', logoUrl: '' }; }),
+  },
+};
+
+function cmsAdd(tmpl) { _cmsRows.push(JSON.parse(JSON.stringify(tmpl))); if (_cmsRender) _cmsRender(); }
+function cmsDel(i) { _cmsRows.splice(i, 1); if (_cmsRender) _cmsRender(); }
+async function cmsRowImg(i, field, input) {
+  var f = input.files[0]; if (!f) return;
+  try { var a = await window.adminApi.media.upload(f, 'content'); _cmsRows[i][field] = a.url; if (_cmsRender) _cmsRender(); }
+  catch (e) { toast(e.message || 'Upload failed', 'error'); }
+  input.value = '';
+}
+
 async function renderContent() {
   var content = document.getElementById('page-content');
+  content.innerHTML =
+    '<div style="display:flex;gap:8px;margin-bottom:18px;">' +
+    '<button class="btn-sm ' + (_cmsTab==='padel'?'btn-lime':'btn-ghost') + '" onclick="_cmsTab=\'padel\';renderContent()">Padel page</button>' +
+    '<button class="btn-sm ' + (_cmsTab==='settings'?'btn-lime':'btn-ghost') + '" onclick="_cmsTab=\'settings\';renderContent()">Global settings</button>' +
+    '<div style="flex:1;"></div><a class="btn-sm btn-ghost" href="/padel" target="_blank">↗ View live Padel page</a></div>' +
+    '<div id="cms-body"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
+  if (_cmsTab === 'settings') return renderGlobalSettings();
+  return renderPadelCms();
+}
+
+async function renderPadelCms() {
+  var body = document.getElementById('cms-body');
+  try {
+    var sections = await window.adminApi.content.page('padel') || [];
+    _padel = {};
+    sections.forEach(function (s) { _padel[s.sectionKey] = s.content; });
+    function merged(k) { return Object.assign({}, PADEL_DEFAULTS[k], _padel[k] || {}); }
+    var hero = merged('hero'), mtm = merged('more_than_a_match'), pt = merged('partners');
+    function card(title, sub, onclick) {
+      return '<div class="card" style="margin-bottom:14px;"><div class="card-header"><div><div class="kicker">RUBRIQUE</div><h3>'+esc(title)+'</h3></div>' +
+        '<button class="btn-sm btn-lime" onclick="'+onclick+'">Edit</button></div>' +
+        '<div style="padding:16px 22px;color:var(--muted);font-size:13px;">'+sub+'</div></div>';
+    }
+    body.innerHTML =
+      card('Hero — "'+esc((hero.headline||'').replace(/\n/g,' '))+'"', 'Kicker, headline, subtitle, CTA label and the two hero stats.', 'editPadelHero()') +
+      card('More than a match', esc(mtm.heading)+' · '+(mtm.cards||[]).length+' format cards (title, description, photo).', 'editPadelMTM()') +
+      card('Trusted by — Partners', (pt.items||[]).length+' partner logos + heading and footer text.', 'editPadelPartners()') +
+      '<div class="form-hint" style="margin-top:8px;">Changes publish to the live Padel page immediately. Empty fields fall back to the built-in defaults.</div>';
+  } catch (e) { body.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
+}
+
+function editPadelHero() {
+  var h = Object.assign({}, PADEL_DEFAULTS.hero, _padel.hero || {});
+  cmsRowsInitFromArray(h.stats || []);
+  var body =
+    '<div class="form-row full">'+fld('KICKER','ph-kicker','text',h.kicker)+'</div>' +
+    '<div class="form-row full"><div class="form-group"><label>HEADLINE (line break allowed)</label><textarea id="ph-headline" rows="2">'+esc(h.headline)+'</textarea></div></div>' +
+    '<div class="form-row full"><div class="form-group"><label>SUBTITLE</label><textarea id="ph-subtitle">'+esc(h.subtitle)+'</textarea></div></div>' +
+    '<div class="form-row full">'+fld('CTA BUTTON LABEL','ph-cta','text',h.ctaLabel)+'</div>' +
+    '<div class="form-group"><label>HERO STATS</label><div id="cms-rows"></div>' +
+    '<button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({big:\'\',label:\'\'})">+ Add stat</button></div>';
+  openGenModal('Edit Hero', body, 'Save', async function () {
+    var content = { kicker: gv('ph-kicker'), headline: document.getElementById('ph-headline').value,
+      subtitle: document.getElementById('ph-subtitle').value, ctaLabel: gv('ph-cta'),
+      stats: _cmsRows.filter(function(r){return (r.big||r.label);}) };
+    await savePadelSection('hero', content);
+  }, 560);
+  _cmsRender = renderStatRows; renderStatRows();
+}
+function renderStatRows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    return '<div style="display:flex;gap:8px;margin-bottom:6px;">' +
+      '<input value="'+esc(r.big||'')+'" placeholder="2" oninput="_cmsRows['+i+'].big=this.value" style="width:90px;'+CINP+'">' +
+      '<input value="'+esc(r.label||'')+'" placeholder="PRO COURTS…" oninput="_cmsRows['+i+'].label=this.value" style="flex:1;'+CINP+'">' +
+      '<button type="button" class="btn-icon danger" onclick="cmsDel('+i+')">×</button></div>';
+  }).join('');
+}
+
+function editPadelMTM() {
+  var m = Object.assign({}, PADEL_DEFAULTS.more_than_a_match, _padel.more_than_a_match || {});
+  cmsRowsInitFromArray(m.cards || []);
+  var body =
+    '<div class="form-row">'+fld('KICKER','pm-kicker','text',m.kicker)+fld('HEADING','pm-heading','text',m.heading)+'</div>' +
+    '<div class="form-group"><label>FORMAT CARDS</label><div id="cms-rows"></div>' +
+    '<button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({n:\'\',title:\'\',desc:\'\',photoUrl:\'\'})">+ Add card</button></div>';
+  openGenModal('Edit "More than a match"', body, 'Save', async function () {
+    var content = { kicker: gv('pm-kicker'), heading: gv('pm-heading'),
+      cards: _cmsRows.filter(function(r){return r.title;}) };
+    await savePadelSection('more_than_a_match', content);
+  }, 600);
+  _cmsRender = renderCardRows; renderCardRows();
+}
+function renderCardRows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    var thumb = r.photoUrl ? '<img src="'+esc(r.photoUrl)+'" style="width:46px;height:46px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">' : '<span style="width:46px;height:46px;border-radius:6px;background:var(--navy);display:inline-block;"></span>';
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:8px;">'+thumb +
+      '<div style="flex:1;display:flex;flex-direction:column;gap:5px;">' +
+        '<div style="display:flex;gap:6px;"><input value="'+esc(r.n||'')+'" placeholder="01" oninput="_cmsRows['+i+'].n=this.value" style="width:54px;'+CINP+'"><input value="'+esc(r.title||'')+'" placeholder="Title" oninput="_cmsRows['+i+'].title=this.value" style="flex:1;'+CINP+'"></div>' +
+        '<input value="'+esc(r.desc||'')+'" placeholder="Description" oninput="_cmsRows['+i+'].desc=this.value" style="'+CINP+'">' +
+      '</div>' +
+      '<input type="file" accept="image/*" id="mtmf-'+i+'" style="display:none;" onchange="cmsRowImg('+i+',\'photoUrl\',this)">' +
+      '<div style="display:flex;flex-direction:column;gap:4px;"><button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'mtmf-'+i+'\').click()">⬆</button>' +
+      '<button type="button" class="btn-icon danger" onclick="cmsDel('+i+')">×</button></div></div>';
+  }).join('');
+}
+
+function editPadelPartners() {
+  var p = Object.assign({}, PADEL_DEFAULTS.partners, _padel.partners || {});
+  cmsRowsInitFromArray(p.items || []);
+  var body =
+    '<div class="form-row">'+fld('KICKER','pp-kicker','text',p.kicker)+fld('HEADING','pp-heading','text',p.heading)+'</div>' +
+    '<div class="form-row full">'+fld('FOOTER TEXT','pp-footer','text',p.footer)+'</div>' +
+    '<div class="form-group"><label>PARTNERS (logo + name)</label><div id="cms-rows"></div>' +
+    '<button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({name:\'\',logoUrl:\'\'})">+ Add partner</button></div>';
+  openGenModal('Edit "Trusted by" — Partners', body, 'Save', async function () {
+    var content = { kicker: gv('pp-kicker'), heading: gv('pp-heading'), footer: gv('pp-footer'),
+      items: _cmsRows.filter(function(r){return (r.name||r.logoUrl);}) };
+    await savePadelSection('partners', content);
+  }, 560);
+  _cmsRender = renderPartnerRows; renderPartnerRows();
+}
+function renderPartnerRows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    var thumb = r.logoUrl ? '<img src="'+esc(r.logoUrl)+'" style="width:40px;height:40px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#fff;">' : '<span style="width:40px;height:40px;border-radius:6px;background:var(--navy);display:inline-block;"></span>';
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">'+thumb +
+      '<input value="'+esc(r.name||'')+'" placeholder="Partner name" oninput="_cmsRows['+i+'].name=this.value" style="flex:1;'+CINP+'">' +
+      '<input type="file" accept="image/*" id="ptf-'+i+'" style="display:none;" onchange="cmsRowImg('+i+',\'logoUrl\',this)">' +
+      '<button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'ptf-'+i+'\').click()">⬆ Logo</button>' +
+      '<button type="button" class="btn-icon danger" onclick="cmsDel('+i+')">×</button></div>';
+  }).join('');
+}
+
+function cmsRowsInitFromArray(a) { _cmsRows = (a || []).map(function (o) { return JSON.parse(JSON.stringify(o)); }); }
+async function savePadelSection(sectionKey, content) {
+  try {
+    await window.adminApi.content.saveSection({ page: 'padel', sectionKey: sectionKey, content: content });
+    toast('Saved — live now.', 'success'); closeGenModal(); renderPadelCms();
+  } catch (e) { toast(e.message || 'Failed.', 'error'); }
+}
+
+async function renderGlobalSettings() {
+  var body = document.getElementById('cms-body');
   try {
     var settings = await window.adminApi.content.settings() || [];
     var rows = settings.map(function (s) {
@@ -1964,13 +2128,12 @@ async function renderContent() {
         '<td>'+esc(String(val))+'</td>' +
         "<td><button class='btn-icon' onclick=\"editSetting('"+esc(s.key)+"',"+JSON.stringify(JSON.stringify(s.value))+")\">Edit</button></td></tr>";
     }).join('');
-    content.innerHTML =
-      '<div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px;"><button class="btn-sm btn-ghost" onclick="editSetting()">+ Add setting</button></div>' +
+    body.innerHTML =
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn-sm btn-ghost" onclick="editSetting()">+ Add setting</button></div>' +
       '<div class="card"><div class="card-header"><div><div class="kicker">GLOBAL SETTINGS</div><h3>Club info &amp; sitewide values</h3></div></div>' +
       '<table><thead><tr><th>KEY</th><th>VALUE</th><th></th></tr></thead><tbody>' +
-      (rows || '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px;">No settings.</td></tr>') + '</tbody></table></div>' +
-      '<div class="form-hint" style="margin-top:14px;">Simple settings store their text under the <code>value</code> key. Page-section editing (hero, FAQ, etc.) is available via the content API per page.</div>';
-  } catch (e) { content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
+      (rows || '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px;">No settings.</td></tr>') + '</tbody></table></div>';
+  } catch (e) { body.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
 }
 function editSetting(key, valueJson) {
   var current = '';
@@ -1980,7 +2143,7 @@ function editSetting(key, valueJson) {
     '<div class="form-hint">Stored as {"value": "…"}.</div>';
   openGenModal(key?'Edit setting':'Add setting', body, 'Save', async function(){
     var k=gv('st-key'); if(!k){ toast('Key required.','error'); return; }
-    try { await window.adminApi.content.saveSetting({ key:k, value:{ value: gv('st-val') } }); toast('Saved.','success'); closeGenModal(); renderContent(); }catch(e){ toast(e.message||'Failed.','error'); }
+    try { await window.adminApi.content.saveSetting({ key:k, value:{ value: gv('st-val') } }); toast('Saved.','success'); closeGenModal(); renderGlobalSettings(); }catch(e){ toast(e.message||'Failed.','error'); }
   });
 }
 
