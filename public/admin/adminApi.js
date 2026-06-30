@@ -105,5 +105,78 @@
       block: function (dto) { return request('POST', '/api/v1/admin/courts/blocks', dto); },
       unblock: function (id) { return request('DELETE', '/api/v1/admin/courts/blocks/' + id); },
     },
+
+    // ── Epic D: tournaments ──
+    tournaments: {
+      list: function () { return request('GET', '/api/v1/admin/tournaments'); },
+      detail: function (id) { return request('GET', '/api/v1/admin/tournaments/' + id); },
+      create: function (dto) { return request('POST', '/api/v1/admin/tournaments', dto); },
+      update: function (id, dto) { return request('PUT', '/api/v1/admin/tournaments/' + id, dto); },
+      remove: function (id) { return request('DELETE', '/api/v1/admin/tournaments/' + id); },
+      setStatus: function (id, status) { return request('POST', '/api/v1/admin/tournaments/' + id + '/status', { status: status }); },
+      duplicate: function (id) { return request('POST', '/api/v1/admin/tournaments/' + id + '/duplicate'); },
+      addField: function (id, dto) { return request('POST', '/api/v1/admin/tournaments/' + id + '/fields', dto); },
+      deleteField: function (fieldId) { return request('DELETE', '/api/v1/admin/tournaments/fields/' + fieldId); },
+      registrations: function (id) { return request('GET', '/api/v1/admin/tournaments/' + id + '/registrations'); },
+      manualRegister: function (id, dto) { return request('POST', '/api/v1/admin/tournaments/' + id + '/registrations', dto); },
+      regStatus: function (regId, dto) { return request('POST', '/api/v1/admin/tournaments/registrations/' + regId + '/status', dto); },
+    },
+
+    // ── Epic E: classes ──
+    classes: {
+      listTypes: function () { return request('GET', '/api/v1/admin/classes/types'); },
+      createType: function (dto) { return request('POST', '/api/v1/admin/classes/types', dto); },
+      updateType: function (id, dto) { return request('PUT', '/api/v1/admin/classes/types/' + id, dto); },
+      sessions: function (fromIso, toIso) { return request('GET', '/api/v1/admin/classes/sessions?from=' + encodeURIComponent(fromIso) + '&to=' + encodeURIComponent(toIso)); },
+      sessionDetail: function (id) { return request('GET', '/api/v1/admin/classes/sessions/' + id); },
+      createSession: function (dto) { return request('POST', '/api/v1/admin/classes/sessions', dto); },
+      updateSession: function (id, dto) { return request('PUT', '/api/v1/admin/classes/sessions/' + id, dto); },
+      cancelSession: function (id) { return request('POST', '/api/v1/admin/classes/sessions/' + id + '/cancel'); },
+      addStudent: function (id, dto) { return request('POST', '/api/v1/admin/classes/sessions/' + id + '/students', dto); },
+      removeStudent: function (bookingId) { return request('DELETE', '/api/v1/admin/classes/bookings/' + bookingId); },
+      promote: function (bookingId) { return request('POST', '/api/v1/admin/classes/bookings/' + bookingId + '/promote'); },
+      attendance: function (bookingId, status) { return request('POST', '/api/v1/admin/classes/bookings/' + bookingId + '/attendance', { status: status }); },
+    },
+
+    // ── Epic F: packs ──
+    packs: {
+      listTypes: function () { return request('GET', '/api/v1/admin/packs/types'); },
+      createType: function (dto) { return request('POST', '/api/v1/admin/packs/types', dto); },
+      updateType: function (id, dto) { return request('PUT', '/api/v1/admin/packs/types/' + id, dto); },
+      activeUserPacks: function () { return request('GET', '/api/v1/admin/packs/user-packs'); },
+      userPacks: function (userId) { return request('GET', '/api/v1/admin/packs/user-packs/by-user/' + userId); },
+      assign: function (dto) { return request('POST', '/api/v1/admin/packs/assign', dto); },
+      extend: function (id, dto) { return request('POST', '/api/v1/admin/packs/user-packs/' + id + '/extend', dto); },
+      adjust: function (id, dto) { return request('POST', '/api/v1/admin/packs/user-packs/' + id + '/credits', dto); },
+      freeze: function (id) { return request('POST', '/api/v1/admin/packs/user-packs/' + id + '/freeze'); },
+      cancel: function (id) { return request('POST', '/api/v1/admin/packs/user-packs/' + id + '/cancel'); },
+    },
+
+    // ── Epic G: products ──
+    products: {
+      list: function () { return request('GET', '/api/v1/admin/products'); },
+      create: function (dto) { return request('POST', '/api/v1/admin/products', dto); },
+      update: function (id, dto) { return request('PUT', '/api/v1/admin/products/' + id, dto); },
+      remove: function (id) { return request('DELETE', '/api/v1/admin/products/' + id); },
+    },
+
+    // ── Epic H3: inquiry pipeline ──
+    inquiryPipeline: {
+      status: function (id, status) { return request('POST', '/api/v1/admin/coaching/' + id + '/status', { status: status }); },
+      assign: function (id, coachId) { return request('POST', '/api/v1/admin/coaching/' + id + '/assign', { coachId: coachId }); },
+      note: function (id, note) { return request('POST', '/api/v1/admin/coaching/' + id + '/note', { note: note }); },
+      close: function (id, outcome) { return request('POST', '/api/v1/admin/coaching/' + id + '/close', { outcome: outcome }); },
+    },
+
+    // ── Epic I: content / CMS ──
+    content: {
+      page: function (page) { return request('GET', '/api/v1/admin/content/' + page); },
+      saveSection: function (dto) { return request('POST', '/api/v1/admin/content/section', dto); },
+      settings: function () { return request('GET', '/api/v1/admin/content/settings'); },
+      saveSetting: function (dto) { return request('POST', '/api/v1/admin/content/settings', dto); },
+      media: function () { return request('GET', '/api/v1/admin/content/media'); },
+      addMedia: function (dto) { return request('POST', '/api/v1/admin/content/media', dto); },
+      deleteMedia: function (id) { return request('DELETE', '/api/v1/admin/content/media/' + id); },
+    },
   };
 })();

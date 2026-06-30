@@ -209,10 +209,6 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
       <div class="nav-item active" onclick="navigate('dashboard')" id="nav-dashboard">
         <span class="icon">◆</span> Dashboard
       </div>
-      <div class="nav-section">CONTENT</div>
-      <div class="nav-item" onclick="navigate('coaches')" id="nav-coaches">
-        <span class="icon">◎</span> Coaches
-      </div>
       <div class="nav-section">OPERATIONS</div>
       <div class="nav-item" onclick="navigate('users')" id="nav-users">
         <span class="icon">☺</span> Users
@@ -220,11 +216,31 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
       <div class="nav-item" onclick="navigate('courts')" id="nav-courts">
         <span class="icon">▦</span> Court Calendar
       </div>
+      <div class="nav-item" onclick="navigate('classes')" id="nav-classes">
+        <span class="icon">❍</span> Pilates Classes
+      </div>
+      <div class="nav-item" onclick="navigate('tournaments')" id="nav-tournaments">
+        <span class="icon">♛</span> Tournaments
+      </div>
       <div class="nav-item" onclick="navigate('inquiries')" id="nav-inquiries">
         <span class="icon">✉</span> Inquiries
       </div>
       <div class="nav-item" onclick="navigate('orders')" id="nav-orders">
         <span class="icon">↗</span> Orders
+      </div>
+      <div class="nav-section">CATALOG</div>
+      <div class="nav-item" onclick="navigate('products')" id="nav-products">
+        <span class="icon">▣</span> Products
+      </div>
+      <div class="nav-item" onclick="navigate('packs')" id="nav-packs">
+        <span class="icon">◈</span> Packs &amp; Plans
+      </div>
+      <div class="nav-section">CONTENT</div>
+      <div class="nav-item" onclick="navigate('coaches')" id="nav-coaches">
+        <span class="icon">◎</span> Coaches
+      </div>
+      <div class="nav-item" onclick="navigate('content')" id="nav-content">
+        <span class="icon">▤</span> Site Content
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -548,6 +564,18 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
   </div>
 </div>
 
+<!-- ── Generic modal (forms built in JS) ── -->
+<div class="modal-overlay" id="gen-modal" style="display:none;" onclick="if(event.target===this)closeGenModal()">
+  <div class="modal" id="gen-modal-box">
+    <div class="modal-header">
+      <h3 id="gen-modal-title"></h3>
+      <button class="modal-close" onclick="closeGenModal()">×</button>
+    </div>
+    <div class="modal-body" id="gen-modal-body"></div>
+    <div class="modal-footer" id="gen-modal-footer"></div>
+  </div>
+</div>
+
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 var _page = 'dashboard';
@@ -584,6 +612,7 @@ window.addEventListener('keydown', function (e) {
     closeBookModal();
     closeCancelModal();
     closeBlockModal();
+    closeGenModal();
   }
 });
 
@@ -653,7 +682,9 @@ function navigate(page) {
   var navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
 
-  var titles = { dashboard: 'Dashboard', coaches: 'Coaches', users: 'Users', courts: 'Court Calendar', inquiries: 'Coaching Inquiries', orders: 'Orders' };
+  var titles = { dashboard: 'Dashboard', coaches: 'Coaches', users: 'Users', courts: 'Court Calendar',
+    classes: 'Pilates Classes', tournaments: 'Tournaments', inquiries: 'Coaching Inquiries', orders: 'Orders',
+    products: 'Products', packs: 'Packs & Plans', content: 'Site Content' };
   document.getElementById('page-title').textContent = titles[page] || page;
 
   var content = document.getElementById('page-content');
@@ -663,8 +694,13 @@ function navigate(page) {
   else if (page === 'coaches') renderCoaches();
   else if (page === 'users') renderUsers();
   else if (page === 'courts') renderCourts();
+  else if (page === 'classes') renderClasses();
+  else if (page === 'tournaments') renderTournaments();
   else if (page === 'inquiries') renderInquiries();
   else if (page === 'orders') renderOrders();
+  else if (page === 'products') renderProducts();
+  else if (page === 'packs') renderPacks();
+  else if (page === 'content') renderContent();
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
@@ -890,18 +926,20 @@ async function renderInquiries() {
       return;
     }
     var rows = items.map(function (inq) {
+      var st = inq.status || 'NEW';
+      var stColor = st==='NEW'?'rgba(234,179,8,.18);color:#fde047':st==='CLOSED'?'rgba(255,255,255,.07);color:var(--muted)':'rgba(196,239,63,.15);color:var(--lime)';
       return `<tr>
         <td style="font-family:'Space Mono';font-size:10px;color:var(--muted);">${new Date(inq.createdAt).toLocaleDateString()}</td>
         <td><strong>${esc(inq.name || '—')}</strong></td>
-        <td>${esc(inq.phone || '—')}</td>
-        <td>${esc(inq.email || '—')}</td>
-        <td style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);">${esc(inq.motivations || '—')}</td>
+        <td style="font-family:'Space Mono';font-size:11px;">${esc(inq.phone || '—')}</td>
+        <td><span class="badge" style="background:${stColor};">${esc(st)}</span></td>
+        <td><button class="btn-icon" onclick='openInquiry(${JSON.stringify(inq)})'>Manage</button></td>
       </tr>`;
     }).join('');
     content.innerHTML = `<div class="card">
       <div class="card-header"><div><div class="kicker">COACHING INQUIRIES</div><h3>${data.totalElements || items.length} total</h3></div></div>
       <table>
-        <thead><tr><th>DATE</th><th>NAME</th><th>PHONE</th><th>EMAIL</th><th>MOTIVATION</th></tr></thead>
+        <thead><tr><th>DATE</th><th>NAME</th><th>PHONE</th><th>STATUS</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
@@ -909,6 +947,38 @@ async function renderInquiries() {
     content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + (e.message || 'Failed to load.') + '</p></div>';
   }
 }
+
+// ── Inquiry pipeline (Epic H3) ──
+async function openInquiry(inq) {
+  var coaches = [];
+  try { coaches = (await window.adminApi.coaches.list() || []).filter(function(c){return c.activity==='PADEL';}); } catch(_) {}
+  var coachOpts = '<option value="">— unassigned —</option>' + coaches.map(function(c){
+    return '<option value="'+c.id+'"'+(c.id===inq.assignedCoachId?' selected':'')+'>'+esc(c.firstName+' '+c.lastName)+'</option>';
+  }).join('');
+  var statusOpts = ['NEW','CONTACTED','SCHEDULED','CLOSED'].map(function(s){return '<option value="'+s+'"'+(s===(inq.status||'NEW')?' selected':'')+'>'+s+'</option>';}).join('');
+  var body =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">' +
+    '<div><div class="kicker">PHONE</div><div>'+esc(inq.phone||'—')+'</div></div>' +
+    '<div><div class="kicker">EMAIL</div><div>'+esc(inq.email||'—')+'</div></div>' +
+    '<div><div class="kicker">LEVEL</div><div>'+esc(inq.level||'—')+'</div></div>' +
+    '<div><div class="kicker">LESSON TYPES</div><div>'+esc((inq.lessonTypes||[]).join(', ')||'—')+'</div></div></div>' +
+    '<div class="form-row">'+
+      '<div class="form-group"><label>STATUS</label><select id="iq-status" onchange="iqStatus(\''+inq.id+'\',this.value)">'+statusOpts+'</select></div>'+
+      '<div class="form-group"><label>ASSIGN COACH</label><select id="iq-coach" onchange="iqAssign(\''+inq.id+'\',this.value)">'+coachOpts+'</select></div>'+
+    '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>INTERNAL NOTE</label><textarea id="iq-note">'+esc(inq.adminNote||'')+'</textarea></div></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<button class="btn-sm btn-ghost" onclick="iqSaveNote(\''+inq.id+'\')">Save note</button>' +
+      '<button class="btn-sm btn-ghost" onclick="iqClose(\''+inq.id+'\',\'CONVERTED\')">Close: Converted</button>' +
+      '<button class="btn-sm btn-ghost" onclick="iqClose(\''+inq.id+'\',\'NO_SHOW\')">Close: No-show</button>' +
+      '<button class="btn-sm btn-ghost" onclick="iqClose(\''+inq.id+'\',\'NOT_INTERESTED\')">Close: Not interested</button>' +
+    '</div>';
+  openGenModal('Inquiry — '+esc(inq.name||''), body, null, null, 560);
+}
+async function iqStatus(id,s){ try{ await window.adminApi.inquiryPipeline.status(id,s); toast('Status updated.','success'); }catch(e){ toast(e.message||'Failed.','error'); } }
+async function iqAssign(id,c){ try{ await window.adminApi.inquiryPipeline.assign(id,c||null); toast('Assigned.','success'); }catch(e){ toast(e.message||'Failed.','error'); } }
+async function iqSaveNote(id){ try{ await window.adminApi.inquiryPipeline.note(id,document.getElementById('iq-note').value); toast('Note saved.','success'); }catch(e){ toast(e.message||'Failed.','error'); } }
+async function iqClose(id,outcome){ try{ await window.adminApi.inquiryPipeline.close(id,outcome); toast('Closed.','success'); closeGenModal(); renderInquiries(); }catch(e){ toast(e.message||'Failed.','error'); } }
 
 // ── Orders ─────────────────────────────────────────────────────────────────
 async function renderOrders() {
@@ -1412,6 +1482,416 @@ function removeBlock(id) {
   confirmDialog('Remove block', 'Remove this block? The slot becomes bookable again.', 'Remove', async function () {
     try { await window.adminApi.courts.unblock(id); toast('Block removed.', 'success'); closeConfirm(); loadCalendar(); }
     catch (e) { toast(e.message || 'Failed.', 'error'); }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GENERIC MODAL — build forms in JS
+// ════════════════════════════════════════════════════════════════════════════
+var _genSaveFn = null;
+function openGenModal(title, bodyHtml, saveLabel, saveFn, maxWidth) {
+  document.getElementById('gen-modal-title').textContent = title;
+  document.getElementById('gen-modal-body').innerHTML = bodyHtml;
+  document.getElementById('gen-modal-box').style.maxWidth = (maxWidth || 540) + 'px';
+  _genSaveFn = saveFn;
+  var footer = document.getElementById('gen-modal-footer');
+  footer.innerHTML = '<button class="btn-sm btn-ghost" onclick="closeGenModal()">Cancel</button>' +
+    (saveFn ? '<button class="btn-sm btn-lime" id="gen-save-btn" onclick="_genSaveFn()">' + esc(saveLabel || 'Save') + '</button>' : '');
+  document.getElementById('gen-modal').style.display = 'flex';
+}
+function closeGenModal() { document.getElementById('gen-modal').style.display = 'none'; _genSaveFn = null; }
+function gv(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function gnum(id) { var v = parseFloat(gv(id)); return isNaN(v) ? null : v; }
+function gint(id) { var v = parseInt(gv(id)); return isNaN(v) ? null : v; }
+function gchecked(id) { var el = document.getElementById(id); return el ? el.checked : false; }
+function fld(label, id, type, val, ph) {
+  return '<div class="form-group"><label>' + label + '</label><input id="' + id + '" type="' + (type||'text') + '" value="' + esc(val==null?'':val) + '" placeholder="' + esc(ph||'') + '"></div>';
+}
+function sel(label, id, options, val) {
+  var opts = options.map(function (o) {
+    var v = o.v !== undefined ? o.v : o; var t = o.t !== undefined ? o.t : o;
+    return '<option value="' + esc(v) + '"' + (String(v) === String(val) ? ' selected' : '') + '>' + esc(t) + '</option>';
+  }).join('');
+  return '<div class="form-group"><label>' + label + '</label><select id="' + id + '">' + opts + '</select></div>';
+}
+function dtLocal(iso) { // ISO → value for datetime-local input
+  if (!iso) return '';
+  var d = new Date(iso); var p = function (n) { return String(n).padStart(2, '0'); };
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function isoFromLocal(id) { var v = gv(id); return v ? new Date(v).toISOString() : null; }
+
+// ════════════════════════════════════════════════════════════════════════════
+// PRODUCTS (Epic G)
+// ════════════════════════════════════════════════════════════════════════════
+var _products = [];
+var PRODUCT_CATEGORIES = ['RACKETS','ACCESSORIES','PADELWEAR','PILATES','TOWELS','LIFESTYLE'];
+async function renderProducts() {
+  var content = document.getElementById('page-content');
+  try {
+    _products = await window.adminApi.products.list() || [];
+    var rows = _products.map(function (p) {
+      return '<tr>' +
+        '<td><strong>' + esc(p.name) + '</strong></td>' +
+        '<td>' + esc(p.category) + '</td>' +
+        '<td style="color:var(--lime);font-weight:700;">' + Number(p.priceDt).toFixed(3) + ' DT</td>' +
+        '<td>' + p.stock + '</td>' +
+        '<td>' + (p.isActive ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-inactive">HIDDEN</span>') + '</td>' +
+        '<td><div class="row-actions">' +
+          "<button class='btn-icon' onclick='editProduct(" + JSON.stringify(p) + ")'>Edit</button>" +
+          "<button class='btn-icon danger' onclick=\"deleteProduct('" + p.id + "','" + esc(p.name) + "')\">Delete</button>" +
+        '</div></td></tr>';
+    }).join('');
+    content.innerHTML =
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn-sm btn-lime" onclick="productForm()">+ Add product</button></div>' +
+      '<div class="card"><div class="card-header"><div><div class="kicker">SHOP</div><h3>' + _products.length + ' products</h3></div></div>' +
+      '<table><thead><tr><th>NAME</th><th>CATEGORY</th><th>PRICE</th><th>STOCK</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No products.</td></tr>') + '</tbody></table></div>';
+  } catch (e) { content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message||'Failed.') + '</p></div>'; }
+}
+function editProduct(p) { productForm(p); }
+function productForm(p) {
+  var body =
+    '<input type="hidden" id="p-id" value="' + (p?p.id:'') + '">' +
+    '<div class="form-row">' + fld('NAME','p-name','text',p?p.name:'') + sel('CATEGORY','p-cat',PRODUCT_CATEGORIES,p?p.category:'RACKETS') + '</div>' +
+    '<div class="form-row">' + fld('PRICE (DT)','p-price','number',p?p.priceDt:'') + fld('STOCK','p-stock','number',p?p.stock:0) + '</div>' +
+    '<div class="form-row">' + fld('TAG','p-tag','text',p?(p.tag||''):'','New / Sale') + sel('ACTIVE','p-active',[{v:'true',t:'Active'},{v:'false',t:'Hidden'}],p?String(p.isActive):'true') + '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>DESCRIPTION</label><textarea id="p-desc">' + esc(p?(p.description||''):'') + '</textarea></div></div>' +
+    '<div class="form-row full"><div class="form-group"><label>IMAGE URLs (comma-separated)</label><input id="p-imgs" type="text" value="' + esc(p?(p.imageUrls||[]).join(', '):'') + '"></div></div>' +
+    '<div class="toggle-row"><span>Has sizes</span><label class="toggle"><input type="checkbox" id="p-sizes"' + (p&&p.hasSizes?' checked':'') + '><span class="toggle-slider"></span></label></div>';
+  openGenModal(p?'Edit product':'Add product', body, 'Save', async function () {
+    var dto = { name: gv('p-name'), category: gv('p-cat'), priceDt: gnum('p-price')||0, stock: gint('p-stock')||0,
+      tag: gv('p-tag')||null, description: document.getElementById('p-desc').value.trim()||null,
+      imageUrls: gv('p-imgs').split(',').map(function(s){return s.trim();}).filter(Boolean),
+      hasSizes: gchecked('p-sizes'), isActive: gv('p-active')==='true' };
+    if (!dto.name) { toast('Name required.','error'); return; }
+    try { var id=gv('p-id'); if(id) await window.adminApi.products.update(id,dto); else await window.adminApi.products.create(dto);
+      toast('Saved.','success'); closeGenModal(); renderProducts(); } catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+function deleteProduct(id, name) {
+  confirmDialog('Delete product', 'Delete "'+name+'"?', 'Delete', async function () {
+    try { await window.adminApi.products.remove(id); toast('Deleted.','success'); closeConfirm(); renderProducts(); }
+    catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PACKS & PLANS (Epic F)
+// ════════════════════════════════════════════════════════════════════════════
+var _packTypes = [];
+async function renderPacks() {
+  var content = document.getElementById('page-content');
+  try {
+    _packTypes = await window.adminApi.packs.listTypes() || [];
+    var rows = _packTypes.map(function (p) {
+      return '<tr><td><strong>' + esc(p.name) + '</strong></td>' +
+        '<td>' + (p.activity==='PADEL'?'<span class="badge badge-padel">PADEL</span>':'<span class="badge badge-pilates">PILATES</span>') + '</td>' +
+        '<td style="color:var(--lime);font-weight:700;">' + Number(p.priceDt).toFixed(0) + ' DT</td>' +
+        '<td>' + (p.unlimited ? '∞ unlimited' : (p.creditCount + ' credits')) + '</td>' +
+        '<td>' + p.validityMonths + ' mo</td>' +
+        '<td>' + (p.active?'<span class="badge badge-active">ACTIVE</span>':'<span class="badge badge-inactive">OFF</span>') + '</td>' +
+        "<td><button class='btn-icon' onclick='editPackType(" + JSON.stringify(p) + ")'>Edit</button></td></tr>";
+    }).join('');
+    content.innerHTML =
+      '<div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px;">' +
+      '<button class="btn-sm btn-ghost" onclick="assignPackForm()">Assign pack to user</button>' +
+      '<button class="btn-sm btn-lime" onclick="packTypeForm()">+ Add pack type</button></div>' +
+      '<div class="card"><div class="card-header"><div><div class="kicker">PACK & PLAN TYPES</div><h3>' + _packTypes.length + '</h3></div></div>' +
+      '<table><thead><tr><th>NAME</th><th>ACTIVITY</th><th>PRICE</th><th>CREDITS</th><th>VALIDITY</th><th>STATUS</th><th></th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">No pack types.</td></tr>') + '</tbody></table></div>';
+  } catch (e) { content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message||'Failed.') + '</p></div>'; }
+}
+function editPackType(p) { packTypeForm(p); }
+function packTypeForm(p) {
+  var body =
+    '<input type="hidden" id="pt-id" value="' + (p?p.id:'') + '">' +
+    '<div class="form-row">' + fld('NAME','pt-name','text',p?p.name:'') + sel('ACTIVITY','pt-act',['PADEL','PILATES'],p?p.activity:'PADEL') + '</div>' +
+    '<div class="form-row">' + fld('PRICE (DT)','pt-price','number',p?p.priceDt:'') + fld('VALIDITY (months)','pt-val','number',p?p.validityMonths:12) + '</div>' +
+    '<div class="form-row">' + fld('CREDIT COUNT','pt-credits','number',p?(p.creditCount==null?'':p.creditCount):'') + sel('ACTIVE','pt-active',[{v:'true',t:'Active'},{v:'false',t:'Off'}],p?String(p.active):'true') + '</div>' +
+    '<div class="toggle-row"><span>Unlimited (ignore credit count)</span><label class="toggle"><input type="checkbox" id="pt-unl"' + (p&&p.unlimited?' checked':'') + '><span class="toggle-slider"></span></label></div>';
+  openGenModal(p?'Edit pack type':'Add pack type', body, 'Save', async function () {
+    var dto = { name: gv('pt-name'), activity: gv('pt-act'), priceDt: gnum('pt-price')||0, validityMonths: gint('pt-val')||12,
+      creditCount: gint('pt-credits'), unlimited: gchecked('pt-unl'), active: gv('pt-active')==='true' };
+    if (!dto.name) { toast('Name required.','error'); return; }
+    try { var id=gv('pt-id'); if(id) await window.adminApi.packs.updateType(id,dto); else await window.adminApi.packs.createType(dto);
+      toast('Saved.','success'); closeGenModal(); renderPacks(); } catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+function assignPackForm() {
+  var typeOpts = _packTypes.filter(function(p){return p.active;}).map(function(p){ return {v:p.id, t:p.name+' ('+p.activity+', '+Number(p.priceDt).toFixed(0)+' DT)'}; });
+  var body =
+    '<div class="form-row full"><div class="form-group"><label>MEMBER — search by name or phone</label>' +
+    '<input id="ap-search" type="text" placeholder="Start typing…" oninput="apSearch()" autocomplete="off">' +
+    '<div id="ap-results" style="margin-top:4px;"></div><div class="form-hint" id="ap-selected"></div></div></div>' +
+    '<div class="form-row full">' + sel('PACK TYPE','ap-type',typeOpts,'') + '</div>';
+  _apUserId = null;
+  openGenModal('Assign pack to user', body, 'Assign', async function () {
+    if (!_apUserId) { toast('Select a member.','error'); return; }
+    try { await window.adminApi.packs.assign({ userId:_apUserId, packTypeId: gv('ap-type') });
+      toast('Pack assigned.','success'); closeGenModal(); } catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+var _apUserId = null, _apTimer = null;
+function apSearch() {
+  var q = gv('ap-search'); _apUserId = null; document.getElementById('ap-selected').textContent='';
+  clearTimeout(_apTimer); if(!q){ document.getElementById('ap-results').innerHTML=''; return; }
+  _apTimer = setTimeout(async function(){
+    try { var rs = await window.adminApi.users.search(q);
+      document.getElementById('ap-results').innerHTML = (rs||[]).slice(0,6).map(function(u){
+        return "<div onclick=\"apPick('"+u.id+"','"+esc(u.name)+" — "+esc(u.phone)+"')\" style='padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13px;border:1px solid var(--border);margin-top:4px;background:var(--navy);'>"+esc(u.name)+" <span style='color:var(--muted);font-family:Space Mono;font-size:11px;'>"+esc(u.phone)+"</span></div>";
+      }).join('') || '<div class="form-hint">No match.</div>';
+    } catch(_){}
+  }, 250);
+}
+function apPick(id, label) { _apUserId=id; document.getElementById('ap-search').value=label.split(' — ')[0]; document.getElementById('ap-results').innerHTML=''; document.getElementById('ap-selected').textContent='✓ '+label; }
+
+// ════════════════════════════════════════════════════════════════════════════
+// PILATES CLASSES (Epic E)
+// ════════════════════════════════════════════════════════════════════════════
+var _classTypes = [], _classDate = null;
+async function renderClasses() {
+  var content = document.getElementById('page-content');
+  if (!_classDate) _classDate = todayStr();
+  try { _classTypes = await window.adminApi.classes.listTypes() || []; } catch(_) { _classTypes = []; }
+  content.innerHTML =
+    '<div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">' +
+    '<button class="btn-sm btn-ghost" onclick="shiftClassDate(-1)">‹ Prev</button>' +
+    '<input id="cls-date" type="date" value="'+_classDate+'" onchange="_classDate=this.value;loadSessions()" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);">' +
+    '<button class="btn-sm btn-ghost" onclick="shiftClassDate(1)">Next ›</button>' +
+    '<div style="flex:1;"></div>' +
+    '<button class="btn-sm btn-ghost" onclick="classTypeForm()">+ Class type</button>' +
+    '<button class="btn-sm btn-lime" onclick="sessionForm()">+ Schedule session</button></div>' +
+    '<div id="sessions-wrap"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
+  loadSessions();
+}
+function shiftClassDate(d){ var x=new Date(_classDate+'T00:00:00'); x.setDate(x.getDate()+d); _classDate=x.toISOString().slice(0,10); var el=document.getElementById('cls-date'); if(el)el.value=_classDate; loadSessions(); }
+function classTypeName(id){ var t=_classTypes.filter(function(x){return x.id===id;})[0]; return t?t.name:'—'; }
+async function loadSessions() {
+  var w = dayWindow(_classDate);
+  try {
+    var list = await window.adminApi.classes.sessions(w.from, w.to) || [];
+    var rows = list.map(function (sd) {
+      var s = sd.session;
+      return '<tr><td style="font-family:Space Mono;font-size:11px;">'+fmtTime(s.startsAt)+'</td>' +
+        '<td><strong>'+esc(classTypeName(s.classTypeId))+'</strong></td>' +
+        '<td>'+sd.bookedCount+' / '+s.maxSpots+(sd.waitlistCount?' (+'+sd.waitlistCount+' wait)':'')+'</td>' +
+        '<td>'+Number(s.priceDt).toFixed(0)+' DT</td>' +
+        '<td>'+(s.status==='CANCELLED'?'<span class="badge badge-inactive">CANCELLED</span>':'<span class="badge badge-active">'+esc(s.status)+'</span>')+'</td>' +
+        '<td><div class="row-actions">' +
+          "<button class='btn-icon' onclick=\"openSession('"+s.id+"')\">Roster</button>" +
+          (s.status!=='CANCELLED'?"<button class='btn-icon danger' onclick=\"cancelSession('"+s.id+"')\">Cancel</button>":'') +
+        '</div></td></tr>';
+    }).join('');
+    document.getElementById('sessions-wrap').innerHTML =
+      '<div class="card"><div class="card-header"><div><div class="kicker">SESSIONS</div><h3>'+new Date(_classDate+'T00:00:00').toLocaleDateString()+'</h3></div></div>' +
+      '<table><thead><tr><th>TIME</th><th>CLASS</th><th>SPOTS</th><th>PRICE</th><th>STATUS</th><th></th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No sessions this day.</td></tr>') + '</tbody></table></div>';
+  } catch (e) { document.getElementById('sessions-wrap').innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
+}
+function classTypeForm(t) {
+  var body = '<input type="hidden" id="ct-id" value="'+(t?t.id:'')+'">' +
+    '<div class="form-row">'+fld('NAME','ct-name','text',t?t.name:'')+fld('LEVEL','ct-level','text',t?(t.level||''):'','All levels')+'</div>' +
+    '<div class="form-row">'+fld('DURATION (min)','ct-dur','number',t?t.durationMin:50)+fld('DEFAULT PRICE (DT)','ct-price','number',t?t.defaultPriceDt:35)+'</div>' +
+    '<div class="form-row full"><div class="form-group"><label>DESCRIPTION</label><textarea id="ct-desc">'+esc(t?(t.description||''):'')+'</textarea></div></div>';
+  openGenModal(t?'Edit class type':'Add class type', body, 'Save', async function () {
+    var dto = { name:gv('ct-name'), level:gv('ct-level')||null, durationMin:gint('ct-dur')||50, defaultPriceDt:gnum('ct-price')||35, description:document.getElementById('ct-desc').value.trim()||null };
+    if(!dto.name){ toast('Name required.','error'); return; }
+    try { var id=gv('ct-id'); if(id) await window.adminApi.classes.updateType(id,dto); else await window.adminApi.classes.createType(dto);
+      toast('Saved.','success'); closeGenModal(); renderClasses(); } catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+function sessionForm() {
+  if (!_classTypes.length) { toast('Create a class type first.','error'); return; }
+  var typeOpts = _classTypes.map(function(t){ return {v:t.id, t:t.name}; });
+  var body =
+    '<div class="form-row">'+sel('CLASS TYPE','se-type',typeOpts,'')+fld('MAX SPOTS','se-spots','number',8)+'</div>' +
+    '<div class="form-row">'+fld('DATE/TIME','se-dt','datetime-local',dtLocal(new Date(_classDate+'T18:00:00').toISOString()))+fld('PRICE (DT)','se-price','number',35)+'</div>' +
+    '<div class="form-row">'+fld('DURATION (min)','se-dur','number',50)+'</div>';
+  openGenModal('Schedule session', body, 'Create', async function () {
+    var dto = { classTypeId:gv('se-type'), startsAt:isoFromLocal('se-dt'), maxSpots:gint('se-spots')||8, priceDt:gnum('se-price')||35, durationMin:gint('se-dur')||50 };
+    if(!dto.startsAt){ toast('Pick a date/time.','error'); return; }
+    try { await window.adminApi.classes.createSession(dto); toast('Session scheduled.','success'); closeGenModal(); loadSessions(); } catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+function cancelSession(id) {
+  confirmDialog('Cancel session','Cancel this session? All booked students will be released.','Cancel session', async function(){
+    try { await window.adminApi.classes.cancelSession(id); toast('Cancelled.','success'); closeConfirm(); loadSessions(); } catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+async function openSession(id) {
+  try {
+    var sd = await window.adminApi.classes.sessionDetail(id);
+    var rows = (sd.bookings||[]).map(function(b){
+      var act = b.status==='WAITLIST' ? "<button class='btn-icon' onclick=\"clsPromote('"+b.id+"','"+id+"')\">Promote</button>" : '';
+      var att = (b.status==='BOOKED') ? "<button class='btn-icon' onclick=\"clsAttend('"+b.id+"','"+id+"','ATTENDED')\">Present</button>" : '';
+      return '<tr><td style="font-family:Space Mono;font-size:11px;">'+esc((b.userId||'').slice(0,8))+'</td><td>'+esc(b.status)+'</td><td><div class="row-actions">'+att+act+
+        "<button class='btn-icon danger' onclick=\"clsRemove('"+b.id+"','"+id+"')\">Remove</button></div></td></tr>";
+    }).join('');
+    var body = '<p style="color:var(--muted);margin-bottom:14px;">'+esc(classTypeName(sd.session.classTypeId))+' · '+new Date(sd.session.startsAt).toLocaleString()+' · '+sd.bookedCount+'/'+sd.session.maxSpots+' booked</p>' +
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn-sm btn-lime" onclick="addStudentForm(\''+id+'\')">+ Add student</button></div>' +
+      '<table><thead><tr><th>USER</th><th>STATUS</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px;">No students yet.</td></tr>')+'</tbody></table>';
+    openGenModal('Session roster', body, null, null, 560);
+  } catch(e){ toast(e.message||'Failed.','error'); }
+}
+function addStudentForm(sessionId) {
+  var body = '<div class="form-row full"><div class="form-group"><label>MEMBER — search</label><input id="as-search" type="text" oninput="asSearch()" autocomplete="off"><div id="as-results" style="margin-top:4px;"></div><div class="form-hint" id="as-selected"></div></div></div>' +
+    '<div class="form-hint" style="margin:6px 0;">Or add a guest:</div>' +
+    '<div class="form-row">'+fld('GUEST NAME','as-gname','text','')+fld('GUEST PHONE','as-gphone','text','')+'</div>';
+  _asUserId = null;
+  openGenModal('Add student', body, 'Add', async function () {
+    var dto = {};
+    if (_asUserId) dto.userId = _asUserId;
+    else { var n=gv('as-gname'), p=gv('as-gphone'); if(!n||!p){ toast('Pick a member or enter guest name+phone.','error'); return; } dto.ghostName=n; dto.ghostPhone=p; }
+    try { await window.adminApi.classes.addStudent(sessionId, dto); toast('Added.','success'); closeGenModal(); openSession(sessionId); } catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+var _asUserId=null,_asTimer=null;
+function asSearch(){ var q=gv('as-search'); _asUserId=null; document.getElementById('as-selected').textContent=''; clearTimeout(_asTimer); if(!q){document.getElementById('as-results').innerHTML='';return;}
+  _asTimer=setTimeout(async function(){ try{ var rs=await window.adminApi.users.search(q); document.getElementById('as-results').innerHTML=(rs||[]).slice(0,6).map(function(u){return "<div onclick=\"asPick('"+u.id+"','"+esc(u.name)+"')\" style='padding:6px 10px;border-radius:7px;cursor:pointer;font-size:13px;border:1px solid var(--border);margin-top:4px;background:var(--navy);'>"+esc(u.name)+" <span style='color:var(--muted);font-size:11px;'>"+esc(u.phone)+"</span></div>";}).join('')||'<div class="form-hint">No match.</div>';}catch(_){} },250); }
+function asPick(id,name){ _asUserId=id; document.getElementById('as-search').value=name; document.getElementById('as-results').innerHTML=''; document.getElementById('as-selected').textContent='✓ '+name; }
+async function clsPromote(bid,sid){ try{ await window.adminApi.classes.promote(bid); toast('Promoted.','success'); openSession(sid);}catch(e){toast(e.message||'Failed.','error');} }
+async function clsAttend(bid,sid,st){ try{ await window.adminApi.classes.attendance(bid,st); toast('Marked.','success'); openSession(sid);}catch(e){toast(e.message||'Failed.','error');} }
+async function clsRemove(bid,sid){ try{ await window.adminApi.classes.removeStudent(bid); toast('Removed.','success'); openSession(sid);}catch(e){toast(e.message||'Failed.','error');} }
+
+// ════════════════════════════════════════════════════════════════════════════
+// TOURNAMENTS (Epic D)
+// ════════════════════════════════════════════════════════════════════════════
+var _tournaments = [];
+var T_FORMATS=['AMERICANO','KNOCKOUT','ROUND_ROBIN','SWISS'], T_CATS=['MIXED','MEN','WOMEN','JUNIOR','SENIOR'];
+var T_STATUSES=['DRAFT','PUBLISHED','REGISTRATION_OPEN','REGISTRATION_CLOSED','ONGOING','FINISHED'];
+async function renderTournaments() {
+  var content = document.getElementById('page-content');
+  try {
+    _tournaments = await window.adminApi.tournaments.list() || [];
+    var rows = _tournaments.map(function (t) {
+      return '<tr><td><strong>'+esc(t.title)+'</strong><br><span style="font-size:11px;color:var(--muted);">'+esc(t.format)+' · '+esc(t.category)+'</span></td>' +
+        '<td style="font-family:Space Mono;font-size:11px;">'+new Date(t.startsAt).toLocaleDateString()+'</td>' +
+        '<td>'+Number(t.entryFeeDt).toFixed(0)+' DT</td>' +
+        '<td><span class="badge" style="background:rgba(196,239,63,.12);color:var(--lime);">'+esc(t.status)+'</span></td>' +
+        '<td><div class="row-actions">' +
+          "<button class='btn-icon' onclick=\"openTournament('"+t.id+"')\">Manage</button>" +
+          "<button class='btn-icon' onclick='editTournament("+JSON.stringify(t)+")'>Edit</button>" +
+          "<button class='btn-icon danger' onclick=\"deleteTournament('"+t.id+"','"+esc(t.title)+"')\">Delete</button>" +
+        '</div></td></tr>';
+    }).join('');
+    content.innerHTML =
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn-sm btn-lime" onclick="tournamentForm()">+ Create tournament</button></div>' +
+      '<div class="card"><div class="card-header"><div><div class="kicker">TOURNAMENTS</div><h3>'+_tournaments.length+'</h3></div></div>' +
+      '<table><thead><tr><th>TITLE</th><th>STARTS</th><th>FEE</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No tournaments.</td></tr>') + '</tbody></table></div>';
+  } catch (e) { content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
+}
+function editTournament(t){ tournamentForm(t); }
+function tournamentForm(t) {
+  var body =
+    '<input type="hidden" id="t-id" value="'+(t?t.id:'')+'">' +
+    '<div class="form-row full">'+fld('TITLE','t-title','text',t?t.title:'')+'</div>' +
+    '<div class="form-row">'+sel('FORMAT','t-format',T_FORMATS,t?t.format:'AMERICANO')+sel('CATEGORY','t-cat',T_CATS,t?t.category:'MIXED')+'</div>' +
+    '<div class="form-row">'+fld('STARTS','t-starts','datetime-local',t?dtLocal(t.startsAt):dtLocal(new Date().toISOString()))+fld('ENTRY FEE (DT)','t-fee','number',t?t.entryFeeDt:80)+'</div>' +
+    '<div class="form-row">'+fld('MAX PARTICIPANTS','t-max','number',t?(t.maxParticipants==null?'':t.maxParticipants):'')+fld('PRIZE','t-prize','text',t?(t.prize||''):'')+'</div>' +
+    '<div class="form-row full"><div class="form-group"><label>DESCRIPTION</label><textarea id="t-desc">'+esc(t?(t.description||''):'')+'</textarea></div></div>' +
+    '<div class="form-row">'+sel('REGISTRATION','t-regmode',[{v:'OPEN',t:'Open to all'},{v:'MEMBERS_ONLY',t:'Members only'},{v:'INVITATION_ONLY',t:'Invitation only'}],t?t.registrationMode:'OPEN')+sel('PAYMENT','t-pay',[{v:'BOTH',t:'Online or club'},{v:'ONLINE',t:'Online only'},{v:'AT_CLUB',t:'At club only'}],t?t.paymentRule:'BOTH')+'</div>' +
+    '<div class="toggle-row"><span>Auto-waitlist when full</span><label class="toggle"><input type="checkbox" id="t-wait"'+(t&&t.autoWaitlist?' checked':'')+'><span class="toggle-slider"></span></label></div>' +
+    '<div class="toggle-row"><span>Manual validation of registrations</span><label class="toggle"><input type="checkbox" id="t-manual"'+(t&&t.manualValidation?' checked':'')+'><span class="toggle-slider"></span></label></div>';
+  openGenModal(t?'Edit tournament':'Create tournament', body, 'Save', async function () {
+    var dto = { title:gv('t-title'), format:gv('t-format'), category:gv('t-cat'), startsAt:isoFromLocal('t-starts'),
+      entryFeeDt:gnum('t-fee')||0, maxParticipants:gint('t-max'), prize:gv('t-prize')||null,
+      description:document.getElementById('t-desc').value.trim()||null, registrationMode:gv('t-regmode'),
+      paymentRule:gv('t-pay'), autoWaitlist:gchecked('t-wait'), manualValidation:gchecked('t-manual') };
+    if(!dto.title||!dto.startsAt){ toast('Title and start date required.','error'); return; }
+    try { var id=gv('t-id'); if(id) await window.adminApi.tournaments.update(id,dto); else await window.adminApi.tournaments.create(dto);
+      toast('Saved.','success'); closeGenModal(); renderTournaments(); } catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+function deleteTournament(id,title){ confirmDialog('Delete tournament','Delete "'+title+'" and all its registrations?','Delete', async function(){ try{ await window.adminApi.tournaments.remove(id); toast('Deleted.','success'); closeConfirm(); renderTournaments(); }catch(e){ toast(e.message||'Failed.','error'); } }); }
+async function openTournament(id) {
+  try {
+    var d = await window.adminApi.tournaments.detail(id);
+    var regs = await window.adminApi.tournaments.registrations(id);
+    var t = d.tournament;
+    var statusOpts = T_STATUSES.map(function(s){return '<option value="'+s+'"'+(s===t.status?' selected':'')+'>'+s+'</option>';}).join('');
+    var fieldsList = (d.fields||[]).map(function(f){ return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span>'+esc(f.label)+' <span style="color:var(--muted);font-size:11px;">'+esc(f.fieldType)+(f.required?' *':'')+'</span></span><button class="btn-icon danger" onclick="delField(\''+f.id+'\',\''+id+'\')">×</button></div>'; }).join('') || '<div class="form-hint">No custom fields yet.</div>';
+    var regRows = (regs||[]).map(function(r){
+      var actions = '';
+      if (r.status==='PENDING') actions += "<button class='btn-icon' onclick=\"regSet('"+r.id+"','"+id+"','CONFIRMED')\">Approve</button><button class='btn-icon danger' onclick=\"regSet('"+r.id+"','"+id+"','REJECTED')\">Reject</button>";
+      else if (r.status==='WAITLIST') actions += "<button class='btn-icon' onclick=\"regSet('"+r.id+"','"+id+"','CONFIRMED')\">Promote</button>";
+      else if (r.status==='CONFIRMED') actions += "<button class='btn-icon danger' onclick=\"regSet('"+r.id+"','"+id+"','CANCELLED')\">Cancel</button>";
+      return '<tr><td style="font-family:Space Mono;font-size:11px;">'+esc((r.userId||'').slice(0,8))+'</td><td>'+esc(r.categoryLabel||'—')+'</td><td>'+esc(r.paymentStatus)+'</td><td>'+esc(r.status)+'</td><td><div class="row-actions">'+actions+'</div></td></tr>';
+    }).join('');
+    var body =
+      '<div class="form-row"><div class="form-group"><label>STATUS</label><select id="t-status" onchange="setTStatus(\''+id+'\',this.value)">'+statusOpts+'</select></div>' +
+      '<div class="form-group"><label>&nbsp;</label><button class="btn-sm btn-ghost" onclick="dupTournament(\''+id+'\')">Duplicate as template</button></div></div>' +
+      '<div class="kicker" style="margin:14px 0 6px;">REGISTRATION FORM FIELDS</div>'+fieldsList+
+      '<div style="margin:8px 0 18px;"><button class="btn-sm btn-ghost" onclick="addFieldForm(\''+id+'\')">+ Add field</button></div>' +
+      '<div class="kicker" style="margin-bottom:6px;">REGISTRATIONS ('+(d.confirmedCount)+' confirmed, '+(d.waitlistCount)+' waitlist)</div>' +
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;"><button class="btn-sm btn-lime" onclick="manualRegForm(\''+id+'\')">+ Register member</button></div>' +
+      '<table><thead><tr><th>USER</th><th>CATEGORY</th><th>PAYMENT</th><th>STATUS</th><th></th></tr></thead><tbody>'+(regRows||'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px;">No registrations.</td></tr>')+'</tbody></table>';
+    openGenModal('Manage: '+t.title, body, null, null, 640);
+  } catch(e){ toast(e.message||'Failed.','error'); }
+}
+async function setTStatus(id,status){ try{ await window.adminApi.tournaments.setStatus(id,status); toast('Status updated.','success'); }catch(e){ toast(e.message||'Failed.','error'); } }
+async function dupTournament(id){ try{ await window.adminApi.tournaments.duplicate(id); toast('Duplicated.','success'); closeGenModal(); renderTournaments(); }catch(e){ toast(e.message||'Failed.','error'); } }
+function addFieldForm(tid){
+  var types=['SHORT_TEXT','LONG_TEXT','DROPDOWN','MULTI_SELECT','DATE','PARTNER','FILE','TSHIRT_SIZE','PHONE','AGREEMENT'];
+  var body = '<div class="form-row">'+sel('TYPE','f-type',types,'SHORT_TEXT')+fld('LABEL','f-label','text','')+'</div>' +
+    '<div class="form-row full"><div class="form-group"><label>OPTIONS (for dropdown/multi-select, comma-separated)</label><input id="f-opts" type="text" placeholder="Beginner, Intermediate, Advanced"></div></div>' +
+    '<div class="toggle-row"><span>Required</span><label class="toggle"><input type="checkbox" id="f-req"><span class="toggle-slider"></span></label></div>';
+  openGenModal('Add form field', body, 'Add', async function(){
+    var dto = { fieldType:gv('f-type'), label:gv('f-label'), required:gchecked('f-req') };
+    var opts = gv('f-opts'); if(opts) dto.options = { choices: opts.split(',').map(function(s){return s.trim();}).filter(Boolean) };
+    if(!dto.label){ toast('Label required.','error'); return; }
+    try { await window.adminApi.tournaments.addField(tid,dto); toast('Field added.','success'); closeGenModal(); openTournament(tid); }catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+async function delField(fid,tid){ try{ await window.adminApi.tournaments.deleteField(fid); toast('Removed.','success'); openTournament(tid); }catch(e){ toast(e.message||'Failed.','error'); } }
+function manualRegForm(tid){
+  var body = '<div class="form-row full"><div class="form-group"><label>MEMBER — search</label><input id="mr-search" type="text" oninput="mrSearch()" autocomplete="off"><div id="mr-results" style="margin-top:4px;"></div><div class="form-hint" id="mr-selected"></div></div></div>' +
+    '<div class="form-hint" style="margin:6px 0;">Or guest:</div><div class="form-row">'+fld('GUEST NAME','mr-gname','text','')+fld('GUEST PHONE','mr-gphone','text','')+'</div>' +
+    '<div class="form-row full">'+fld('CATEGORY LABEL','mr-cat','text','','Adult / Junior')+'</div>';
+  _mrUserId=null;
+  openGenModal('Register member', body, 'Register', async function(){
+    var dto = { categoryLabel: gv('mr-cat')||null, answers:{} };
+    if(_mrUserId) dto.userId=_mrUserId; else { var n=gv('mr-gname'),p=gv('mr-gphone'); if(!n||!p){ toast('Pick member or enter guest.','error'); return; } dto.ghostName=n; dto.ghostPhone=p; }
+    try{ await window.adminApi.tournaments.manualRegister(tid,dto); toast('Registered.','success'); closeGenModal(); openTournament(tid); }catch(e){ toast(e.message||'Failed.','error'); }
+  });
+}
+var _mrUserId=null,_mrTimer=null;
+function mrSearch(){ var q=gv('mr-search'); _mrUserId=null; document.getElementById('mr-selected').textContent=''; clearTimeout(_mrTimer); if(!q){document.getElementById('mr-results').innerHTML='';return;}
+  _mrTimer=setTimeout(async function(){ try{ var rs=await window.adminApi.users.search(q); document.getElementById('mr-results').innerHTML=(rs||[]).slice(0,6).map(function(u){return "<div onclick=\"mrPick('"+u.id+"','"+esc(u.name)+"')\" style='padding:6px 10px;border-radius:7px;cursor:pointer;font-size:13px;border:1px solid var(--border);margin-top:4px;background:var(--navy);'>"+esc(u.name)+" <span style='color:var(--muted);font-size:11px;'>"+esc(u.phone)+"</span></div>";}).join('')||'<div class="form-hint">No match.</div>';}catch(_){} },250); }
+function mrPick(id,name){ _mrUserId=id; document.getElementById('mr-search').value=name; document.getElementById('mr-results').innerHTML=''; document.getElementById('mr-selected').textContent='✓ '+name; }
+async function regSet(regId,tid,status){ try{ await window.adminApi.tournaments.regStatus(regId,{status:status,refund:status==='CANCELLED'}); toast('Updated.','success'); openTournament(tid); }catch(e){ toast(e.message||'Failed.','error'); } }
+
+// ════════════════════════════════════════════════════════════════════════════
+// SITE CONTENT (Epic I)
+// ════════════════════════════════════════════════════════════════════════════
+async function renderContent() {
+  var content = document.getElementById('page-content');
+  try {
+    var settings = await window.adminApi.content.settings() || [];
+    var rows = settings.map(function (s) {
+      var val = s.value && s.value.value !== undefined ? s.value.value : JSON.stringify(s.value);
+      return '<tr><td style="font-family:Space Mono;font-size:11px;color:var(--lime);">'+esc(s.key)+'</td>' +
+        '<td>'+esc(String(val))+'</td>' +
+        "<td><button class='btn-icon' onclick=\"editSetting('"+esc(s.key)+"',"+JSON.stringify(JSON.stringify(s.value))+")\">Edit</button></td></tr>";
+    }).join('');
+    content.innerHTML =
+      '<div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px;"><button class="btn-sm btn-ghost" onclick="editSetting()">+ Add setting</button></div>' +
+      '<div class="card"><div class="card-header"><div><div class="kicker">GLOBAL SETTINGS</div><h3>Club info &amp; sitewide values</h3></div></div>' +
+      '<table><thead><tr><th>KEY</th><th>VALUE</th><th></th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px;">No settings.</td></tr>') + '</tbody></table></div>' +
+      '<div class="form-hint" style="margin-top:14px;">Simple settings store their text under the <code>value</code> key. Page-section editing (hero, FAQ, etc.) is available via the content API per page.</div>';
+  } catch (e) { content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
+}
+function editSetting(key, valueJson) {
+  var current = '';
+  if (valueJson) { try { var v = JSON.parse(valueJson); current = (v && v.value !== undefined) ? v.value : valueJson; } catch(_) { current = valueJson; } }
+  var body = '<div class="form-row full">'+fld('KEY','st-key','text',key||'','club.phone')+'</div>' +
+    '<div class="form-row full">'+fld('VALUE','st-val','text',current,'')+'</div>' +
+    '<div class="form-hint">Stored as {"value": "…"}.</div>';
+  openGenModal(key?'Edit setting':'Add setting', body, 'Save', async function(){
+    var k=gv('st-key'); if(!k){ toast('Key required.','error'); return; }
+    try { await window.adminApi.content.saveSetting({ key:k, value:{ value: gv('st-val') } }); toast('Saved.','success'); closeGenModal(); renderContent(); }catch(e){ toast(e.message||'Failed.','error'); }
   });
 }
 
