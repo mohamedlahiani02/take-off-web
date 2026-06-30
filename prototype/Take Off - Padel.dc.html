@@ -437,6 +437,7 @@ class Component extends DCLogic {
   state = {
     dateIdx: 0, selected: {}, _authTick: 0, _cartTick: 0,
     openCoachIdx: null,
+    _coachPreview: null,
     // coaching form
     coachFormDone: false, coursSelected: {}, availGrid: {}, // key: "day|slot" => bool
     // plans
@@ -450,10 +451,17 @@ class Component extends DCLogic {
     if (window.takeOffCart) {
       window.takeOffCart.subscribe(() => this.setState(s => ({ _cartTick: s._cartTick + 1 })));
     }
-    // prefill coaching form from auth
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.setState({ openCoachIdx: null });
     });
+    (async () => {
+      if (window.takeOffApi && window.takeOffApi.isOnline()) {
+        try {
+          const data = await window.takeOffApi.coaches.list('PADEL', true);
+          if (data && data.length) this.setState({ _coachPreview: data });
+        } catch (_) {}
+      }
+    })();
   }
 
   _dates() {
@@ -634,7 +642,18 @@ class Component extends DCLogic {
     const authUser = window.takeOffAuth && window.takeOffAuth.user;
 
     // Coaches with extended data
-    const coachesData = [
+    const _apiPreview = this.state._coachPreview;
+    const coachesData = _apiPreview ? _apiPreview.map((c, i) => ({
+      first: c.firstName.toUpperCase(),
+      last: c.lastName.toUpperCase(),
+      role: c.roleTitle,
+      spec: c.specs[0] || '',
+      slot: 'pad-coach-' + (i + 1),
+      name: (c.firstName + ' ' + c.lastName).toUpperCase(),
+      bio: c.bio,
+      specs: c.specs,
+      achievements: c.achievements,
+    })) : [
       { first: 'COACH', last: 'RAFAEL ORTIZ', role: 'Head Performance Coach', spec: 'Advanced technique, power play & strategy', slot: 'pad-coach-1',
         name: 'RAFAEL ORTIZ', bio: "Formé en Espagne et actif sur le circuit mondial, Rafael est l'architecte du jeu offensif de Take Off. Il analyse chaque échange avec une précision chirurgicale et transforme les failles en armes.", specs: ['Technique avancée', 'Power play', 'Stratégie de jeu'], achievements: ["Champion national Espagne U21", "10 ans d'expérience coaching pro", "70+ joueurs en tournoi depuis 2020"] },
       { first: 'COACH', last: 'SOFIA MARTINEZ', role: 'Technique & Footwork', spec: 'Ball control, movement & accuracy drills', slot: 'pad-coach-2',
