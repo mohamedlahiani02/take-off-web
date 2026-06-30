@@ -1,5 +1,5 @@
 // Take Off Club — Shared Cart + Checkout
-// v2: qty grouping, Tunisian delivery, 4-step checkout with review, proper payment methods
+// v3: booking-only cart skips delivery step (3-step flow); products keep 4-step flow
 (function () {
   if (window.takeOffCart) return;
 
@@ -19,6 +19,13 @@
   var _step = 1;
   var _orderId = null;
   var _d = { name:'', email:'', phone:'', delivery:'pickup', address:'', city:'Tunis', notes:'', pay:'cod', d17:'', cardNum:'', cardExp:'', cardCvc:'' };
+
+  // True when every item in the cart is a court booking or pack (no physical products)
+  function hasOnlyBookings() {
+    return _items.length > 0 && _items.every(function(it) {
+      return it.kind === 'booking' || it.kind === 'pack';
+    });
+  }
 
   // ── Public API ────────────────────────────────────────────────────────────
   var cart = {
@@ -50,7 +57,7 @@
     getCount: function() { return _items.reduce(function(a,b){return a+(b.qty||1);},0); },
     getSubtotal: function() { return _items.reduce(function(a,b){return a+(b._raw||0)*(b.qty||1);},0); },
     getShipping: function() {
-      if (_d.delivery==='pickup') return 0;
+      if (hasOnlyBookings() || _d.delivery==='pickup') return 0;
       var c=(_d.city||'').trim().toLowerCase();
       return (c===''||c==='tunis') ? 9 : 15;
     },
@@ -296,37 +303,58 @@
     var coOv = document.getElementById('tk-co-ov');
     if (!coOv) return;
     var u = window.takeOffAuth && window.takeOffAuth.user;
-    var walletBal = u ? (u.wallet||0) : 0;
+    var walletBal = u ? (u.walletDt !== undefined ? u.walletDt : (u.wallet || 0)) : 0;
     var total = cart.getTotal();
     var walletOk = u && walletBal >= total;
+    var bookingOnly = hasOnlyBookings();
+    // booking-only: 3 steps (1=contact, 3=payment, 4=confirm) — step 2 (delivery) is skipped
+    var totalSteps = bookingOnly ? 3 : 4;
     var inner = '';
 
+    // ── Success ──────────────────────────────────────────────────────────────
     if (_step === 'success') {
-      var orderId = _orderId || ('TKO-'+Date.now().toString(36).toUpperCase());
-      var delivInfo = _d.delivery==='pickup'
-        ? 'Pick up at Take Off Club · Ready in 24–48h'
-        : esc(_d.address)+', '+esc(_d.city)+(_d.notes?' ('+esc(_d.notes)+')':'');
+      var refId = _orderId || ('TKO-'+Date.now().toString(36).toUpperCase());
       var itemRows = _items.map(function(it){
         return '<div class="tk-srow">'+
           '<span>'+esc(it.name)+(it.size?' · '+esc(it.size):'')+(it.qty>1?' × '+it.qty:'')+'</span>'+
           '<span style="color:#c4ef3f;">'+((it._raw||0)*(it.qty||1))+' DT</span>'+
         '</div>';
       }).join('');
-      inner = '<div class="tk-success">'+
-        '<div class="tk-s-icon">✓</div>'+
-        '<div class="tk-co-title" style="color:#c4ef3f;">Order placed</div>'+
-        '<div class="tk-s-id">ORDER '+orderId+'</div>'+
-        '<div class="tk-sbox" style="text-align:left;margin-bottom:16px;">'+
-          itemRows+
-          '<hr class="tk-sdiv">'+
-          '<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':cart.getShipping()+' DT')+'</span></div>'+
-          '<div class="tk-stotal"><span class="tk-stl">TOTAL PAID</span><span class="tk-stv">'+total+' DT</span></div>'+
-        '</div>'+
-        '<div style="font-size:13px;color:rgba(244,245,238,.6);line-height:1.65;margin-bottom:18px;">'+delivInfo+
-          (_d.delivery!=='pickup'?'<br><span style="opacity:.6">Estimated: 2–4 business days · '+( _d.delivery==='deliver'&&(_d.city||'').toLowerCase()==='tunis'?'9':'15')+' DT delivery</span>':'')+'</div>'+
-        (!u?'<div class="tk-nudge" style="margin-bottom:18px;">No account yet? <a id="tk-s-login">Create one</a> to track orders and manage your bookings.</div>':'')+
-        '<button class="tk-next-btn" id="tk-co-done">Done</button>'+
-      '</div>';
+
+      if (bookingOnly) {
+        inner = '<div class="tk-success">'+
+          '<div class="tk-s-icon">✓</div>'+
+          '<div class="tk-co-title" style="color:#c4ef3f;">Booking confirmed</div>'+
+          '<div class="tk-s-id">REF '+refId+'</div>'+
+          '<div class="tk-sbox" style="text-align:left;margin-bottom:16px;">'+
+            itemRows+
+            '<hr class="tk-sdiv">'+
+            '<div class="tk-stotal"><span class="tk-stl">TOTAL PAID</span><span class="tk-stv">'+total+' DT</span></div>'+
+          '</div>'+
+          '<div style="font-size:13px;color:rgba(244,245,238,.6);line-height:1.65;margin-bottom:18px;">See you on the court. Your slot is reserved — arrive 5 min early.</div>'+
+          (!u?'<div class="tk-nudge" style="margin-bottom:18px;">No account yet? <a id="tk-s-login">Create one</a> to manage your bookings.</div>':'')+
+          '<button class="tk-next-btn" id="tk-co-done">Done</button>'+
+        '</div>';
+      } else {
+        var delivInfo = _d.delivery==='pickup'
+          ? 'Pick up at Take Off Club · Ready in 24–48h'
+          : esc(_d.address)+', '+esc(_d.city)+(_d.notes?' ('+esc(_d.notes)+')':'');
+        inner = '<div class="tk-success">'+
+          '<div class="tk-s-icon">✓</div>'+
+          '<div class="tk-co-title" style="color:#c4ef3f;">Order placed</div>'+
+          '<div class="tk-s-id">ORDER '+refId+'</div>'+
+          '<div class="tk-sbox" style="text-align:left;margin-bottom:16px;">'+
+            itemRows+
+            '<hr class="tk-sdiv">'+
+            '<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':cart.getShipping()+' DT')+'</span></div>'+
+            '<div class="tk-stotal"><span class="tk-stl">TOTAL PAID</span><span class="tk-stv">'+total+' DT</span></div>'+
+          '</div>'+
+          '<div style="font-size:13px;color:rgba(244,245,238,.6);line-height:1.65;margin-bottom:18px;">'+delivInfo+
+            (_d.delivery!=='pickup'?'<br><span style="opacity:.6">Estimated: 2–4 business days · '+cart.getShipping()+' DT delivery</span>':'')+'</div>'+
+          (!u?'<div class="tk-nudge" style="margin-bottom:18px;">No account yet? <a id="tk-s-login">Create one</a> to track orders and manage your bookings.</div>':'')+
+          '<button class="tk-next-btn" id="tk-co-done">Done</button>'+
+        '</div>';
+      }
 
       coOv.innerHTML = '<div class="tk-co-card"><div class="tk-co-inner">'+inner+'</div></div>';
       document.getElementById('tk-co-done').addEventListener('click', function(){ _hideEl('tk-co-ov'); });
@@ -335,39 +363,57 @@
       return;
     }
 
+    // ── Step pip helper — maps logical step to visual position ────────────────
+    function pip(logicalStep) {
+      // booking: 1→1, 3→2, 4→3 | product: 1→1, 2→2, 3→3, 4→4
+      var pos = bookingOnly
+        ? (logicalStep === 1 ? 1 : logicalStep === 3 ? 2 : 3)
+        : logicalStep;
+      var h = '<div class="tk-stepper">';
+      for (var i=1;i<=totalSteps;i++) h += '<div class="tk-pip '+(i<pos?'done':i===pos?'act':'')+'"></div>';
+      return h+'</div>';
+    }
+
+    // ── Step 1: Contact ───────────────────────────────────────────────────────
     if (_step === 1) {
+      var contactHint = bookingOnly
+        ? '<div class="tk-co-eyebrow">01 — YOUR CONTACT DETAILS</div>'
+        : '<div class="tk-co-eyebrow">01 — YOUR DETAILS</div>';
+      var phoneHint = bookingOnly
+        ? '<div class="tk-hint">+216 · 8 digits · for booking updates</div>'
+        : '<div class="tk-hint">+216 · 8 digits · used for delivery &amp; updates</div>';
       inner =
-        stepper(1)+
+        pip(1)+
         '<div class="tk-co-title">Contact</div>'+
-        '<div class="tk-co-eyebrow">01 — YOUR DETAILS</div>'+
+        contactHint+
         sbox(false)+
         '<div class="tk-g2">'+
           '<div><label class="tk-lbl">FULL NAME</label><input class="tk-inp" id="tk-name" placeholder="Sami Ben Ahmed" value="'+escA(_d.name||(u?u.name||'':''))+'"></div>'+
           '<div>'+
             '<label class="tk-lbl">PHONE <span style="opacity:.4">(WhatsApp OK)</span></label>'+
-            '<input class="tk-inp" id="tk-phone" type="tel" placeholder="+216 XX XXX XXX" value="'+escA(_d.phone)+'">'+
-            '<div class="tk-hint">+216 · 8 digits · used for delivery &amp; updates</div>'+
+            '<input class="tk-inp" id="tk-phone" type="tel" placeholder="+216 XX XXX XXX" value="'+escA(_d.phone||(u?u.phone||'':''))+'">'+
+            phoneHint+
           '</div>'+
         '</div>'+
-        '<label class="tk-lbl">EMAIL <span style="opacity:.4">(order confirmation)</span></label>'+
-        '<input class="tk-inp" id="tk-email" type="email" placeholder="you@email.com" value="'+escA(_d.email||(u?u.email||'':''))+'">'+
-        (!u?'<div class="tk-nudge">Have an account? <a id="tk-s1-in">Sign in</a> to pre-fill your details and save this order.</div>':'')+
+        (!bookingOnly ? '<label class="tk-lbl">EMAIL <span style="opacity:.4">(order confirmation)</span></label><input class="tk-inp" id="tk-email" type="email" placeholder="you@email.com" value="'+escA(_d.email||(u?u.email||'':''))+'">' : '')+
+        (!u?'<div class="tk-nudge">Have an account? <a id="tk-s1-in">Sign in</a> to pre-fill your details and save this '+(bookingOnly?'booking':'order')+'.</div>':'')+
         '<div class="tk-actions"><button class="tk-next-btn" id="tk-next">Continue →</button></div>';
     }
 
+    // ── Step 2: Delivery (products only) ─────────────────────────────────────
     if (_step === 2) {
       inner =
-        stepper(2)+
+        pip(2)+
         '<div class="tk-co-title">Delivery</div>'+
         '<div class="tk-co-eyebrow">02 — HOW DO YOU WANT TO RECEIVE IT?</div>'+
         '<div class="tk-radios">'+
           '<label class="tk-radio'+(_d.delivery==='pickup'?' sel':'')+'" data-del="pickup">'+
-            '<input type="radio" name="tk-del" value="pickup" '+(_d.delivery==='pickup'?'checked':'')+' id="tk-del-p">'+
+            '<input type="radio" name="tk-del" value="pickup" '+(_d.delivery==='pickup'?'checked':'')+'>'+
             '<div><div class="tk-rl">Pick up at the club <span style="color:#c4ef3f;font-weight:400;font-size:12px;">FREE</span></div>'+
             '<div class="tk-rs">Take Off Club · Tunis<br>Ready to collect within 24–48h of order confirmation</div></div>'+
           '</label>'+
           '<label class="tk-radio'+(_d.delivery==='deliver'?' sel':'')+'" data-del="deliver">'+
-            '<input type="radio" name="tk-del" value="deliver" '+(_d.delivery==='deliver'?'checked':'')+' id="tk-del-d">'+
+            '<input type="radio" name="tk-del" value="deliver" '+(_d.delivery==='deliver'?'checked':'')+'>'+
             '<div><div class="tk-rl">Deliver to my address <span style="color:rgba(244,245,238,.45);font-weight:400;font-size:12px;">from 9 DT</span></div>'+
             '<div class="tk-rs">Tunis: 9 DT · Other regions: 15 DT · 2–4 business days</div></div>'+
           '</label>'+
@@ -383,21 +429,27 @@
         '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">Continue →</button></div>';
     }
 
+    // ── Step 3: Payment ───────────────────────────────────────────────────────
     if (_step === 3) {
       var walletSubtitle = walletOk
         ? walletBal+' DT available — sufficient'
         : (u ? walletBal+' DT available — insufficient for this order' : 'Sign in to use your wallet');
-      inner =
-        stepper(3)+
-        '<div class="tk-co-title">Payment</div>'+
-        '<div class="tk-co-eyebrow">03 — HOW DO YOU PAY?</div>'+
-        sbox(true)+
-        '<div class="tk-radios">'+
-          radioHTML('cod', _d.pay, 'Cash on delivery / at pickup', 'Pay when you collect or when the courier arrives', false)+
-          radioHTML('d17', _d.pay, 'D17 — Mobile payment', 'We\'ll send a payment request to your D17 number', false)+
+      var payOptions = bookingOnly
+        ? radioHTML('d17', _d.pay, 'D17 — Mobile payment', 'We\'ll send a payment request to your D17 number', false)+
           radioHTML('wallet', _d.pay, '◆ Club wallet · <span style="color:'+( walletOk?'#c4ef3f':'rgba(244,245,238,.4)')+'">'+walletBal+' DT</span>', walletSubtitle, !walletOk)+
           radioHTML('card', _d.pay, 'Card — Visa / Mastercard', 'Secure card entry', false)+
-        '</div>'+
+          radioHTML('cash', _d.pay, 'Pay at the club', 'Settle at reception before your session', false)
+        : radioHTML('cod', _d.pay, 'Cash on delivery / at pickup', 'Pay when you collect or when the courier arrives', false)+
+          radioHTML('d17', _d.pay, 'D17 — Mobile payment', 'We\'ll send a payment request to your D17 number', false)+
+          radioHTML('wallet', _d.pay, '◆ Club wallet · <span style="color:'+( walletOk?'#c4ef3f':'rgba(244,245,238,.4)')+'">'+walletBal+' DT</span>', walletSubtitle, !walletOk)+
+          radioHTML('card', _d.pay, 'Card — Visa / Mastercard', 'Secure card entry', false);
+      var stepLabel = bookingOnly ? '02 — HOW DO YOU PAY?' : '03 — HOW DO YOU PAY?';
+      inner =
+        pip(3)+
+        '<div class="tk-co-title">Payment</div>'+
+        '<div class="tk-co-eyebrow">'+stepLabel+'</div>'+
+        sbox(!bookingOnly)+
+        '<div class="tk-radios">'+payOptions+'</div>'+
         '<div id="tk-d17f" style="display:'+(_d.pay==='d17'?'block':'none')+';">'+
           '<label class="tk-lbl">D17 PHONE NUMBER</label>'+
           '<input class="tk-inp" id="tk-d17" type="tel" placeholder="+216 XX XXX XXX" value="'+escA(_d.d17||_d.phone)+'">'+
@@ -410,45 +462,55 @@
             '<div><label class="tk-lbl">CVC</label><input class="tk-inp" id="tk-cc" placeholder="•••" maxlength="4" value="'+escA(_d.cardCvc)+'"></div>'+
           '</div>'+
         '</div>'+
-        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">Review order →</button></div>';
+        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">Review →</button></div>';
     }
 
+    // ── Step 4: Review & confirm ──────────────────────────────────────────────
     if (_step === 4) {
       var payLabels = {
-        cod: 'Cash on delivery',
-        d17: 'D17 · '+(_d.d17||_d.phone),
+        cod:  'Cash on delivery',
+        cash: 'Pay at the club',
+        d17:  'D17 · '+(_d.d17||_d.phone),
         wallet: 'Club wallet ('+walletBal+' DT)',
         card: 'Card ····'+(_d.cardNum.replace(/\s/g,'').slice(-4)||'????'),
       };
-      var delivText = _d.delivery==='pickup'
-        ? 'Pick up at Take Off Club · <span style="color:#c4ef3f;">FREE</span>'
-        : esc(_d.address)+', '+esc(_d.city)+(_d.notes?' ('+esc(_d.notes)+')':'')+'<br><span style="opacity:.55;font-size:12px;">Estimated 2–4 business days · '+cart.getShipping()+' DT</span>';
-      var itemRows = _items.map(function(it){
+      var itemRows4 = _items.map(function(it){
         return '<div class="tk-srow">'+
           '<span>'+esc(it.name)+(it.size?' · '+esc(it.size):'')+(it.qty>1?' × '+it.qty:'')+'</span>'+
           '<span>'+((it._raw||0)*(it.qty||1))+' DT</span>'+
         '</div>';
       }).join('');
+      var stepLabel4 = bookingOnly ? '03 — CONFIRM YOUR BOOKING' : '04 — CONFIRM BEFORE PLACING YOUR ORDER';
+      var ctaLabel = bookingOnly ? 'Confirm booking' : 'Place order';
+      var reviewRows = bookingOnly
+        ? '<div class="tk-rrow"><span class="tk-rkey">CONTACT</span><span class="tk-rval">'+esc(_d.name)+' · '+esc(_d.phone)+'</span></div>'+
+          '<div class="tk-rrow" style="border:none;"><span class="tk-rkey">PAYMENT</span><span class="tk-rval">'+esc(payLabels[_d.pay]||_d.pay)+'</span></div>'
+        : (function(){
+            var delivText = _d.delivery==='pickup'
+              ? 'Pick up at Take Off Club · <span style="color:#c4ef3f;">FREE</span>'
+              : esc(_d.address)+', '+esc(_d.city)+(_d.notes?' ('+esc(_d.notes)+')':'')+'<br><span style="opacity:.55;font-size:12px;">Estimated 2–4 business days · '+cart.getShipping()+' DT</span>';
+            return '<div class="tk-rrow"><span class="tk-rkey">CONTACT</span><span class="tk-rval">'+esc(_d.name)+' · '+esc(_d.phone)+'<br><span style="opacity:.55;font-size:12px;">'+esc(_d.email)+'</span></span></div>'+
+              '<div class="tk-rrow"><span class="tk-rkey">DELIVERY</span><span class="tk-rval">'+delivText+'</span></div>'+
+              '<div class="tk-rrow" style="border:none;"><span class="tk-rkey">PAYMENT</span><span class="tk-rval">'+esc(payLabels[_d.pay]||_d.pay)+'</span></div>';
+          })();
       inner =
-        stepper(4)+
+        pip(4)+
         '<div class="tk-co-title">Review</div>'+
-        '<div class="tk-co-eyebrow">04 — CONFIRM BEFORE PLACING YOUR ORDER</div>'+
+        '<div class="tk-co-eyebrow">'+stepLabel4+'</div>'+
         '<div class="tk-sbox">'+
-          itemRows+
+          itemRows4+
           '<hr class="tk-sdiv">'+
-          '<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':cart.getShipping()+' DT')+'</span></div>'+
+          (!bookingOnly?'<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':cart.getShipping()+' DT')+'</span></div>':'')+
           '<div class="tk-stotal"><span class="tk-stl">TOTAL</span><span class="tk-stv">'+cart.getTotal()+' DT</span></div>'+
         '</div>'+
-        '<div class="tk-rrow"><span class="tk-rkey">CONTACT</span><span class="tk-rval">'+esc(_d.name)+' · '+esc(_d.phone)+'<br><span style="opacity:.55;font-size:12px;">'+esc(_d.email)+'</span></span></div>'+
-        '<div class="tk-rrow"><span class="tk-rkey">DELIVERY</span><span class="tk-rval">'+delivText+'</span></div>'+
-        '<div class="tk-rrow" style="border:none;"><span class="tk-rkey">PAYMENT</span><span class="tk-rval">'+esc(payLabels[_d.pay]||_d.pay)+'</span></div>'+
-        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next" style="background:#c4ef3f;">Place order</button></div>';
+        reviewRows+
+        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">'+ctaLabel+'</button></div>';
     }
 
     coOv.innerHTML = '<div class="tk-co-card"><button class="tk-co-close" id="tk-co-x">×</button><div class="tk-co-inner">'+inner+'</div></div>';
     document.getElementById('tk-co-x').addEventListener('click', function(){ _hideEl('tk-co-ov'); });
 
-    // Step-specific wiring
+    // ── Step wiring ───────────────────────────────────────────────────────────
     if (_step === 1) {
       var s1in = document.getElementById('tk-s1-in');
       if (s1in) s1in.addEventListener('click', function(){ _hideEl('tk-co-ov'); if(window.takeOffAuth) window.takeOffAuth.openLogin(); });
@@ -456,7 +518,9 @@
         var n=val('tk-name'), p=val('tk-phone'), e=val('tk-email');
         if (!n.trim()) { flash('tk-name','Please enter your name'); return; }
         if (!p.trim()) { flash('tk-phone','Please enter your phone number'); return; }
-        _d.name=n; _d.phone=p; _d.email=e; _step=2; renderCheckout();
+        _d.name=n; _d.phone=p; _d.email=e;
+        _step = bookingOnly ? 3 : 2; // skip delivery for bookings
+        renderCheckout();
       });
     }
 
@@ -468,7 +532,7 @@
         document.querySelectorAll('.tk-radio[data-del]').forEach(function(r){
           r.classList.toggle('sel', r.getAttribute('data-del')===v);
         });
-        renderDrawer(); // refresh shipping line in drawer
+        renderDrawer();
       }
       document.querySelectorAll('.tk-radio[data-del]').forEach(function(r){
         r.addEventListener('click', function(){ setDel(r.getAttribute('data-del')); });
@@ -502,7 +566,10 @@
           if (inp && !inp.disabled) setPay(r.getAttribute('data-val'));
         });
       });
-      document.getElementById('tk-back').addEventListener('click', function(){ _step=2; renderCheckout(); });
+      document.getElementById('tk-back').addEventListener('click', function(){
+        _step = bookingOnly ? 1 : 2; // skip delivery step going back
+        renderCheckout();
+      });
       document.getElementById('tk-next').addEventListener('click', function(){
         if (_d.pay==='d17') { _d.d17 = val('tk-d17'); if(!_d.d17.trim()){flash('tk-d17','Please enter your D17 number');return;} }
         if (_d.pay==='card') {
@@ -520,11 +587,10 @@
         if (btn) { btn.disabled = true; btn.textContent = '...'; }
         var its = cart.getItems();
 
-        // purchase any packs locally (packs backend module is TODO)
         its.forEach(function(it){ if(it.kind==='pack'&&it._packMeta&&window.takeOffAuth&&window.takeOffAuth.purchasePack) window.takeOffAuth.purchasePack(it._packMeta); });
 
         var client = window.takeOffApi;
-        if (client && client.isOnline()) {
+        if (client && client.isOnline() && !bookingOnly) {
           try {
             var payload = {
               deliveryMethod: _d.delivery === 'pickup' ? 'PICKUP' : 'DELIVER',
@@ -532,16 +598,16 @@
               paymentMethod: (_d.pay || 'cod').toUpperCase(),
               contact: { name: _d.name, email: _d.email, phone: _d.phone },
               items: its.filter(function(it){ return it.kind !== 'pack'; }).map(function(it){
-                return { productName: it.name || it.n, qty: it.qty || 1, size: it.size || null, unitPriceDt: it.price || 0 };
+                return { productName: it.name || it.n, qty: it.qty || 1, size: it.size || null, unitPriceDt: it._raw || 0 };
               }),
             };
             var order = await client.orders.place(payload);
             _orderId = order && order.orderRef ? order.orderRef : ('TKO-' + Date.now().toString(36).toUpperCase());
           } catch (e) {
-            // fall through to offline success
             _orderId = 'TKO-' + Date.now().toString(36).toUpperCase();
           }
         } else {
+          // bookings: courts backend is TODO — local confirmation for now
           _orderId = 'TKO-' + Date.now().toString(36).toUpperCase();
         }
 
