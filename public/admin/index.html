@@ -318,8 +318,14 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>PHOTO URL</label>
-          <input id="coach-photoUrl" type="text" placeholder="https://... or /uploads/coaches/...">
+          <label>PHOTO</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img id="coach-photo-thumb" src="" style="width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid var(--border);display:none;">
+            <input type="file" accept="image/*" id="coach-photo-file" style="display:none;" onchange="coachPhotoUpload(this)">
+            <button type="button" class="btn-sm btn-ghost" onclick="document.getElementById('coach-photo-file').click()">⬆ Upload</button>
+            <span class="form-hint" id="coach-photo-status"></span>
+          </div>
+          <input id="coach-photoUrl" type="hidden">
         </div>
         <div class="form-group">
           <label>DISPLAY ORDER</label>
@@ -849,6 +855,9 @@ function openCoachModal(coach) {
   document.getElementById('coach-specs').value = coach ? (coach.specs || []).join(', ') : '';
   document.getElementById('coach-achievements').value = coach ? (coach.achievements || []).join(', ') : '';
   document.getElementById('coach-photoUrl').value = coach ? (coach.photoUrl || '') : '';
+  var ct = document.getElementById('coach-photo-thumb');
+  if (coach && coach.photoUrl) { ct.src = coach.photoUrl; ct.style.display = 'block'; } else { ct.src = ''; ct.style.display = 'none'; }
+  document.getElementById('coach-photo-status').textContent = '';
   document.getElementById('coach-displayOrder').value = coach ? coach.displayOrder : '';
   document.getElementById('coach-active').checked = coach ? coach.active : true;
   document.getElementById('coach-showOnPadelPreview').checked = coach ? coach.showOnPadelPreview : false;
@@ -857,6 +866,18 @@ function openCoachModal(coach) {
 }
 
 function editCoach(coach) { openCoachModal(coach); }
+
+async function coachPhotoUpload(input) {
+  var file = input.files[0]; if (!file) return;
+  var status = document.getElementById('coach-photo-status'); status.textContent = 'Uploading…';
+  try {
+    var asset = await window.adminApi.media.upload(file, 'coaches');
+    document.getElementById('coach-photoUrl').value = asset.url;
+    var t = document.getElementById('coach-photo-thumb'); t.src = asset.url; t.style.display = 'block';
+    status.textContent = '';
+  } catch (e) { status.textContent = e.message || 'Upload failed'; toast(e.message || 'Upload failed', 'error'); }
+  input.value = '';
+}
 
 function closeCoachModal() {
   document.getElementById('coach-modal').style.display = 'none';
@@ -1521,53 +1542,121 @@ function dtLocal(iso) { // ISO → value for datetime-local input
 }
 function isoFromLocal(id) { var v = gv(id); return v ? new Date(v).toISOString() : null; }
 
+// ── Reusable image uploader (Cloudinary) ──
+var _imgLists = {};
+function imgWidget(wid, urls, label, multiple) {
+  _imgLists[wid] = (urls || []).slice();
+  return '<div class="form-group"><label>' + (label || 'PHOTOS') + '</label>' +
+    '<div id="' + wid + '-thumbs" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>' +
+    '<input type="file" accept="image/*" id="' + wid + '-file" style="display:none;" onchange="imgUpload(\'' + wid + '\',this,' + (multiple ? 'true' : 'false') + ')">' +
+    '<button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'' + wid + '-file\').click()">⬆ Upload image</button>' +
+    '<span class="form-hint" id="' + wid + '-status" style="margin-left:10px;"></span></div>';
+}
+function imgRenderThumbs(wid) {
+  var el = document.getElementById(wid + '-thumbs'); if (!el) return;
+  el.innerHTML = (_imgLists[wid] || []).map(function (u, i) {
+    return '<div style="position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--navy);">' +
+      '<img src="' + esc(u) + '" style="width:100%;height:100%;object-fit:cover;">' +
+      '<button type="button" onclick="imgRemove(\'' + wid + '\',' + i + ')" style="position:absolute;top:2px;right:2px;background:rgba(239,68,68,.92);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;line-height:1;cursor:pointer;">×</button></div>';
+  }).join('');
+}
+async function imgUpload(wid, input, multiple) {
+  var file = input.files[0]; if (!file) return;
+  var status = document.getElementById(wid + '-status'); if (status) status.textContent = 'Uploading…';
+  try {
+    var folder = wid.indexOf('coach') >= 0 ? 'coaches' : (wid.indexOf('prod') >= 0 ? 'products' : 'misc');
+    var asset = await window.adminApi.media.upload(file, folder);
+    if (!multiple) _imgLists[wid] = [];
+    _imgLists[wid].push(asset.url);
+    imgRenderThumbs(wid);
+    if (status) status.textContent = '';
+  } catch (e) { if (status) status.textContent = e.message || 'Upload failed'; toast(e.message || 'Upload failed', 'error'); }
+  input.value = '';
+}
+function imgRemove(wid, i) { _imgLists[wid].splice(i, 1); imgRenderThumbs(wid); }
+function imgGet(wid) { return _imgLists[wid] || []; }
+
+// ── Reusable size/stock variants editor ──
+var _variantRows = [];
+function variantsWidget(variants) {
+  _variantRows = (variants || []).map(function (v) { return { size: v.size, stock: v.stock }; });
+  return '<div class="form-group"><label>SIZES &amp; STOCK <span style="color:var(--muted)">(leave empty for one-size products)</span></label>' +
+    '<div id="variant-rows"></div>' +
+    '<button type="button" class="btn-sm btn-ghost" onclick="variantAdd()" style="margin-top:6px;">+ Add size</button></div>';
+}
+function variantRender() {
+  var el = document.getElementById('variant-rows'); if (!el) return;
+  el.innerHTML = _variantRows.map(function (v, i) {
+    return '<div style="display:flex;gap:8px;margin-bottom:6px;">' +
+      '<input type="text" placeholder="Size (S / M / 42…)" value="' + esc(v.size) + '" oninput="_variantRows[' + i + '].size=this.value" style="flex:1;padding:9px;border-radius:7px;border:1px solid rgba(196,239,63,.22);background:var(--navy);color:var(--cream);">' +
+      '<input type="number" min="0" placeholder="Stock" value="' + v.stock + '" oninput="_variantRows[' + i + '].stock=parseInt(this.value)||0" style="width:110px;padding:9px;border-radius:7px;border:1px solid rgba(196,239,63,.22);background:var(--navy);color:var(--cream);">' +
+      '<button type="button" class="btn-icon danger" onclick="variantDel(' + i + ')">×</button></div>';
+  }).join('');
+}
+function variantAdd() { _variantRows.push({ size: '', stock: 0 }); variantRender(); }
+function variantDel(i) { _variantRows.splice(i, 1); variantRender(); }
+function variantsGet() { return _variantRows.filter(function (v) { return v.size && v.size.trim(); }).map(function (v) { return { size: v.size.trim(), stock: v.stock || 0 }; }); }
+
 // ════════════════════════════════════════════════════════════════════════════
 // PRODUCTS (Epic G)
 // ════════════════════════════════════════════════════════════════════════════
 var _products = [];
 var PRODUCT_CATEGORIES = ['RACKETS','ACCESSORIES','PADELWEAR','PILATES','TOWELS','LIFESTYLE'];
+function prodTotalStock(d) {
+  if (d.variants && d.variants.length) return d.variants.reduce(function (s, v) { return s + (v.stock || 0); }, 0);
+  return d.product.stock || 0;
+}
 async function renderProducts() {
   var content = document.getElementById('page-content');
   try {
     _products = await window.adminApi.products.list() || [];
-    var rows = _products.map(function (p) {
+    var rows = _products.map(function (d) {
+      var p = d.product;
+      var thumb = (p.imageUrls && p.imageUrls.length)
+        ? '<img src="' + esc(p.imageUrls[0]) + '" style="width:40px;height:40px;border-radius:6px;object-fit:cover;vertical-align:middle;margin-right:10px;">'
+        : '<span style="display:inline-block;width:40px;height:40px;border-radius:6px;background:var(--navy);vertical-align:middle;margin-right:10px;"></span>';
+      var sizes = (d.variants && d.variants.length)
+        ? d.variants.map(function (v) { return esc(v.size) + ':' + v.stock; }).join('  ')
+        : '<span style="color:var(--muted);">one size</span>';
       return '<tr>' +
-        '<td><strong>' + esc(p.name) + '</strong></td>' +
+        '<td>' + thumb + '<strong>' + esc(p.name) + '</strong>' + (p.imageUrls && p.imageUrls.length>1 ? ' <span style="color:var(--muted);font-size:11px;">+'+(p.imageUrls.length-1)+' photos</span>':'') + '</td>' +
         '<td>' + esc(p.category) + '</td>' +
         '<td style="color:var(--lime);font-weight:700;">' + Number(p.priceDt).toFixed(3) + ' DT</td>' +
-        '<td>' + p.stock + '</td>' +
+        '<td style="font-family:Space Mono;font-size:11px;">' + sizes + '</td>' +
+        '<td>' + prodTotalStock(d) + '</td>' +
         '<td>' + (p.isActive ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-inactive">HIDDEN</span>') + '</td>' +
         '<td><div class="row-actions">' +
-          "<button class='btn-icon' onclick='editProduct(" + JSON.stringify(p) + ")'>Edit</button>" +
+          "<button class='btn-icon' onclick='editProduct(" + JSON.stringify(d) + ")'>Edit</button>" +
           "<button class='btn-icon danger' onclick=\"deleteProduct('" + p.id + "','" + esc(p.name) + "')\">Delete</button>" +
         '</div></td></tr>';
     }).join('');
     content.innerHTML =
       '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn-sm btn-lime" onclick="productForm()">+ Add product</button></div>' +
       '<div class="card"><div class="card-header"><div><div class="kicker">SHOP</div><h3>' + _products.length + ' products</h3></div></div>' +
-      '<table><thead><tr><th>NAME</th><th>CATEGORY</th><th>PRICE</th><th>STOCK</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>' +
-      (rows || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No products.</td></tr>') + '</tbody></table></div>';
+      '<table><thead><tr><th>PRODUCT</th><th>CATEGORY</th><th>PRICE</th><th>SIZES (stock)</th><th>TOTAL</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">No products.</td></tr>') + '</tbody></table></div>';
   } catch (e) { content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message||'Failed.') + '</p></div>'; }
 }
-function editProduct(p) { productForm(p); }
-function productForm(p) {
+function editProduct(d) { productForm(d); }
+function productForm(d) {
+  var p = d ? d.product : null;
   var body =
     '<input type="hidden" id="p-id" value="' + (p?p.id:'') + '">' +
     '<div class="form-row">' + fld('NAME','p-name','text',p?p.name:'') + sel('CATEGORY','p-cat',PRODUCT_CATEGORIES,p?p.category:'RACKETS') + '</div>' +
-    '<div class="form-row">' + fld('PRICE (DT)','p-price','number',p?p.priceDt:'') + fld('STOCK','p-stock','number',p?p.stock:0) + '</div>' +
+    '<div class="form-row">' + fld('PRICE (DT)','p-price','number',p?p.priceDt:'') + fld('FALLBACK STOCK (no sizes)','p-stock','number',p?p.stock:0) + '</div>' +
     '<div class="form-row">' + fld('TAG','p-tag','text',p?(p.tag||''):'','New / Sale') + sel('ACTIVE','p-active',[{v:'true',t:'Active'},{v:'false',t:'Hidden'}],p?String(p.isActive):'true') + '</div>' +
     '<div class="form-row full"><div class="form-group"><label>DESCRIPTION</label><textarea id="p-desc">' + esc(p?(p.description||''):'') + '</textarea></div></div>' +
-    '<div class="form-row full"><div class="form-group"><label>IMAGE URLs (comma-separated)</label><input id="p-imgs" type="text" value="' + esc(p?(p.imageUrls||[]).join(', '):'') + '"></div></div>' +
-    '<div class="toggle-row"><span>Has sizes</span><label class="toggle"><input type="checkbox" id="p-sizes"' + (p&&p.hasSizes?' checked':'') + '><span class="toggle-slider"></span></label></div>';
+    '<div class="form-row full">' + imgWidget('prod-imgs', p?(p.imageUrls||[]):[], 'PHOTOS (first is the cover)', true) + '</div>' +
+    '<div class="form-row full">' + variantsWidget(d?d.variants:[]) + '</div>';
   openGenModal(p?'Edit product':'Add product', body, 'Save', async function () {
     var dto = { name: gv('p-name'), category: gv('p-cat'), priceDt: gnum('p-price')||0, stock: gint('p-stock')||0,
       tag: gv('p-tag')||null, description: document.getElementById('p-desc').value.trim()||null,
-      imageUrls: gv('p-imgs').split(',').map(function(s){return s.trim();}).filter(Boolean),
-      hasSizes: gchecked('p-sizes'), isActive: gv('p-active')==='true' };
+      imageUrls: imgGet('prod-imgs'), isActive: gv('p-active')==='true', variants: variantsGet() };
     if (!dto.name) { toast('Name required.','error'); return; }
     try { var id=gv('p-id'); if(id) await window.adminApi.products.update(id,dto); else await window.adminApi.products.create(dto);
       toast('Saved.','success'); closeGenModal(); renderProducts(); } catch(e){ toast(e.message||'Failed.','error'); }
-  });
+  }, 600);
+  imgRenderThumbs('prod-imgs'); variantRender();
 }
 function deleteProduct(id, name) {
   confirmDialog('Delete product', 'Delete "'+name+'"?', 'Delete', async function () {

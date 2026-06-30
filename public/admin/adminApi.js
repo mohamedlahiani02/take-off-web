@@ -168,6 +168,25 @@
       close: function (id, outcome) { return request('POST', '/api/v1/admin/coaching/' + id + '/close', { outcome: outcome }); },
     },
 
+    // ── Image upload (Cloudinary via backend) ──
+    media: {
+      upload: async function (file, folder) {
+        if (offline()) throw { status: 0, message: 'No API URL configured' };
+        var token = getToken();
+        var fd = new FormData();
+        fd.append('file', file);
+        if (folder) fd.append('folder', folder);
+        var res = await fetch(_baseUrl + '/api/v1/admin/media/upload', {
+          method: 'POST',
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+          body: fd,
+        });
+        if (res.status === 401) { clearToken(); window.dispatchEvent(new CustomEvent('admin:unauthorized')); throw { status: 401, message: 'Session expired' }; }
+        if (!res.ok) { var e = {}; try { e = await res.json(); } catch (_) {} throw { status: res.status, message: e.title || e.message || 'Upload failed' }; }
+        return res.json();
+      },
+    },
+
     // ── Epic I: content / CMS ──
     content: {
       page: function (page) { return request('GET', '/api/v1/admin/content/' + page); },
