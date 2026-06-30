@@ -155,6 +155,13 @@
         return request('GET', '/api/v1/coaches?' + qs, undefined, true);
       },
     },
+
+    content: {
+      // Returns the visible site_content sections for a page (public, no auth).
+      page: function (page) {
+        return request('GET', '/api/v1/content/' + encodeURIComponent(page), undefined, true);
+      },
+    },
   };
 
   window.takeOffApi = api;

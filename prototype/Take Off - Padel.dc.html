@@ -78,11 +78,11 @@
 
     <div style="position:relative; z-index:3; width:100%; padding:0 5vw 7vh; display:flex; align-items:flex-end; justify-content:space-between; gap:40px; flex-wrap:wrap;">
       <div style="max-width:880px;">
-        <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.32em; color:#c4ef3f; margin-bottom:22px; animation:upP .7s .2s both;">TAKE OFF CLUB — PADEL · TUNIS</div>
-        <h1 class="anton" style="margin:0; font-size:clamp(64px,12vw,210px); line-height:.84; letter-spacing:.005em; color:#fff; text-shadow:0 14px 60px rgba(0,0,0,.45); animation:upP .8s .3s both;">Own the<br>night court<span style="color:#c4ef3f;">.</span></h1>
-        <p style="margin:26px 0 0; font-size:clamp(16px,1.4vw,21px); line-height:1.5; color:rgba(244,245,238,.82); max-width:480px; animation:upP .8s .45s both;">Two pro courts under the lights. Grab your crew, book in seconds, bring the noise.</p>
+        <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.32em; color:#c4ef3f; margin-bottom:22px; animation:upP .7s .2s both;">{{ heroKicker }}</div>
+        <h1 class="anton" style="margin:0; font-size:clamp(64px,12vw,210px); line-height:.84; letter-spacing:.005em; color:#fff; text-shadow:0 14px 60px rgba(0,0,0,.45); white-space:pre-line; animation:upP .8s .3s both;">{{ heroHeadline }}</h1>
+        <p style="margin:26px 0 0; font-size:clamp(16px,1.4vw,21px); line-height:1.5; color:rgba(244,245,238,.82); max-width:480px; animation:upP .8s .45s both;">{{ heroSubtitle }}</p>
         <div style="margin-top:34px; display:flex; gap:14px; flex-wrap:wrap; animation:upP .8s .6s both;">
-          <a href="#book" style="display:inline-flex; align-items:center; gap:14px; padding:16px 16px 16px 28px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:16px;" class="lift">Book a court <span style="display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
+          <a href="#book" style="display:inline-flex; align-items:center; gap:14px; padding:16px 16px 16px 28px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:16px;" class="lift">{{ heroCtaLabel }} <span style="display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
         </div>
       </div>
       <div style="display:flex; flex-direction:column; gap:20px; animation:upP .8s .7s both; max-width:340px;">
@@ -214,12 +214,17 @@
 
   <!-- ░ PLAY YOUR WAY ░ -->
   <div id="play" style="padding:9vh 5vw; background:#0a1733;">
-    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">02 — PLAY YOUR WAY</div>
-    <h2 class="anton" style="margin:14px 0 40px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff; max-width:760px;">More than a match</h2>
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">{{ mtmKicker }}</div>
+    <h2 class="anton" style="margin:14px 0 40px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff; max-width:760px;">{{ mtmHeading }}</h2>
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px;">
       <sc-for list="{{ formats }}" as="f" hint-placeholder-count="4">
         <div class="lift" style="position:relative; min-height:340px; border-radius:20px; overflow:hidden; cursor:pointer;">
-          <image-slot id="{{ f.slot }}" placeholder="Drop photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+          <sc-if value="{{ f.hasPhoto }}" hint-placeholder-val="">
+            <img src="{{ f.photoUrl }}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">
+          </sc-if>
+          <sc-if value="{{ f.noPhoto }}" hint-placeholder-val="">
+            <image-slot id="{{ f.slot }}" placeholder="Drop photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+          </sc-if>
           <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,23,51,.15), rgba(10,23,51,.9));"></div>
           <div style="position:absolute; inset:0; padding:22px; display:flex; flex-direction:column; justify-content:space-between;">
             <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.2em; color:#c4ef3f;">{{ f.n }}</div>
@@ -236,18 +241,23 @@
   <!-- ░ PARTNERS ░ -->
   <div id="partenaires" style="padding:9vh 5vw; background:#eceadf; color:#0a1733;">
     <div style="text-align:center; margin-bottom:42px;">
-      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16; margin-bottom:14px;">03 — OUR PARTNERS</div>
-      <h2 class="anton" style="margin:0; font-size:clamp(36px,5.5vw,76px); line-height:.9;">Trusted by</h2>
+      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16; margin-bottom:14px;">{{ partnersKicker }}</div>
+      <h2 class="anton" style="margin:0; font-size:clamp(36px,5.5vw,76px); line-height:.9;">{{ partnersHeading }}</h2>
     </div>
     <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
       <sc-for list="{{ partners }}" as="pt" hint-placeholder-count="8">
         <div class="lift" style="background:#dddbd0; border-radius:14px; height:120px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
-          <image-slot id="{{ pt.slot }}" placeholder="Partner logo" style="position:absolute; inset:0; width:100%; height:100%; filter:grayscale(1) opacity(.55); transition:filter .3s;"></image-slot>
-          <div style="position:relative; z-index:1; font-family:'Space Mono'; font-size:11px; letter-spacing:.14em; color:rgba(10,23,51,.4);">{{ pt.name }}</div>
+          <sc-if value="{{ pt.hasLogo }}" hint-placeholder-val="">
+            <img src="{{ pt.logoUrl }}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; padding:14px;">
+          </sc-if>
+          <sc-if value="{{ pt.noLogo }}" hint-placeholder-val="">
+            <image-slot id="{{ pt.slot }}" placeholder="Partner logo" style="position:absolute; inset:0; width:100%; height:100%; filter:grayscale(1) opacity(.55); transition:filter .3s;"></image-slot>
+            <div style="position:relative; z-index:1; font-family:'Space Mono'; font-size:11px; letter-spacing:.14em; color:rgba(10,23,51,.4);">{{ pt.name }}</div>
+          </sc-if>
         </div>
       </sc-for>
     </div>
-    <div style="text-align:center; font-family:'Space Mono'; font-size:11px; letter-spacing:.12em; color:rgba(10,23,51,.45);">Want to become a partner? Contact the club.</div>
+    <div style="text-align:center; font-family:'Space Mono'; font-size:11px; letter-spacing:.12em; color:rgba(10,23,51,.45);">{{ partnersFooter }}</div>
   </div>
 
   <!-- ░ TOURNAMENTS ░ -->
@@ -438,6 +448,7 @@ class Component extends DCLogic {
     dateIdx: 0, selected: {}, _authTick: 0, _cartTick: 0,
     openCoachIdx: null,
     _coachPreview: null,
+    _cms: null,
     // coaching form
     coachFormDone: false, coursSelected: {}, availGrid: {}, // key: "day|slot" => bool
     // plans
@@ -459,6 +470,14 @@ class Component extends DCLogic {
         try {
           const data = await window.takeOffApi.coaches.list('PADEL', true);
           if (data && data.length) this.setState({ _coachPreview: data });
+        } catch (_) {}
+        try {
+          const sections = await window.takeOffApi.content.page('padel');
+          if (sections && sections.length) {
+            const map = {};
+            sections.forEach((s) => { map[s.sectionKey] = s.content; });
+            this.setState({ _cms: map });
+          }
         } catch (_) {}
       }
     })();
@@ -700,34 +719,56 @@ class Component extends DCLogic {
       }),
     }));
 
-    // Partners
-    const partners = [
-      { slot: 'pad-partner-1', name: 'PARTENAIRE' },
-      { slot: 'pad-partner-2', name: 'PARTENAIRE' },
-      { slot: 'pad-partner-3', name: 'PARTENAIRE' },
-      { slot: 'pad-partner-4', name: 'PARTENAIRE' },
-      { slot: 'pad-partner-5', name: 'PARTENAIRE' },
-      { slot: 'pad-partner-6', name: 'PARTENAIRE' },
-      { slot: 'pad-partner-7', name: 'PARTENAIRE' },
-      { slot: 'pad-partner-8', name: 'PARTENAIRE' },
+    // ── CMS (admin-managed) with built-in fallbacks ──
+    const cms = this.state._cms || {};
+    const cmsHero = cms.hero || {};
+    const cmsMtm = cms.more_than_a_match || {};
+    const cmsPartners = cms.partners || {};
+
+    const heroKicker = cmsHero.kicker || 'TAKE OFF CLUB — PADEL · TUNIS';
+    const heroHeadline = cmsHero.headline || 'Own the\nnight court.';
+    const heroSubtitle = cmsHero.subtitle || 'Two pro courts under the lights. Grab your crew, book in seconds, bring the noise.';
+    const heroCtaLabel = cmsHero.ctaLabel || 'Book a court';
+    const heroStats = (cmsHero.stats && cmsHero.stats.length)
+      ? cmsHero.stats.map((s) => ({ big: s.big, label: s.label }))
+      : [{ big: '2', label: 'PRO COURTS · PANORAMIC GLASS' }, { big: '7/7', label: 'OPEN 7AM — 11PM' }];
+
+    const mtmKicker = cmsMtm.kicker || '02 — PLAY YOUR WAY';
+    const mtmHeading = cmsMtm.heading || 'More than a match';
+    const formatsDefault = [
+      { n: '01', title: 'Book a court', desc: 'Share or buy the full court. Done in seconds.', slot: 'pad-fmt-1' },
+      { n: '02', title: 'Tournaments', desc: 'Compete in seasonal cups and americanos.', slot: 'pad-fmt-2' },
+      { n: '03', title: 'Coaching', desc: 'Private and group sessions with our pros.', slot: 'pad-fmt-3', href: '#coaching-form' },
     ];
+    const formats = ((cmsMtm.cards && cmsMtm.cards.length) ? cmsMtm.cards : formatsDefault).map((c, i) => ({
+      n: c.n, title: c.title, desc: c.desc,
+      slot: c.slot || ('pad-fmt-' + (i + 1)),
+      photoUrl: c.photoUrl || '', hasPhoto: c.photoUrl ? true : null, noPhoto: c.photoUrl ? null : true,
+    }));
+
+    const partnersKicker = cmsPartners.kicker || '03 — OUR PARTNERS';
+    const partnersHeading = cmsPartners.heading || 'Trusted by';
+    const partnersFooter = cmsPartners.footer || 'Want to become a partner? Contact the club.';
+    const partnersSource = (cmsPartners.items && cmsPartners.items.length)
+      ? cmsPartners.items
+      : [1,2,3,4,5,6,7,8].map(() => ({ name: 'PARTENAIRE', logoUrl: '' }));
+    const partners = partnersSource.map((p, i) => ({
+      slot: 'pad-partner-' + (i + 1), name: p.name || '',
+      logoUrl: p.logoUrl || '', hasLogo: p.logoUrl ? true : null, noLogo: p.logoUrl ? null : true,
+    }));
 
     return {
+      heroKicker, heroHeadline, heroSubtitle, heroCtaLabel,
+      mtmKicker, mtmHeading,
+      partnersKicker, partnersHeading, partnersFooter,
       loaderRef: this.loaderRef,
-      heroStats: [
-        { big: '2', label: 'PRO COURTS · PANORAMIC GLASS' },
-        { big: '7/7', label: 'OPEN 7AM — 11PM' },
-      ],
+      heroStats,
       dates: dateVals, courts,
       hasSelection: committedKeys ? true : null, noSelection: committedKeys ? null : true,
       selectionList, selCount: committedKeys, selTotal,
       confirmBooking: () => this._confirm(),
       confirmBg: committedKeys ? LIME : 'rgba(244,245,238,.1)', confirmFg: committedKeys ? NAVY : 'rgba(244,245,238,.4)',
-      formats: [
-        { n: '01', title: 'Book a court', desc: 'Share or buy the full court. Done in seconds.', slot: 'pad-fmt-1' },
-        { n: '02', title: 'Tournaments', desc: 'Compete in seasonal cups and americanos.', slot: 'pad-fmt-2' },
-        { n: '03', title: 'Coaching', desc: 'Private and group sessions with our pros.', slot: 'pad-fmt-3', href: '#coaching-form' },
-      ],
+      formats,
       tournaments,
       coaches,
       coachModalOpen, coachModal,
