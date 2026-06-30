@@ -16,7 +16,6 @@
         { n: '01', title: 'Play', links: [
           { label: 'Book a court',   desc: '20 DT a share · 80 DT the full court', href: 'Take Off - Padel.dc.html#book' },
           { label: 'Tournaments',    desc: 'Cups, americanos & seasonal cups',      href: 'Take Off - Padel.dc.html#tournaments' },
-          { label: 'Ladder',         desc: 'Monthly club leaderboard',              href: 'Take Off - Padel.dc.html#ladder' },
           { label: 'Coaching',       desc: 'Meet the full coaching team',           href: 'Take Off - Coaches.dc.html' },
           { label: 'Coaching inquiry', desc: 'Book private or group sessions',      href: 'Take Off - Coaches.dc.html#coaching-form' },
           { label: 'Court rental',   desc: 'Rent the full court for your event',    href: 'Take Off - Padel.dc.html#book' },

@@ -37,12 +37,12 @@
       return function () { _subs = _subs.filter(function (s) { return s !== fn; }); };
     },
 
-    login: async function (identifier, password) {
-      var id = (identifier || '').trim();
+    login: async function (phone, password) {
+      var id = (phone || '').trim();
       var client = api();
       if (client && client.isOnline()) {
         try {
-          var data = await client.auth.login({ identifier: id, password: password });
+          var data = await client.auth.login({ phone: id, password: password });
           auth.user = data.user;
           storageSet('takeoff_user', data.user);
           notify();
@@ -51,11 +51,11 @@
           return { ok: false, error: e.message || 'Invalid credentials.' };
         }
       }
-      // offline fallback (local dev without backend): match by email or phone
+      // offline fallback — match by phone
       var users = storageGet('takeOffUsers') || {};
-      var key = id.toLowerCase();
-      var u = users[key] || Object.keys(users).map(function (k) { return users[k]; })
-        .filter(function (x) { return x.phone === id || x.email === key; })[0];
+      var normalized = normalizePhone(id);
+      var u = Object.keys(users).map(function (k) { return users[k]; })
+        .filter(function (x) { return x.phone === normalized; })[0];
       if (!u) return { ok: false, error: 'No account found. Create one first.' };
       if (u.password !== password) return { ok: false, error: 'Wrong password.' };
       auth.user = u;
@@ -87,7 +87,7 @@
       // offline fallback
       var users = storageGet('takeOffUsers') || {};
       if (users[email]) return { ok: false, error: 'Account already exists. Sign in instead.' };
-      var u = { email: email, name: name, phone: phone, password: password, tracks: tracks, walletDt: 0, createdAt: new Date().toISOString(), padelLevel: 1, points: 100 };
+      var u = { email: email, name: name, phone: phone, password: password, tracks: tracks, walletDt: 0, points: 0, createdAt: new Date().toISOString() };
       users[email] = u;
       storageSet('takeOffUsers', users);
       auth.user = u;
@@ -160,57 +160,6 @@
       return left <= 0;
     },
 
-    logMatch: async function (opts) {
-      if (!auth.user) return;
-      var client = api();
-      var myLevel = auth.user.padelLevel || 1;
-      var opponentLevel = opts.opponentLevel !== undefined ? parseFloat(opts.opponentLevel) : myLevel;
-      var result = opts.result === 'W' ? 'W' : 'L';
-
-      if (client && client.isOnline()) {
-        try {
-          var res = await client.matches.log({
-            partnerName: opts.partner || null,
-            opponentNames: opts.opponents ? opts.opponents.split('&').map(function (s) { return s.trim(); }).filter(Boolean) : [],
-            result: result,
-            score: opts.score || null,
-            opponentLevel: opponentLevel,
-            playedAt: opts.playedAt || new Date().toISOString().slice(0, 10),
-          });
-          auth.user.points = res.newPoints;
-          auth.user.padelLevel = res.newLevel;
-          storageSet('takeoff_user', auth.user);
-          notify();
-          return res;
-        } catch (e) {}
-      }
-      // offline ELO fallback
-      var base = result === 'W' ? 20 : -15;
-      var delta = Math.round(base * (1 + 0.15 * (opponentLevel - myLevel)));
-      delta = Math.max(-40, Math.min(40, delta));
-      var newPoints = Math.max(0, (auth.user.points || 100) + delta);
-      auth.user.points = newPoints;
-      auth.user.padelLevel = Math.min(7, Math.floor(newPoints / 150) + 1);
-      storageSet('takeoff_user', auth.user);
-      notify();
-      return { delta: delta, newPoints: newPoints, newLevel: auth.user.padelLevel };
-    },
-
-    submitLevelSurvey: async function (answers) {
-      if (!auth.user) return;
-      var level = Math.max(1, Math.min(7, answers.level || 1));
-      var client = api();
-      if (client && client.isOnline()) {
-        try { await client.auth.updateMe({ padelLevelSelfDeclared: level }); } catch (e) {}
-      }
-      var pts = (level - 1) * 150 + 100;
-      auth.user.padelLevelSelfDeclared = level;
-      auth.user.points = pts;
-      auth.user.padelLevel = Math.min(7, Math.floor(pts / 150) + 1);
-      storageSet('takeoff_user', auth.user);
-      notify();
-    },
-
     requireAuth: function (cb) {
       if (auth.user) { cb(); return; }
       _pendingCb = cb;
@@ -274,19 +223,8 @@
     '.tk-topup-pills{display:flex;gap:10px;margin:16px 0;flex-wrap:wrap;}',
     '.tk-topup-pill{padding:10px 20px;border-radius:999px;border:1px solid rgba(196,239,63,.4);background:transparent;color:#c4ef3f;font-family:"Space Mono",monospace;font-size:13px;cursor:pointer;}',
     '.tk-topup-pill.sel{background:#c4ef3f;color:#0a1733;font-weight:700;}',
-    // survey overlay
-    '.tk-survey-ov{position:fixed;inset:0;z-index:1200;background:rgba(7,15,36,.7);display:flex;align-items:center;justify-content:center;padding:20px;}',
-    '.tk-survey-card{background:#0c2350;border-radius:18px;padding:32px;width:100%;max-width:420px;}',
-    '.tk-survey-q{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.14em;color:rgba(196,239,63,.9);margin:0 0 10px;}',
-    '.tk-survey-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}',
-    '.tk-survey-opt{padding:10px 16px;border-radius:11px;border:1px solid rgba(196,239,63,.3);background:transparent;color:#f4f5ee;font-size:14px;cursor:pointer;text-align:left;}',
-    '.tk-survey-opt.sel{background:rgba(196,239,63,.15);border-color:#c4ef3f;color:#c4ef3f;}',
     // toast
     '.tk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#c4ef3f;color:#0a1733;font-weight:700;font-family:"Space Grotesk",sans-serif;font-size:14px;padding:12px 24px;border-radius:999px;z-index:2000;box-shadow:0 8px 30px rgba(0,0,0,.3);transition:opacity .3s;}',
-    // leaderboard
-    '.tk-lb-table{width:100%;border-collapse:collapse;font-size:13px;}',
-    '.tk-lb-table th{font-family:"Space Mono",monospace;font-size:9px;letter-spacing:.14em;color:rgba(244,245,238,.45);text-align:left;padding:4px 8px;font-weight:400;}',
-    '.tk-lb-table td{padding:8px 8px;border-top:1px solid rgba(244,245,238,.06);}',
     '.tk-pill{padding:3px 9px;border-radius:999px;font-family:"Space Mono",monospace;font-size:10px;}',
   ].join('');
   document.head.appendChild(css);
@@ -327,7 +265,7 @@
         (isReg
           ? '<label class="tk-lbl">EMAIL</label><input class="tk-inp" id="tk-f-email" type="email" placeholder="your@email.com">' +
             '<label class="tk-lbl">PHONE</label><input class="tk-inp" id="tk-f-phone" type="tel" inputmode="numeric" placeholder="+216 XX XXX XXX">'
-          : '<label class="tk-lbl">EMAIL OR PHONE</label><input class="tk-inp" id="tk-f-email" type="text" placeholder="your@email.com or +216...">') +
+          : '<label class="tk-lbl">PHONE</label><input class="tk-inp" id="tk-f-email" type="tel" inputmode="numeric" placeholder="+216 XX XXX XXX">') +
         '<label class="tk-lbl">PASSWORD</label><input class="tk-inp" id="tk-f-pass" type="password" placeholder="••••••••">' +
         (isReg ? '<label class="tk-lbl">I\'M INTO</label><div class="tk-checks"><label class="tk-check"><input type="checkbox" id="tk-tr-pad" checked> Padel</label><label class="tk-check"><input type="checkbox" id="tk-tr-pil"> Pilates</label></div>' : '') +
         '<button class="tk-btn" id="tk-modal-sub">' + (isReg ? 'Create account' : 'Sign in') + '</button>' +
@@ -379,11 +317,11 @@
   // ── Account Drawer ────────────────────────────────────────────────────────
 
   var drawerRoot = null, drawerTab = 'bookings';
-  var _drData = { matches: null, orders: null, leaderboard: null }; // fetched API data per session
+  var _drData = { orders: null }; // fetched API data per session
 
   function showDrawer(tab) {
     if (!auth.user) { showModal('login'); return; }
-    drawerTab = (['bookings', 'packs', 'matches', 'orders', 'profile'].indexOf(tab) >= 0) ? tab : 'bookings';
+    drawerTab = (['bookings', 'packs', 'orders', 'profile'].indexOf(tab) >= 0) ? tab : 'bookings';
     if (!drawerRoot) { drawerRoot = document.createElement('div'); document.body.appendChild(drawerRoot); }
     renderDrawer();
     document.addEventListener('keydown', onEscDrawer);
@@ -396,12 +334,8 @@
   async function fetchTabData(tab) {
     var client = api();
     if (!client || !client.isOnline()) return;
-    if (tab === 'matches' && !_drData.matches) {
-      try { var mr = await client.matches.list(); _drData.matches = mr && mr.content ? mr.content : (mr || []); renderBody(); } catch (e) {}
-    } else if (tab === 'orders' && !_drData.orders) {
+    if (tab === 'orders' && !_drData.orders) {
       try { var or = await client.orders.list(); _drData.orders = or && or.content ? or.content : (or || []); renderBody(); } catch (e) {}
-    } else if (tab === 'profile' && !_drData.leaderboard) {
-      try { _drData.leaderboard = await client.leaderboard.get(); renderBody(); } catch (e) {}
     }
   }
 
@@ -426,7 +360,7 @@
           '</div>' +
         '</div>' +
         '<div class="tk-tabs">' +
-          ['bookings','packs','matches','orders','profile'].map(function (t) {
+          ['bookings','packs','orders','profile'].map(function (t) {
             return '<button class="tk-tab' + (drawerTab === t ? ' active' : '') + '" data-tab="' + t + '">' + t.toUpperCase() + '</button>';
           }).join('') +
         '</div>' +
@@ -466,7 +400,6 @@
   function bodyHTML() {
     if (drawerTab === 'bookings') return bookingsHTML();
     if (drawerTab === 'packs') return packsHTML();
-    if (drawerTab === 'matches') return matchesHTML();
     if (drawerTab === 'orders') return ordersHTML();
     return profileHTML();
   }
@@ -532,67 +465,6 @@
     return html;
   }
 
-  // ── Tab: Matches ─────────────────────────────────────────────────────────
-
-  var _matchFormOpen = false, _matchResult = 'W';
-
-  function matchesHTML() {
-    var items = _drData.matches || (auth.user && auth.user.matches) || [];
-    var u = auth.user || {};
-    var myLevel = u.padelLevel || 1;
-
-    // ELO delta hint
-    var hintFn = 'function _eloHint(){ var lvl=parseFloat(document.getElementById("tk-m-oplvl").value)||' + myLevel + '; var r=window._matchResultUI||"W"; var b=r==="W"?20:-15; var d=Math.round(b*(1+0.15*(lvl-' + myLevel + '))); d=Math.max(-40,Math.min(40,d)); document.getElementById("tk-m-hint").textContent=(d>=0?"+":"")+d+" pts"; }';
-
-    var histHTML = items.length
-      ? items.slice().reverse().map(function (m) {
-          var isW = m.result === 'W';
-          var d = m.delta !== undefined ? m.delta : 0;
-          var dStr = (d >= 0 ? '+' : '') + d;
-          var date = m.playedAt || (m.date || '');
-          var opps = (m.opponentNames || m.opponents || []);
-          if (typeof opps === 'string') opps = opps.split('&').map(function (s) { return s.trim(); });
-          return '<div class="tk-card-row">' +
-            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-              '<div style="min-width:0;">' +
-                '<div style="font-weight:600;font-size:13px;color:#fff;">' + (m.partnerName || m.partner ? 'w/ ' + esc(m.partnerName || m.partner) : 'Solo') + '</div>' +
-                '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:2px;">' + esc(date) + (opps.length ? ' · vs ' + opps.map(esc).join(' & ') : '') + '</div>' +
-                (m.score ? '<div style="font-family:\'Space Mono\',monospace;font-size:11px;color:rgba(244,245,238,.7);margin-top:3px;">' + esc(m.score) + '</div>' : '') +
-              '</div>' +
-              '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">' +
-                '<span class="tk-pill" style="background:' + (isW ? 'rgba(196,239,63,.15)' : 'rgba(220,90,40,.18)') + ';color:' + (isW ? '#c4ef3f' : '#f4a060') + ';">' + dStr + '</span>' +
-                '<span class="tk-pill" style="font-weight:700;background:' + (isW ? 'rgba(196,239,63,.2)' : 'rgba(220,60,60,.18)') + ';color:' + (isW ? '#c4ef3f' : '#f4a0a0') + ';">' + m.result + '</span>' +
-              '</div>' +
-            '</div>' +
-          '</div>';
-        }).join('')
-      : '<div class="tk-empty">No matches logged yet.<br>Log your first match below.</div>';
-
-    var formHTML = _matchFormOpen
-      ? '<div id="tk-mform" style="background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.2);border-radius:14px;padding:16px;margin-top:16px;">' +
-          '<script>' + hintFn + '</script>' +
-          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:#c4ef3f;margin-bottom:12px;">LOG A MATCH</div>' +
-          '<label class="tk-lbl">PARTNER NAME</label><input class="tk-inp" id="tk-m-partner" type="text" placeholder="Partner name" style="margin-bottom:10px;">' +
-          '<label class="tk-lbl">OPPONENTS</label><input class="tk-inp" id="tk-m-opponents" type="text" placeholder="Name &amp; Name" style="margin-bottom:10px;">' +
-          '<label class="tk-lbl">DATE</label><input class="tk-inp" id="tk-m-date" type="date" value="' + new Date().toISOString().slice(0,10) + '" style="margin-bottom:10px;">' +
-          '<label class="tk-lbl">RESULT</label>' +
-          '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
-            '<button id="tk-m-win" style="flex:1;padding:9px;border-radius:999px;border:1px solid rgba(196,239,63,.4);background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;font-weight:700;">W</button>' +
-            '<button id="tk-m-loss" style="flex:1;padding:9px;border-radius:999px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.5);font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;">L</button>' +
-          '</div>' +
-          '<label class="tk-lbl">SCORE</label><input class="tk-inp" id="tk-m-score" type="text" placeholder="6-4 3-6 10-7" style="margin-bottom:10px;">' +
-          '<label class="tk-lbl">OPPONENT AVG LEVEL (1–7) <span id="tk-m-hint" style="color:#c4ef3f;margin-left:8px;"></span></label>' +
-          '<input class="tk-inp" id="tk-m-oplvl" type="number" min="1" max="7" step="0.5" placeholder="' + myLevel + '" oninput="_eloHint()" style="margin-bottom:14px;">' +
-          '<div style="display:flex;gap:10px;">' +
-            '<button id="tk-m-cancel" style="flex:1;padding:12px;border-radius:13px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.6);cursor:pointer;font-family:\'Space Grotesk\',sans-serif;">Cancel</button>' +
-            '<button id="tk-m-save" class="tk-btn" style="flex:2;padding:12px;">Save match</button>' +
-          '</div>' +
-        '</div>'
-      : '<button id="tk-m-add" style="width:100%;margin-top:16px;padding:12px;border-radius:13px;border:1px solid rgba(196,239,63,.3);background:transparent;color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.14em;cursor:pointer;">+ LOG A MATCH</button>';
-
-    return histHTML + formHTML;
-  }
-
   // ── Tab: Orders ──────────────────────────────────────────────────────────
 
   function ordersHTML() {
@@ -624,56 +496,12 @@
 
   function profileHTML() {
     var u = auth.user || {};
-    var level = u.padelLevel || 1;
     var points = u.points || 0;
-    var matches = _drData.matches || u.matches || [];
-    var lb = _drData.leaderboard || [];
-
-    // rank from leaderboard
-    var rank = 'Unranked';
-    if (lb.length && u.id) {
-      var me = lb.find(function (e) { return e.userId === u.id; });
-      if (me) rank = '#' + me.rank;
-    }
-
     var memberSince = u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
-    var matchCount = matches.length;
-    var levelReadOnly = matchCount >= 5;
 
-    var pillsHTML = [1,2,3,4,5,6,7].map(function (n) {
-      var active = n === level;
-      var disabled = levelReadOnly;
-      return '<button class="tk-lvl-pill" data-lvl="' + n + '" ' + (disabled ? 'disabled' : '') + ' style="padding:6px 13px;border-radius:999px;border:1px solid ' + (active ? '#c4ef3f' : 'rgba(196,239,63,.35)') + ';background:' + (active ? '#c4ef3f' : 'transparent') + ';color:' + (active ? '#0a1733' : 'rgba(244,245,238,.75)') + ';font-family:\'Space Mono\',monospace;font-size:11px;cursor:' + (disabled ? 'default' : 'pointer') + ';opacity:' + (disabled ? '.5' : '1') + ';">' + n + '</button>';
-    }).join(' ');
-
-    var surveyBtn = !u.padelLevelSelfDeclared
-      ? '<div style="margin-bottom:16px;"><a id="tk-survey-link" style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;color:#c4ef3f;cursor:pointer;text-decoration:underline;">Take the level survey →</a></div>'
-      : '';
-
-    var lbHTML = lb.length
-      ? '<table class="tk-lb-table"><thead><tr><th>#</th><th>Player</th><th>LVL</th><th>PTS</th></tr></thead><tbody>' +
-          lb.slice(0, 10).map(function (e) {
-            var isMe = u.id && e.userId === u.id;
-            return '<tr style="' + (isMe ? 'background:rgba(196,239,63,.08);' : '') + '">' +
-              '<td style="font-family:Anton,sans-serif;color:#c4ef3f;">' + e.rank + '</td>' +
-              '<td style="font-weight:' + (isMe ? '700' : '400') + ';color:#f4f5ee;">' + esc(e.name) + '</td>' +
-              '<td style="font-family:\'Space Mono\',monospace;font-size:11px;color:rgba(244,245,238,.65);">' + e.padelLevel + '</td>' +
-              '<td style="font-family:Anton,sans-serif;color:#c4ef3f;">' + e.points + '</td>' +
-            '</tr>';
-          }).join('') +
-        '</tbody></table>'
-      : '<div style="font-size:13px;color:rgba(244,245,238,.4);">Leaderboard loading…</div>';
-
-    return '<div class="tk-stat-grid">' +
-        '<div class="tk-stat"><div class="tk-stat-lbl">LEVEL</div><div class="tk-stat-val">' + level + '</div></div>' +
+    return '<div class="tk-stat-grid" style="grid-template-columns:1fr 1fr;">' +
         '<div class="tk-stat"><div class="tk-stat-lbl">POINTS</div><div class="tk-stat-val">' + points + '</div></div>' +
-        '<div class="tk-stat"><div class="tk-stat-lbl">RANK</div><div class="tk-stat-val" style="font-size:' + (rank.length > 4 ? '18' : '28') + 'px;">' + rank + '</div></div>' +
-      '</div>' +
-      (levelReadOnly ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.4);margin-bottom:12px;">Level computed from your ELO after 5+ matches.</div>' : surveyBtn) +
-      '<div style="margin-bottom:18px;">' +
-        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:8px;">PADEL LEVEL</div>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + pillsHTML + '</div>' +
-        (levelReadOnly ? '' : '<div style="font-family:\'Space Mono\',monospace;font-size:9px;color:rgba(244,245,238,.35);margin-top:6px;">Auto-locked after 5 matches</div>') +
+        '<div class="tk-stat"><div class="tk-stat-lbl">= DT</div><div class="tk-stat-val">' + points + '</div></div>' +
       '</div>' +
       '<div style="margin-bottom:16px;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
@@ -692,72 +520,12 @@
           return '<span style="padding:5px 12px;border-radius:999px;background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;margin-right:6px;">' + t.toUpperCase() + '</span>';
         }).join('') + '</div>' +
       '</div>' +
-      (memberSince ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.35);margin-bottom:20px;">Member since ' + memberSince + '</div>' : '') +
-      '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:10px;">LEADERBOARD</div>' +
-      lbHTML;
+      (memberSince ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.35);margin-bottom:20px;">Member since ' + memberSince + '</div>' : '');
   }
 
   // ── Wire body event listeners ─────────────────────────────────────────────
 
   function wireBodyEvents() {
-    // Level pills
-    document.querySelectorAll('.tk-lvl-pill:not([disabled])').forEach(function (pill) {
-      pill.onclick = function () {
-        var n = parseInt(pill.getAttribute('data-lvl'), 10);
-        auth.submitLevelSurvey({ level: n });
-        renderBody();
-      };
-    });
-
-    // Survey link
-    var surveyLink = document.getElementById('tk-survey-link');
-    if (surveyLink) surveyLink.onclick = showSurveyModal;
-
-    // Match form toggle
-    var addBtn = document.getElementById('tk-m-add');
-    if (addBtn) addBtn.onclick = function () { _matchFormOpen = true; renderBody(); };
-    var cancelBtn = document.getElementById('tk-m-cancel');
-    if (cancelBtn) cancelBtn.onclick = function () { _matchFormOpen = false; renderBody(); };
-
-    // Match result toggle
-    var winBtn = document.getElementById('tk-m-win');
-    var lossBtn = document.getElementById('tk-m-loss');
-    if (winBtn && lossBtn) {
-      window._matchResultUI = _matchResult;
-      function setResult(r) {
-        _matchResult = r; window._matchResultUI = r;
-        if (r === 'W') {
-          winBtn.style.cssText = 'flex:1;padding:9px;border-radius:999px;border:1px solid rgba(196,239,63,.4);background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;font-weight:700;';
-          lossBtn.style.cssText = 'flex:1;padding:9px;border-radius:999px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.5);font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;';
-        } else {
-          lossBtn.style.cssText = 'flex:1;padding:9px;border-radius:999px;border:1px solid rgba(220,60,60,.4);background:rgba(220,60,60,.15);color:#f4a0a0;font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;font-weight:700;';
-          winBtn.style.cssText = 'flex:1;padding:9px;border-radius:999px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.5);font-family:\'Space Mono\',monospace;font-size:12px;cursor:pointer;';
-        }
-      }
-      setResult(_matchResult);
-      winBtn.onclick = function () { setResult('W'); };
-      lossBtn.onclick = function () { setResult('L'); };
-    }
-
-    // Match save
-    var saveBtn = document.getElementById('tk-m-save');
-    if (saveBtn) saveBtn.onclick = async function () {
-      saveBtn.disabled = true; saveBtn.textContent = '...';
-      var res = await auth.logMatch({
-        partner: (document.getElementById('tk-m-partner').value || '').trim(),
-        opponents: (document.getElementById('tk-m-opponents').value || '').trim(),
-        result: _matchResult,
-        score: (document.getElementById('tk-m-score').value || '').trim(),
-        opponentLevel: parseFloat(document.getElementById('tk-m-oplvl').value) || undefined,
-        playedAt: document.getElementById('tk-m-date').value || undefined,
-      });
-      _matchFormOpen = false;
-      _drData.matches = null; // invalidate cache
-      var delta = res && res.delta !== undefined ? res.delta : 0;
-      toast('Match logged — ' + (delta >= 0 ? '+' : '') + delta + ' pts');
-      renderBody();
-    };
-
     // Profile: edit name
     var editNameBtn = document.getElementById('tk-edit-name');
     if (editNameBtn) {
@@ -836,59 +604,6 @@
       if (walletEl) walletEl.textContent = '◆ ' + (auth.user.walletDt || 0) + ' DT';
       toast('+' + amount + ' DT added to your wallet');
     };
-  }
-
-  // ── Level survey modal ────────────────────────────────────────────────────
-
-  function showSurveyModal() {
-    var qs = [
-      { q: 'HOW LONG HAVE YOU BEEN PLAYING?', opts: ['< 6 months', '6 months – 2 years', '2 – 5 years', '5+ years'], pts: [1, 2, 3, 4] },
-      { q: 'COMPETITION EXPERIENCE?', opts: ['None', 'Played club matches', 'Local tournaments', 'Regional / National'], pts: [0, 1, 2, 3] },
-      { q: 'PHYSICAL FITNESS?', opts: ['Getting started', 'Recreational', 'Athletic', 'High performance'], pts: [0, 1, 1, 2] },
-    ];
-    var answers = [0, 0, 0];
-    var root = document.createElement('div');
-    root.className = 'tk-survey-ov';
-
-    function renderSurvey() {
-      root.innerHTML = '<div class="tk-survey-card">' +
-        '<button id="tk-sv-x" style="float:right;background:none;border:none;color:rgba(244,245,238,.5);font-size:22px;cursor:pointer;">×</button>' +
-        '<div style="font-family:Anton,sans-serif;font-size:24px;color:#fff;margin-bottom:4px;">Level survey</div>' +
-        '<div style="font-size:13px;color:rgba(244,245,238,.55);margin-bottom:20px;">Helps us place you on the ladder</div>' +
-        qs.map(function (qData, qi) {
-          return '<div class="tk-survey-q">' + qData.q + '</div>' +
-            '<div class="tk-survey-opts">' +
-              qData.opts.map(function (opt, oi) {
-                return '<button class="tk-survey-opt' + (answers[qi] === oi ? ' sel' : '') + '" data-qi="' + qi + '" data-oi="' + oi + '">' + opt + '</button>';
-              }).join('') +
-            '</div>';
-        }).join('') +
-        '<button class="tk-btn" id="tk-sv-confirm">Set my level</button>' +
-      '</div>';
-
-      root.querySelectorAll('.tk-survey-opt').forEach(function (btn) {
-        btn.onclick = function () {
-          var qi = parseInt(btn.getAttribute('data-qi'), 10);
-          var oi = parseInt(btn.getAttribute('data-oi'), 10);
-          answers[qi] = oi;
-          renderSurvey();
-        };
-      });
-
-      document.getElementById('tk-sv-x').onclick = function () { root.remove(); };
-      document.getElementById('tk-sv-confirm').onclick = async function () {
-        var totalPts = qs.reduce(function (s, qData, qi) { return s + qData.pts[answers[qi]]; }, 0);
-        var level = Math.min(7, Math.max(1, totalPts));
-        await auth.submitLevelSurvey({ level: level });
-        root.remove();
-        _drData.leaderboard = null;
-        renderBody();
-        toast('Level set to ' + level);
-      };
-    }
-
-    renderSurvey();
-    document.body.appendChild(root);
   }
 
   // ── XSS-safe escape ───────────────────────────────────────────────────────
