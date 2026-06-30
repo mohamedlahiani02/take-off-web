@@ -110,8 +110,8 @@
   <!-- ░ MARQUEE ░ -->
   <div style="background:#c4ef3f; color:#0a1733; padding:16px 0; overflow:hidden; white-space:nowrap; border-top:3px solid #0a1733; border-bottom:3px solid #0a1733;">
     <div style="display:inline-flex; gap:40px; animation:marquee 24s linear infinite; will-change:transform;">
-      <span class="anton" style="font-size:24px; letter-spacing:.04em;">PADEL · TOURNAMENTS · LADDER · COACHING · COURT RENTAL · NIGHT SESSIONS · PADEL · TOURNAMENTS · LADDER · COACHING · COURT RENTAL · NIGHT SESSIONS ·&nbsp;</span>
-      <span class="anton" style="font-size:24px; letter-spacing:.04em;">PADEL · TOURNAMENTS · LADDER · COACHING · COURT RENTAL · NIGHT SESSIONS · PADEL · TOURNAMENTS · LADDER · COACHING · COURT RENTAL · NIGHT SESSIONS ·&nbsp;</span>
+      <span class="anton" style="font-size:24px; letter-spacing:.04em;">PADEL · TOURNAMENTS · COACHING · COURT RENTAL · NIGHT SESSIONS · PADEL · TOURNAMENTS · COACHING · COURT RENTAL · NIGHT SESSIONS ·&nbsp;</span>
+      <span class="anton" style="font-size:24px; letter-spacing:.04em;">PADEL · TOURNAMENTS · COACHING · COURT RENTAL · NIGHT SESSIONS · PADEL · TOURNAMENTS · COACHING · COURT RENTAL · NIGHT SESSIONS ·&nbsp;</span>
     </div>
   </div>
 
@@ -283,63 +283,6 @@
     </div>
   </div>
 
-  <!-- ░ LADDER ░ -->
-  <div id="ladder" style="padding:9vh 5vw; background:#0c1c3f;">
-    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">02c — LADDER</div>
-    <h2 class="anton" style="margin:0 0 10px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff;">Monthly club ladder</h2>
-    <p style="font-family:'Space Mono'; font-size:12px; letter-spacing:.05em; color:rgba(244,245,238,.45); margin:0 0 48px; line-height:1.7;">Log your matches in your account · top 10 each month win shop credit</p>
-
-    <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:32px; align-items:start;">
-
-      <!-- Leaderboard -->
-      <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.18); border-radius:20px; overflow:hidden;">
-        <!-- header row -->
-        <div style="display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid rgba(196,239,63,.15); gap:12px;">
-          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); width:32px;">#</span>
-          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); flex:1;">PLAYER</span>
-          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); width:52px; text-align:center;">LVL</span>
-          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); width:56px; text-align:center;">W-L</span>
-          <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); width:48px; text-align:right;">PTS</span>
-        </div>
-        <sc-for list="{{ ladderRows }}" as="row" hint-placeholder-count="10">
-          <div style="display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid rgba(196,239,63,.08); gap:12px;">
-            <span class="anton" style="font-size:22px; color:#c4ef3f; width:32px; line-height:1;">{{ row.rank }}</span>
-            <span style="font-weight:600; font-size:15px; color:#f4f5ee; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ row.name }}</span>
-            <span style="display:inline-block; width:52px; text-align:center; font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; padding:4px 0; border-radius:6px; background:#0a1733; border:1px solid rgba(196,239,63,.4); color:#c4ef3f;">LV {{ row.level }}</span>
-            <span style="font-family:'Space Mono'; font-size:12px; color:rgba(244,245,238,.45); width:56px; text-align:center;">{{ row.wl }}</span>
-            <span class="anton" style="font-size:22px; color:#fff; width:48px; text-align:right; line-height:1;">{{ row.pts }}</span>
-          </div>
-        </sc-for>
-      </div>
-
-      <!-- Your Standing -->
-      <div style="position:sticky; top:96px; border:1px solid #c4ef3f; background:#0f1f44; border-radius:20px; padding:24px;">
-        <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:#c4ef3f; margin-bottom:18px;">YOUR STANDING</div>
-        <sc-if value="{{ ladderLoggedIn }}" hint-placeholder-val="">
-          <div style="margin-bottom:18px;">
-            <div style="font-weight:700; font-size:18px; color:#fff; margin-bottom:8px;">{{ ladderUserName }}</div>
-            <span style="display:inline-block; padding:5px 13px; border-radius:999px; background:#0a1733; border:1px solid rgba(196,239,63,.5); color:#c4ef3f; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em;">LV {{ ladderUserLevel }}</span>
-          </div>
-          <div style="display:flex; gap:24px; margin-bottom:22px;">
-            <div>
-              <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:rgba(244,245,238,.45); margin-bottom:4px;">RANK</div>
-              <div class="anton" style="font-size:34px; color:#fff; line-height:1;">{{ ladderUserRank }}</div>
-            </div>
-            <div>
-              <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:rgba(244,245,238,.45); margin-bottom:4px;">W-L</div>
-              <div class="anton" style="font-size:34px; color:#fff; line-height:1;">{{ ladderUserWL }}</div>
-            </div>
-          </div>
-          <div onClick="{{ openAccountMatches }}" style="padding:13px; border-radius:13px; text-align:center; font-weight:700; font-size:14px; cursor:pointer; background:#c4ef3f; color:#0a1733;" class="lift">+ Log a match</div>
-        </sc-if>
-        <sc-if value="{{ ladderLoggedOut }}" hint-placeholder-val="">
-          <p style="font-size:14px; line-height:1.6; color:rgba(244,245,238,.55); margin:0 0 20px;">Sign in to track your rank and log your matches on the monthly ladder.</p>
-          <div onClick="{{ openLogin }}" style="padding:13px; border-radius:13px; text-align:center; font-weight:700; font-size:14px; cursor:pointer; background:#c4ef3f; color:#0a1733;" class="lift">Sign in</div>
-        </sc-if>
-      </div>
-    </div>
-  </div>
-
   <!-- ░ COACHES ░ -->
   <div id="coaches" style="padding:9vh 5vw; background:#f4f5ee; color:#0a1733;">
     <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:42px;">
@@ -476,7 +419,7 @@
         <p style="font-size:13px; line-height:1.6; margin:0;">Take Off Club — Padel &amp; Pilates under one roof. Tunis. Open 7/7.</p>
       </div>
       <div style="display:flex; gap:60px; flex-wrap:wrap; font-size:13px;">
-        <div style="display:flex; flex-direction:column; gap:11px;"><span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:#c4ef3f;">PADEL</span><a href="#book">Book a court</a><a href="#tournaments">Tournaments</a><a href="#ladder">Ladder</a><a href="#coaching-form">Contact / Coaching</a><a href="Take Off - Coaches.dc.html">Coaches</a><a href="#plans">Packs</a></div>
+        <div style="display:flex; flex-direction:column; gap:11px;"><span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:#c4ef3f;">PADEL</span><a href="#book">Book a court</a><a href="#tournaments">Tournaments</a><a href="#coaching-form">Contact / Coaching</a><a href="Take Off - Coaches.dc.html">Coaches</a><a href="#plans">Packs</a></div>
         <div style="display:flex; flex-direction:column; gap:11px;"><span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:#c4ef3f;">CLUB</span><a href="Take Off - Gateway.dc.html">Gateway</a><a href="Take Off - Pilates.dc.html">Pilates</a><a href="Take Off - Store.dc.html">Store</a><a href="Take Off - Coaches.dc.html">Coaches</a></div>
       </div>
     </div>
@@ -690,23 +633,6 @@ class Component extends DCLogic {
 
     const authUser = window.takeOffAuth && window.takeOffAuth.user;
 
-    const ladderData = [
-      { rank: 1,  name: 'Yassine K.',  level: 6, wl: '24-3',  pts: 142 },
-      { rank: 2,  name: 'Mehdi B.',    level: 5, wl: '21-6',  pts: 128 },
-      { rank: 3,  name: 'Selim R.',    level: 6, wl: '19-5',  pts: 121 },
-      { rank: 4,  name: 'Karim T.',    level: 5, wl: '18-7',  pts: 110 },
-      { rank: 5,  name: 'Amine F.',    level: 4, wl: '17-8',  pts: 102 },
-      { rank: 6,  name: 'Oussama N.', level: 5, wl: '15-7',  pts: 96  },
-      { rank: 7,  name: 'Nadia S.',    level: 4, wl: '14-9',  pts: 88  },
-      { rank: 8,  name: 'Hatem L.',    level: 4, wl: '13-9',  pts: 81  },
-      { rank: 9,  name: 'Walid D.',    level: 3, wl: '12-10', pts: 74  },
-      { rank: 10, name: 'Skander Z.',  level: 4, wl: '11-10', pts: 70  },
-    ];
-
-    const userMatches = authUser ? (authUser.matches || []) : [];
-    const userWins  = userMatches.filter(m => m.result === 'W').length;
-    const userLoss  = userMatches.filter(m => m.result === 'L').length;
-
     // Coaches with extended data
     const coachesData = [
       { first: 'COACH', last: 'RAFAEL ORTIZ', role: 'Head Performance Coach', spec: 'Advanced technique, power play & strategy', slot: 'pad-coach-1',
@@ -781,8 +707,7 @@ class Component extends DCLogic {
       formats: [
         { n: '01', title: 'Book a court', desc: 'Share or buy the full court. Done in seconds.', slot: 'pad-fmt-1' },
         { n: '02', title: 'Tournaments', desc: 'Compete in seasonal cups and americanos.', slot: 'pad-fmt-2' },
-        { n: '03', title: 'Ladder', desc: 'Log matches, climb the monthly leaderboard.', slot: 'pad-fmt-3', href: '#ladder' },
-        { n: '04', title: 'Coaching', desc: 'Private and group sessions with our pros.', slot: 'pad-fmt-4', href: '#coaching-form' },
+        { n: '03', title: 'Coaching', desc: 'Private and group sessions with our pros.', slot: 'pad-fmt-3', href: '#coaching-form' },
       ],
       tournaments,
       coaches,
@@ -809,14 +734,6 @@ class Component extends DCLogic {
       userInitial: authUser ? (authUser.name || authUser.email || '?')[0].toUpperCase() : '',
       openAccount: () => window.takeOffAuth && window.takeOffAuth.openAccount(),
       openLogin: () => window.takeOffAuth && window.takeOffAuth.openLogin(),
-      ladderRows: ladderData,
-      ladderLoggedIn: authUser ? true : null,
-      ladderLoggedOut: authUser ? null : true,
-      ladderUserName: authUser ? (authUser.name || authUser.email) : '',
-      ladderUserLevel: authUser ? (authUser.padelLevel !== undefined ? authUser.padelLevel : 1) : 1,
-      ladderUserRank: userMatches.length ? '—' : '—',
-      ladderUserWL: userWins + '-' + userLoss,
-      openAccountMatches: () => window.takeOffAuth && window.takeOffAuth.openAccount('matches'),
     };
   }
 }
