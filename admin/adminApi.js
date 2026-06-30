@@ -75,5 +75,35 @@
     inquiries: {
       list: function (page) { return request('GET', '/api/v1/admin/coaching?page=' + (page || 0)); },
     },
+
+    // ── Epic B: users ──
+    users: {
+      search: function (q) { return request('GET', '/api/v1/admin/users/search?q=' + encodeURIComponent(q || '')); },
+      list: function (status, page) {
+        var qs = 'page=' + (page || 0) + '&size=50';
+        if (status) qs += '&status=' + encodeURIComponent(status);
+        return request('GET', '/api/v1/admin/users?' + qs);
+      },
+      get: function (id) { return request('GET', '/api/v1/admin/users/' + id); },
+      createGhost: function (dto) { return request('POST', '/api/v1/admin/users', dto); },
+      update: function (id, dto) { return request('PATCH', '/api/v1/admin/users/' + id, dto); },
+      credit: function (id, dto) { return request('POST', '/api/v1/admin/users/' + id + '/wallet/credit', dto); },
+      debit: function (id, dto) { return request('POST', '/api/v1/admin/users/' + id + '/wallet/debit', dto); },
+      block: function (id) { return request('POST', '/api/v1/admin/users/' + id + '/block'); },
+      unblock: function (id) { return request('POST', '/api/v1/admin/users/' + id + '/unblock'); },
+      remove: function (id) { return request('DELETE', '/api/v1/admin/users/' + id); },
+    },
+
+    // ── Epic C: courts ──
+    courts: {
+      calendar: function (fromIso, toIso) {
+        return request('GET', '/api/v1/admin/courts/calendar?from=' + encodeURIComponent(fromIso) + '&to=' + encodeURIComponent(toIso));
+      },
+      book: function (dto) { return request('POST', '/api/v1/admin/courts/bookings', dto); },
+      cancel: function (id, dto) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/cancel', dto); },
+      reschedule: function (id, dto) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/reschedule', dto); },
+      block: function (dto) { return request('POST', '/api/v1/admin/courts/blocks', dto); },
+      unblock: function (id) { return request('DELETE', '/api/v1/admin/courts/blocks/' + id); },
+    },
   };
 })();

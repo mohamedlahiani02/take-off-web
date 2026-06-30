@@ -214,6 +214,12 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
         <span class="icon">◎</span> Coaches
       </div>
       <div class="nav-section">OPERATIONS</div>
+      <div class="nav-item" onclick="navigate('users')" id="nav-users">
+        <span class="icon">☺</span> Users
+      </div>
+      <div class="nav-item" onclick="navigate('courts')" id="nav-courts">
+        <span class="icon">▦</span> Court Calendar
+      </div>
       <div class="nav-item" onclick="navigate('inquiries')" id="nav-inquiries">
         <span class="icon">✉</span> Inquiries
       </div>
@@ -326,7 +332,7 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
 <div class="modal-overlay" id="confirm-modal" style="display:none;" onclick="if(event.target===this)closeConfirm()">
   <div class="modal" style="max-width:400px;">
     <div class="modal-header">
-      <h3>Confirm delete</h3>
+      <h3 id="confirm-title">Confirm</h3>
       <button class="modal-close" onclick="closeConfirm()">×</button>
     </div>
     <div class="modal-body">
@@ -334,7 +340,210 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
     </div>
     <div class="modal-footer">
       <button class="btn-sm btn-ghost" onclick="closeConfirm()">Cancel</button>
-      <button class="btn-sm btn-danger" onclick="confirmAction()" id="confirm-ok-btn">Delete</button>
+      <button class="btn-sm btn-danger" onclick="confirmAction()" id="confirm-ok-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── User create/edit modal ── -->
+<div class="modal-overlay" id="user-modal" style="display:none;" onclick="if(event.target===this)closeUserModal()">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 id="user-modal-title">Create user</h3>
+      <button class="modal-close" onclick="closeUserModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="user-id">
+      <div class="form-row full"><div class="form-group">
+        <label>FULL NAME</label>
+        <input id="user-name" type="text" placeholder="Mohamed Lahiani">
+      </div></div>
+      <div class="form-row full"><div class="form-group">
+        <label>PHONE</label>
+        <input id="user-phone" type="text" placeholder="44 412 115 or +21644412115">
+        <div class="form-hint">Tunisian number — 8 digits or full +216 form.</div>
+      </div></div>
+      <div class="form-row full"><div class="form-group">
+        <label>EMAIL <span style="color:var(--muted)">(optional)</span></label>
+        <input id="user-email" type="email" placeholder="member@email.com">
+      </div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeUserModal()">Cancel</button>
+      <button class="btn-sm btn-lime" onclick="saveUser()" id="user-save-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Wallet adjust modal ── -->
+<div class="modal-overlay" id="wallet-modal" style="display:none;" onclick="if(event.target===this)closeWalletModal()">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>Adjust wallet</h3>
+      <button class="modal-close" onclick="closeWalletModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="wallet-user-id">
+      <p style="color:var(--muted);margin-bottom:16px;" id="wallet-user-label"></p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>ACTION</label>
+          <select id="wallet-action"><option value="credit">Credit (+)</option><option value="debit">Debit (−)</option></select>
+        </div>
+        <div class="form-group">
+          <label>AMOUNT (DT)</label>
+          <input id="wallet-amount" type="number" min="0" step="0.001" placeholder="20">
+        </div>
+      </div>
+      <div class="form-row full"><div class="form-group">
+        <label>REASON</label>
+        <input id="wallet-reason" type="text" placeholder="Cash top-up at reception">
+        <div class="form-hint">Required — recorded in the wallet ledger and audit log.</div>
+      </div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeWalletModal()">Cancel</button>
+      <button class="btn-sm btn-lime" onclick="saveWallet()" id="wallet-save-btn">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── User profile modal ── -->
+<div class="modal-overlay" id="profile-modal" style="display:none;" onclick="if(event.target===this)closeProfileModal()">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3 id="profile-title">User profile</h3>
+      <button class="modal-close" onclick="closeProfileModal()">×</button>
+    </div>
+    <div class="modal-body" id="profile-body"></div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeProfileModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Book on behalf modal ── -->
+<div class="modal-overlay" id="book-modal" style="display:none;" onclick="if(event.target===this)closeBookModal()">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>Book a court</h3>
+      <button class="modal-close" onclick="closeBookModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>COURT</label>
+          <select id="book-court"></select>
+        </div>
+        <div class="form-group">
+          <label>MODE</label>
+          <select id="book-mode" onchange="onBookModeChange()">
+            <option value="FULL">Full court (80 DT)</option>
+            <option value="SHARE">Share (20 DT)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>DATE</label><input id="book-date" type="date"></div>
+        <div class="form-group"><label>PRICE (DT)</label><input id="book-price" type="number" min="0" step="0.001" value="80"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>START</label><input id="book-start" type="time" value="18:00"></div>
+        <div class="form-group"><label>END</label><input id="book-end" type="time" value="19:30"></div>
+      </div>
+      <div style="border-top:1px solid var(--border);margin:8px 0 14px;"></div>
+      <div class="form-row full"><div class="form-group">
+        <label>MEMBER — search by name or phone</label>
+        <input id="book-user-search" type="text" placeholder="Start typing…" oninput="onBookUserSearch()" autocomplete="off">
+        <div id="book-user-results" style="margin-top:4px;"></div>
+        <div class="form-hint" id="book-user-selected"></div>
+      </div></div>
+      <div id="book-ghost-fields">
+        <div class="form-hint" style="margin-bottom:8px;">No match? Create a quick guest profile:</div>
+        <div class="form-row">
+          <div class="form-group"><label>GUEST NAME</label><input id="book-ghost-name" type="text" placeholder="Walk-in name"></div>
+          <div class="form-group"><label>GUEST PHONE</label><input id="book-ghost-phone" type="text" placeholder="44 412 115"></div>
+        </div>
+      </div>
+      <div class="form-row full"><div class="form-group">
+        <label>PAYMENT STATUS</label>
+        <select id="book-payment">
+          <option value="PENDING">Pending</option>
+          <option value="PAID">Paid</option>
+          <option value="PAY_AT_CLUB">Pay at club</option>
+        </select>
+      </div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeBookModal()">Cancel</button>
+      <button class="btn-sm btn-lime" onclick="saveBooking()" id="book-save-btn">Create booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Cancel booking modal ── -->
+<div class="modal-overlay" id="cancel-modal" style="display:none;" onclick="if(event.target===this)closeCancelModal()">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>Cancel booking</h3>
+      <button class="modal-close" onclick="closeCancelModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cancel-booking-id">
+      <div class="form-row full"><div class="form-group">
+        <label>REASON</label>
+        <input id="cancel-reason" type="text" placeholder="Member requested cancellation">
+      </div></div>
+      <div class="toggle-row" style="margin-top:6px;">
+        <span>Refund price to member wallet</span>
+        <label class="toggle"><input type="checkbox" id="cancel-refund"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeCancelModal()">Keep booking</button>
+      <button class="btn-sm btn-danger" onclick="saveCancel()" id="cancel-save-btn">Cancel booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Block slot modal ── -->
+<div class="modal-overlay" id="block-modal" style="display:none;" onclick="if(event.target===this)closeBlockModal()">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>Block a slot</h3>
+      <button class="modal-close" onclick="closeBlockModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>COURT</label><select id="block-court"></select></div>
+        <div class="form-group"><label>DATE</label><input id="block-date" type="date"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>START</label><input id="block-start" type="time" value="10:00"></div>
+        <div class="form-group"><label>END</label><input id="block-end" type="time" value="12:00"></div>
+      </div>
+      <div class="form-row full"><div class="form-group">
+        <label>REASON</label>
+        <input id="block-reason" type="text" placeholder="Maintenance / private event">
+      </div></div>
+      <div class="form-row full"><div class="form-group">
+        <label>REPEAT WEEKLY <span style="color:var(--muted)">(optional)</span></label>
+        <select id="block-recurring" onchange="document.getElementById('block-until-row').style.display = this.value ? 'block' : 'none'">
+          <option value="">One-off (no repeat)</option>
+          <option value="1">Every Monday</option><option value="2">Every Tuesday</option>
+          <option value="3">Every Wednesday</option><option value="4">Every Thursday</option>
+          <option value="5">Every Friday</option><option value="6">Every Saturday</option>
+          <option value="0">Every Sunday</option>
+        </select>
+      </div></div>
+      <div class="form-row full" id="block-until-row" style="display:none;"><div class="form-group">
+        <label>REPEAT UNTIL</label>
+        <input id="block-until" type="date">
+      </div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeBlockModal()">Cancel</button>
+      <button class="btn-sm btn-lime" onclick="saveBlock()" id="block-save-btn">Create block</button>
     </div>
   </div>
 </div>
@@ -345,6 +554,12 @@ var _page = 'dashboard';
 var _adminData = null;
 var _coaches = [];
 var _confirmFn = null;
+var _users = [];
+var _userSearchTimer = null;
+var _cal = null;              // current court calendar payload
+var _calDate = null;          // 'YYYY-MM-DD' currently shown
+var _bookSelectedUserId = null;
+var _bookSearchTimer = null;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 window.addEventListener('load', function () {
@@ -363,6 +578,12 @@ window.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
     closeCoachModal();
     closeConfirm();
+    closeUserModal();
+    closeWalletModal();
+    closeProfileModal();
+    closeBookModal();
+    closeCancelModal();
+    closeBlockModal();
   }
 });
 
@@ -432,7 +653,7 @@ function navigate(page) {
   var navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
 
-  var titles = { dashboard: 'Dashboard', coaches: 'Coaches', inquiries: 'Coaching Inquiries', orders: 'Orders' };
+  var titles = { dashboard: 'Dashboard', coaches: 'Coaches', users: 'Users', courts: 'Court Calendar', inquiries: 'Coaching Inquiries', orders: 'Orders' };
   document.getElementById('page-title').textContent = titles[page] || page;
 
   var content = document.getElementById('page-content');
@@ -440,6 +661,8 @@ function navigate(page) {
 
   if (page === 'dashboard') renderDashboard();
   else if (page === 'coaches') renderCoaches();
+  else if (page === 'users') renderUsers();
+  else if (page === 'courts') renderCourts();
   else if (page === 'inquiries') renderInquiries();
   else if (page === 'orders') renderOrders();
 }
@@ -456,6 +679,16 @@ async function renderDashboard() {
     <div class="card">
       <div class="card-header"><div><div class="kicker">QUICK LINKS</div><h3>Jump to</h3></div></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;padding:20px;">
+        <div onclick="navigate('users')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
+          <div style="font-size:22px;margin-bottom:8px;">☺</div>
+          <div style="font-weight:600;margin-bottom:4px;">Users</div>
+          <div style="font-size:12px;color:var(--muted);">Search, create, wallet, block</div>
+        </div>
+        <div onclick="navigate('courts')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
+          <div style="font-size:22px;margin-bottom:8px;">▦</div>
+          <div style="font-weight:600;margin-bottom:4px;">Court Calendar</div>
+          <div style="font-size:12px;color:var(--muted);">Book on behalf, cancel, block</div>
+        </div>
         <div onclick="navigate('coaches')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
           <div style="font-size:22px;margin-bottom:8px;">◎</div>
           <div style="font-weight:600;margin-bottom:4px;">Manage Coaches</div>
@@ -632,16 +865,14 @@ async function saveCoach() {
 }
 
 function deleteCoach(id, name) {
-  _confirmFn = async function () {
+  confirmDialog('Delete coach', 'Delete "' + name + '"? This cannot be undone.', 'Delete', async function () {
     try {
       await window.adminApi.coaches.delete(id);
       toast(name + ' deleted.', 'success');
       closeConfirm();
       renderCoaches();
     } catch (e) { toast(e.message || 'Delete failed.', 'error'); }
-  };
-  document.getElementById('confirm-message').textContent = 'Delete "' + name + '"? This cannot be undone.';
-  document.getElementById('confirm-modal').style.display = 'flex';
+  });
 }
 
 // ── Inquiries ──────────────────────────────────────────────────────────────
@@ -715,7 +946,483 @@ async function renderOrders() {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// USERS (Epic B)
+// ════════════════════════════════════════════════════════════════════════════
+function renderUsers() {
+  var content = document.getElementById('page-content');
+  if (!window.adminApi || !window.adminApi.isOnline()) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">⚡</div><p>API not configured.</p></div>';
+    return;
+  }
+  content.innerHTML = `
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;">
+      <input id="user-search" type="text" placeholder="Search by name, phone or email…" oninput="onUserSearch()"
+        style="flex:1;padding:11px 14px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);font-size:14px;outline:none;">
+      <select id="user-status-filter" onchange="loadUsersList()" style="padding:11px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);">
+        <option value="">All active</option>
+        <option value="ACTIVE">Active</option>
+        <option value="GHOST">Guests</option>
+        <option value="BLOCKED">Blocked</option>
+      </select>
+      <button class="btn-sm btn-lime" onclick="openUserModal()">+ Create user</button>
+    </div>
+    <div id="users-table-wrap"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+  `;
+  loadUsersList();
+}
+
+async function loadUsersList() {
+  var status = (document.getElementById('user-status-filter') || {}).value || '';
+  try {
+    var data = await window.adminApi.users.list(status, 0);
+    _users = (data && data.content) || [];
+    renderUsersTable(_users);
+  } catch (e) {
+    document.getElementById('users-table-wrap').innerHTML =
+      '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message || 'Failed to load users.') + '</p></div>';
+  }
+}
+
+function onUserSearch() {
+  var q = (document.getElementById('user-search').value || '').trim();
+  clearTimeout(_userSearchTimer);
+  if (!q) { renderUsersTable(_users); return; }
+  _userSearchTimer = setTimeout(async function () {
+    try {
+      var results = await window.adminApi.users.search(q);
+      renderUsersTable(results || []);
+    } catch (_) {}
+  }, 250);
+}
+
+function userStatusBadge(s) {
+  if (s === 'ACTIVE') return '<span class="badge badge-active">ACTIVE</span>';
+  if (s === 'GHOST') return '<span class="badge" style="background:rgba(234,179,8,.18);color:#fde047;">GUEST</span>';
+  if (s === 'BLOCKED') return '<span class="badge badge-inactive">BLOCKED</span>';
+  return '<span class="badge" style="background:rgba(255,255,255,.07);color:var(--muted);">' + esc(s) + '</span>';
+}
+
+function renderUsersTable(list) {
+  var wrap = document.getElementById('users-table-wrap');
+  if (!wrap) return;
+  if (!list.length) {
+    wrap.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">☺</div><p>No users found.</p></div></div>';
+    return;
+  }
+  var rows = list.map(function (u) {
+    var blockBtn = u.accountStatus === 'BLOCKED'
+      ? `<button class="btn-icon" onclick="toggleBlock('${u.id}','${esc(u.name)}',false)">Unblock</button>`
+      : `<button class="btn-icon danger" onclick="toggleBlock('${u.id}','${esc(u.name)}',true)">Block</button>`;
+    return `<tr>
+      <td><strong>${esc(u.name)}</strong></td>
+      <td style="font-family:'Space Mono';font-size:11px;">${esc(u.phone)}</td>
+      <td style="color:var(--muted);">${esc(u.email || '—')}</td>
+      <td>${userStatusBadge(u.accountStatus)}</td>
+      <td style="font-weight:700;color:var(--lime);">${Number(u.walletDt).toFixed(3)} DT</td>
+      <td><div class="row-actions">
+        <button class="btn-icon" onclick="openProfile('${u.id}')">View</button>
+        <button class="btn-icon" onclick='editUser(${JSON.stringify(u)})'>Edit</button>
+        <button class="btn-icon" onclick="openWalletModal('${u.id}','${esc(u.name)}',${u.walletDt})">Wallet</button>
+        ${blockBtn}
+      </div></td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<div class="card">
+    <div class="card-header"><div><div class="kicker">USERS</div><h3>${list.length} shown</h3></div></div>
+    <table>
+      <thead><tr><th>NAME</th><th>PHONE</th><th>EMAIL</th><th>STATUS</th><th>WALLET</th><th>ACTIONS</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function openUserModal(user) {
+  document.getElementById('user-modal-title').textContent = user ? 'Edit user' : 'Create user';
+  document.getElementById('user-id').value = user ? user.id : '';
+  document.getElementById('user-name').value = user ? user.name : '';
+  document.getElementById('user-phone').value = user ? user.phone : '';
+  document.getElementById('user-email').value = user && user.email ? user.email : '';
+  document.getElementById('user-modal').style.display = 'flex';
+  document.getElementById('user-name').focus();
+}
+function editUser(u) { openUserModal(u); }
+function closeUserModal() { document.getElementById('user-modal').style.display = 'none'; }
+
+async function saveUser() {
+  var id = document.getElementById('user-id').value;
+  var btn = document.getElementById('user-save-btn');
+  var name = document.getElementById('user-name').value.trim();
+  var phone = document.getElementById('user-phone').value.trim();
+  var email = document.getElementById('user-email').value.trim();
+  if (!name || !phone) { toast('Name and phone are required.', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    if (id) {
+      await window.adminApi.users.update(id, { name: name, phone: phone, email: email || null });
+      toast('User updated.', 'success');
+    } else {
+      await window.adminApi.users.createGhost({ name: name, phone: phone, email: email || null });
+      toast('User created.', 'success');
+    }
+    closeUserModal();
+    loadUsersList();
+  } catch (e) { toast(e.message || 'Save failed.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Save';
+}
+
+function openWalletModal(id, name, balance) {
+  document.getElementById('wallet-user-id').value = id;
+  document.getElementById('wallet-user-label').innerHTML = '<strong>' + esc(name) + '</strong> — current balance ' + Number(balance).toFixed(3) + ' DT';
+  document.getElementById('wallet-action').value = 'credit';
+  document.getElementById('wallet-amount').value = '';
+  document.getElementById('wallet-reason').value = '';
+  document.getElementById('wallet-modal').style.display = 'flex';
+  document.getElementById('wallet-amount').focus();
+}
+function closeWalletModal() { document.getElementById('wallet-modal').style.display = 'none'; }
+
+async function saveWallet() {
+  var id = document.getElementById('wallet-user-id').value;
+  var action = document.getElementById('wallet-action').value;
+  var amount = parseFloat(document.getElementById('wallet-amount').value);
+  var reason = document.getElementById('wallet-reason').value.trim();
+  if (!(amount > 0)) { toast('Enter a positive amount.', 'error'); return; }
+  if (!reason) { toast('A reason is required.', 'error'); return; }
+  var btn = document.getElementById('wallet-save-btn');
+  btn.disabled = true; btn.textContent = 'Applying…';
+  try {
+    var dto = { amountDt: amount, reason: reason };
+    if (action === 'credit') await window.adminApi.users.credit(id, dto);
+    else await window.adminApi.users.debit(id, dto);
+    toast('Wallet updated.', 'success');
+    closeWalletModal();
+    loadUsersList();
+  } catch (e) { toast(e.message || 'Failed.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Apply';
+}
+
+async function openProfile(id) {
+  document.getElementById('profile-body').innerHTML = '<div class="loading"><div class="spinner"></div>Loading…</div>';
+  document.getElementById('profile-modal').style.display = 'flex';
+  try {
+    var p = await window.adminApi.users.get(id);
+    var u = p.user;
+    document.getElementById('profile-title').textContent = u.name;
+    var ledger = (p.walletLedger || []).map(function (l) {
+      var amt = Number(l.amountDt);
+      var color = amt >= 0 ? 'var(--lime)' : '#fca5a5';
+      return `<tr>
+        <td style="font-family:'Space Mono';font-size:10px;color:var(--muted);">${new Date(l.createdAt).toLocaleString()}</td>
+        <td>${esc(l.type)}</td>
+        <td style="color:${color};font-weight:600;">${amt >= 0 ? '+' : ''}${amt.toFixed(3)}</td>
+        <td style="color:var(--muted);">${esc(l.reason || '—')}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('profile-body').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+        <div><div class="kicker">PHONE</div><div>${esc(u.phone)}</div></div>
+        <div><div class="kicker">EMAIL</div><div>${esc(u.email || '—')}</div></div>
+        <div><div class="kicker">STATUS</div><div>${userStatusBadge(u.accountStatus)}</div></div>
+        <div><div class="kicker">WALLET</div><div style="color:var(--lime);font-weight:700;">${Number(u.walletDt).toFixed(3)} DT</div></div>
+        <div><div class="kicker">POINTS</div><div>${p.points}</div></div>
+        <div><div class="kicker">JOINED</div><div>${new Date(u.createdAt).toLocaleDateString()}</div></div>
+      </div>
+      <div class="kicker" style="margin-bottom:8px;">WALLET LEDGER</div>
+      ${ledger ? `<table><thead><tr><th>WHEN</th><th>TYPE</th><th>AMOUNT</th><th>REASON</th></tr></thead><tbody>${ledger}</tbody></table>`
+               : '<p style="color:var(--muted);">No wallet movements yet.</p>'}
+    `;
+  } catch (e) {
+    document.getElementById('profile-body').innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message || 'Failed.') + '</p></div>';
+  }
+}
+function closeProfileModal() { document.getElementById('profile-modal').style.display = 'none'; }
+
+function toggleBlock(id, name, block) {
+  confirmDialog(
+    block ? 'Block user' : 'Unblock user',
+    (block ? 'Block "' + name + '"? They will not be able to log in.' : 'Unblock "' + name + '"? They will be able to log in again.'),
+    block ? 'Block' : 'Unblock',
+    async function () {
+      try {
+        if (block) await window.adminApi.users.block(id); else await window.adminApi.users.unblock(id);
+        toast('Done.', 'success'); closeConfirm(); loadUsersList();
+      } catch (e) { toast(e.message || 'Failed.', 'error'); }
+    }
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COURT CALENDAR (Epic C)
+// ════════════════════════════════════════════════════════════════════════════
+function todayStr() { var d = new Date(); return d.toISOString().slice(0, 10); }
+
+function dayWindow(dateStr) {
+  var start = new Date(dateStr + 'T00:00:00');
+  var end = new Date(start.getTime() + 24 * 3600 * 1000);
+  return { from: start.toISOString(), to: end.toISOString() };
+}
+function localToIso(dateStr, timeStr) { return new Date(dateStr + 'T' + timeStr + ':00').toISOString(); }
+function fmtTime(iso) { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+
+function renderCourts() {
+  var content = document.getElementById('page-content');
+  if (!window.adminApi || !window.adminApi.isOnline()) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">⚡</div><p>API not configured.</p></div>';
+    return;
+  }
+  if (!_calDate) _calDate = todayStr();
+  content.innerHTML = `
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="btn-sm btn-ghost" onclick="shiftCalDate(-1)">‹ Prev</button>
+      <input id="cal-date" type="date" value="${_calDate}" onchange="changeCalDate(this.value)"
+        style="padding:10px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);">
+      <button class="btn-sm btn-ghost" onclick="shiftCalDate(1)">Next ›</button>
+      <button class="btn-sm btn-ghost" onclick="changeCalDate(todayStr())">Today</button>
+      <div style="flex:1;"></div>
+      <button class="btn-sm btn-ghost" onclick="openBlockModal()">+ Block slot</button>
+      <button class="btn-sm btn-lime" onclick="openBookModal()">+ Book court</button>
+    </div>
+    <div id="cal-wrap"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+  `;
+  loadCalendar();
+}
+
+function changeCalDate(d) { _calDate = d; var el = document.getElementById('cal-date'); if (el) el.value = d; loadCalendar(); }
+function shiftCalDate(days) {
+  var d = new Date(_calDate + 'T00:00:00'); d.setDate(d.getDate() + days);
+  changeCalDate(d.toISOString().slice(0, 10));
+}
+
+async function loadCalendar() {
+  var w = dayWindow(_calDate);
+  try {
+    _cal = await window.adminApi.courts.calendar(w.from, w.to);
+    renderCalendar();
+  } catch (e) {
+    document.getElementById('cal-wrap').innerHTML =
+      '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message || 'Failed to load calendar.') + '</p></div>';
+  }
+}
+
+function bookingStatusBadge(s) {
+  if (s === 'CONFIRMED') return '<span class="badge badge-active">CONFIRMED</span>';
+  if (s === 'CANCELLED') return '<span class="badge badge-inactive">CANCELLED</span>';
+  return '<span class="badge" style="background:rgba(255,255,255,.07);color:var(--muted);">' + esc(s) + '</span>';
+}
+
+function renderCalendar() {
+  var wrap = document.getElementById('cal-wrap');
+  if (!_cal) return;
+  var courts = _cal.courts || [];
+  if (!courts.length) {
+    wrap.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">▦</div><p>No courts configured.</p></div></div>';
+    return;
+  }
+  var html = courts.map(function (court) {
+    var bookings = (_cal.bookings || []).filter(function (b) { return b.courtId === court.id; })
+      .sort(function (a, b) { return new Date(a.startsAt) - new Date(b.startsAt); });
+    var blocks = (_cal.blocks || []).filter(function (b) { return b.courtId === court.id; })
+      .sort(function (a, b) { return new Date(a.startsAt) - new Date(b.startsAt); });
+
+    var rows = bookings.map(function (b) {
+      var actions = b.status === 'CONFIRMED'
+        ? `<button class="btn-icon danger" onclick="openCancelModal('${b.id}')">Cancel</button>`
+        : '';
+      return `<tr>
+        <td style="font-family:'Space Mono';font-size:11px;">${fmtTime(b.startsAt)}–${fmtTime(b.endsAt)}</td>
+        <td>${b.mode === 'FULL' ? 'Full' : 'Share'}</td>
+        <td>${Number(b.priceDt).toFixed(0)} DT</td>
+        <td><span class="badge" style="background:rgba(255,255,255,.07);color:var(--cream);">${esc(b.paymentStatus)}</span></td>
+        <td>${bookingStatusBadge(b.status)}</td>
+        <td><div class="row-actions">${actions}</div></td>
+      </tr>`;
+    }).join('');
+
+    var blockRows = blocks.map(function (bl) {
+      return `<tr style="background:rgba(239,68,68,.05);">
+        <td style="font-family:'Space Mono';font-size:11px;">${fmtTime(bl.startsAt)}–${fmtTime(bl.endsAt)}</td>
+        <td colspan="4" style="color:#fca5a5;">⛔ ${esc(bl.reason)}${bl.recurringDow != null ? ' (weekly)' : ''}</td>
+        <td><button class="btn-icon" onclick="removeBlock('${bl.id}')">Remove</button></td>
+      </tr>`;
+    }).join('');
+
+    var body = (rows + blockRows) ||
+      '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No bookings or blocks.</td></tr>';
+
+    return `<div class="card" style="margin-bottom:18px;">
+      <div class="card-header"><div><div class="kicker">${esc(court.activity)}</div><h3>${esc(court.name)}</h3></div>
+        <span style="color:var(--muted);font-size:12px;">${bookings.filter(function(b){return b.status==='CONFIRMED';}).length} booking(s)</span></div>
+      <table>
+        <thead><tr><th>TIME</th><th>MODE</th><th>PRICE</th><th>PAYMENT</th><th>STATUS</th><th></th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+  wrap.innerHTML = html;
+}
+
+function fillCourtSelect(selectId) {
+  var sel = document.getElementById(selectId);
+  if (!sel || !_cal) return;
+  sel.innerHTML = (_cal.courts || []).map(function (c) {
+    return '<option value="' + c.id + '">' + esc(c.name) + '</option>';
+  }).join('');
+}
+
+// ── Book on behalf ──
+function openBookModal() {
+  if (!_cal) { toast('Calendar still loading…', 'error'); return; }
+  fillCourtSelect('book-court');
+  document.getElementById('book-date').value = _calDate;
+  document.getElementById('book-mode').value = 'FULL';
+  document.getElementById('book-price').value = '80';
+  document.getElementById('book-start').value = '18:00';
+  document.getElementById('book-end').value = '19:30';
+  document.getElementById('book-user-search').value = '';
+  document.getElementById('book-user-results').innerHTML = '';
+  document.getElementById('book-user-selected').textContent = '';
+  document.getElementById('book-ghost-name').value = '';
+  document.getElementById('book-ghost-phone').value = '';
+  document.getElementById('book-payment').value = 'PENDING';
+  _bookSelectedUserId = null;
+  document.getElementById('book-modal').style.display = 'flex';
+}
+function closeBookModal() { document.getElementById('book-modal').style.display = 'none'; }
+function onBookModeChange() {
+  document.getElementById('book-price').value = document.getElementById('book-mode').value === 'FULL' ? '80' : '20';
+}
+function onBookUserSearch() {
+  var q = (document.getElementById('book-user-search').value || '').trim();
+  _bookSelectedUserId = null;
+  document.getElementById('book-user-selected').textContent = '';
+  clearTimeout(_bookSearchTimer);
+  if (!q) { document.getElementById('book-user-results').innerHTML = ''; return; }
+  _bookSearchTimer = setTimeout(async function () {
+    try {
+      var results = await window.adminApi.users.search(q);
+      document.getElementById('book-user-results').innerHTML = (results || []).slice(0, 6).map(function (u) {
+        return `<div onclick="pickBookUser('${u.id}','${esc(u.name)} — ${esc(u.phone)}')"
+          style="padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13px;border:1px solid var(--border);margin-top:4px;background:var(--navy);"
+          onmouseover="this.style.background='rgba(196,239,63,.08)'" onmouseout="this.style.background='var(--navy)'">
+          ${esc(u.name)} <span style="color:var(--muted);font-family:'Space Mono';font-size:11px;">${esc(u.phone)}</span></div>`;
+      }).join('') || '<div class="form-hint" style="margin-top:4px;">No match — fill guest fields below.</div>';
+    } catch (_) {}
+  }, 250);
+}
+function pickBookUser(id, label) {
+  _bookSelectedUserId = id;
+  document.getElementById('book-user-search').value = label.split(' — ')[0];
+  document.getElementById('book-user-results').innerHTML = '';
+  document.getElementById('book-user-selected').textContent = '✓ Selected: ' + label;
+}
+async function saveBooking() {
+  var dto = {
+    courtId: document.getElementById('book-court').value,
+    startsAt: localToIso(document.getElementById('book-date').value, document.getElementById('book-start').value),
+    endsAt: localToIso(document.getElementById('book-date').value, document.getElementById('book-end').value),
+    mode: document.getElementById('book-mode').value,
+    priceDt: parseFloat(document.getElementById('book-price').value) || 0,
+    paymentStatus: document.getElementById('book-payment').value,
+  };
+  if (_bookSelectedUserId) {
+    dto.userId = _bookSelectedUserId;
+  } else {
+    var gn = document.getElementById('book-ghost-name').value.trim();
+    var gp = document.getElementById('book-ghost-phone').value.trim();
+    if (!gn || !gp) { toast('Pick a member or enter guest name + phone.', 'error'); return; }
+    dto.ghostName = gn; dto.ghostPhone = gp;
+  }
+  var btn = document.getElementById('book-save-btn');
+  btn.disabled = true; btn.textContent = 'Booking…';
+  try {
+    await window.adminApi.courts.book(dto);
+    toast('Booking created.', 'success');
+    closeBookModal();
+    loadCalendar();
+  } catch (e) { toast(e.message || 'Booking failed.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Create booking';
+}
+
+// ── Cancel booking ──
+function openCancelModal(id) {
+  document.getElementById('cancel-booking-id').value = id;
+  document.getElementById('cancel-reason').value = '';
+  document.getElementById('cancel-refund').checked = false;
+  document.getElementById('cancel-modal').style.display = 'flex';
+  document.getElementById('cancel-reason').focus();
+}
+function closeCancelModal() { document.getElementById('cancel-modal').style.display = 'none'; }
+async function saveCancel() {
+  var id = document.getElementById('cancel-booking-id').value;
+  var reason = document.getElementById('cancel-reason').value.trim();
+  if (!reason) { toast('A reason is required.', 'error'); return; }
+  var btn = document.getElementById('cancel-save-btn');
+  btn.disabled = true; btn.textContent = 'Cancelling…';
+  try {
+    await window.adminApi.courts.cancel(id, { reason: reason, refundToWallet: document.getElementById('cancel-refund').checked });
+    toast('Booking cancelled.', 'success');
+    closeCancelModal();
+    loadCalendar();
+  } catch (e) { toast(e.message || 'Failed.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Cancel booking';
+}
+
+// ── Block slot ──
+function openBlockModal() {
+  if (!_cal) { toast('Calendar still loading…', 'error'); return; }
+  fillCourtSelect('block-court');
+  document.getElementById('block-date').value = _calDate;
+  document.getElementById('block-start').value = '10:00';
+  document.getElementById('block-end').value = '12:00';
+  document.getElementById('block-reason').value = '';
+  document.getElementById('block-recurring').value = '';
+  document.getElementById('block-until-row').style.display = 'none';
+  document.getElementById('block-until').value = '';
+  document.getElementById('block-modal').style.display = 'flex';
+}
+function closeBlockModal() { document.getElementById('block-modal').style.display = 'none'; }
+async function saveBlock() {
+  var date = document.getElementById('block-date').value;
+  var reason = document.getElementById('block-reason').value.trim();
+  if (!date || !reason) { toast('Date and reason are required.', 'error'); return; }
+  var dto = {
+    courtId: document.getElementById('block-court').value,
+    startsAt: localToIso(date, document.getElementById('block-start').value),
+    endsAt: localToIso(date, document.getElementById('block-end').value),
+    reason: reason,
+  };
+  var dow = document.getElementById('block-recurring').value;
+  if (dow !== '') {
+    dto.recurringDow = parseInt(dow);
+    var until = document.getElementById('block-until').value;
+    if (until) dto.recurringUntil = until;
+  }
+  var btn = document.getElementById('block-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await window.adminApi.courts.block(dto);
+    toast('Slot blocked.', 'success');
+    closeBlockModal();
+    loadCalendar();
+  } catch (e) { toast(e.message || 'Failed.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Create block';
+}
+function removeBlock(id) {
+  confirmDialog('Remove block', 'Remove this block? The slot becomes bookable again.', 'Remove', async function () {
+    try { await window.adminApi.courts.unblock(id); toast('Block removed.', 'success'); closeConfirm(); loadCalendar(); }
+    catch (e) { toast(e.message || 'Failed.', 'error'); }
+  });
+}
+
 // ── Confirm modal ──────────────────────────────────────────────────────────
+function confirmDialog(title, message, okLabel, fn) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-ok-btn').textContent = okLabel || 'Confirm';
+  _confirmFn = fn;
+  document.getElementById('confirm-modal').style.display = 'flex';
+}
 function closeConfirm() {
   document.getElementById('confirm-modal').style.display = 'none';
   _confirmFn = null;
