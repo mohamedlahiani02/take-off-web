@@ -312,6 +312,7 @@ class Component extends DCLogic {
     _submitting: false,
     _lessonTypes: { individual: false, group: false },
     _availGrid: {},   // key: "Mon|Morning" → true
+    _coaches: null,
   };
 
   componentDidMount() {
@@ -319,6 +320,14 @@ class Component extends DCLogic {
     if (window.takeOffAuth) window.takeOffAuth.subscribe(() => this.setState(s => ({ _authTick: s._authTick + 1 })));
     if (window.takeOffCart) window.takeOffCart.subscribe(() => this.setState(s => ({ _cartTick: s._cartTick + 1 })));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.setState({ openCoachIdx: null }); });
+    (async () => {
+      if (window.takeOffApi && window.takeOffApi.isOnline()) {
+        try {
+          const data = await window.takeOffApi.coaches.list('PADEL', false);
+          if (data && data.length) this.setState({ _coaches: data });
+        } catch (_) {}
+      }
+    })();
   }
 
   _coachesData() {
@@ -354,7 +363,17 @@ class Component extends DCLogic {
     const authUser = window.takeOffAuth && window.takeOffAuth.user;
     const cartCount = window.takeOffCart ? window.takeOffCart.getCount() : 0;
     const openIdx = this.state.openCoachIdx;
-    const raw = this._coachesData();
+    const apiCoaches = this.state._coaches;
+    const raw = apiCoaches ? apiCoaches.map((c, i) => ({
+      firstName: c.firstName.toUpperCase(),
+      lastName: c.lastName.toUpperCase(),
+      role: c.roleTitle,
+      specs: c.specs,
+      slot: 'coa-coach-' + (i + 1),
+      name: (c.firstName + ' ' + c.lastName).toUpperCase(),
+      bio: c.bio,
+      achievements: c.achievements,
+    })) : this._coachesData();
     const coaches = raw.map((c, idx) => Object.assign({}, c, { open: () => this.setState({ openCoachIdx: idx }) }));
     const coachModalOpen = openIdx !== null && openIdx >= 0 ? true : null;
     const modal = (openIdx !== null && openIdx >= 0) ? raw[openIdx] : { name: '', role: '', bio: '', specs: [], achievements: [], slot: 'coa-coach-1' };
