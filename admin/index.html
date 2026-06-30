@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Take Off — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #0a1733;
+  --navy2: #0f1f44;
+  --navy3: #1a2f5e;
+  --lime: #c4ef3f;
+  --lime-dark: #6a8a16;
+  --cream: #f4f5ee;
+  --muted: rgba(244,245,238,.55);
+  --border: rgba(196,239,63,.15);
+  --red: #ef4444;
+}
+html, body { height: 100%; background: var(--navy); color: var(--cream); font-family: 'Space Grotesk', sans-serif; font-size: 14px; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; }
+input, select, textarea { font-family: inherit; }
+
+/* ── Layout ── */
+#app { display: flex; height: 100vh; }
+
+/* ── Login ── */
+#login-screen {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; min-height: 100vh;
+  background: radial-gradient(80% 60% at 30% 40%, rgba(43,107,240,.2), transparent 60%), var(--navy);
+}
+.login-card {
+  background: var(--navy2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 44px 40px; width: 100%; max-width: 400px;
+  box-shadow: 0 40px 80px rgba(0,0,0,.5);
+}
+.login-card .logo { font-family: 'Space Mono'; font-size: 11px; letter-spacing: .28em; color: var(--lime); margin-bottom: 28px; }
+.login-card h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+.login-card p { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+.field { margin-bottom: 18px; }
+.field label { display: block; font-family: 'Space Mono'; font-size: 10px; letter-spacing: .18em; color: rgba(196,239,63,.8); margin-bottom: 7px; }
+.field input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(196,239,63,.25); background: var(--navy); color: var(--cream); font-size: 15px; outline: none; }
+.field input:focus { border-color: var(--lime); }
+.btn-primary { width: 100%; padding: 13px; border-radius: 10px; background: var(--lime); color: var(--navy); font-size: 15px; font-weight: 700; margin-top: 8px; transition: opacity .15s; }
+.btn-primary:hover { opacity: .88; }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.login-error { margin-top: 14px; padding: 10px 14px; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); border-radius: 8px; font-size: 13px; color: #fca5a5; display: none; }
+
+/* ── Sidebar ── */
+#sidebar {
+  width: 220px; min-width: 220px; background: var(--navy2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 0;
+  overflow-y: auto;
+}
+.sidebar-logo { padding: 24px 20px 18px; border-bottom: 1px solid var(--border); }
+.sidebar-logo .brand { font-family: 'Space Mono'; font-size: 10px; letter-spacing: .22em; color: var(--lime); margin-bottom: 2px; }
+.sidebar-logo .sub { font-size: 12px; color: var(--muted); }
+.sidebar-nav { flex: 1; padding: 12px 0; }
+.nav-section { font-family: 'Space Mono'; font-size: 9px; letter-spacing: .2em; color: rgba(196,239,63,.45); padding: 16px 20px 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px; cursor: pointer; border-radius: 0;
+  color: var(--muted); font-size: 13px; font-weight: 500;
+  transition: background .12s, color .12s;
+  border-left: 3px solid transparent;
+}
+.nav-item:hover { background: rgba(196,239,63,.06); color: var(--cream); }
+.nav-item.active { background: rgba(196,239,63,.1); color: var(--lime); border-left-color: var(--lime); }
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+.admin-info { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.admin-info strong { color: var(--cream); display: block; }
+.btn-logout { width: 100%; padding: 8px; border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; border: 1px solid rgba(244,245,238,.15); transition: all .15s; }
+.btn-logout:hover { background: rgba(239,68,68,.15); color: #fca5a5; border-color: rgba(239,68,68,.3); }
+
+/* ── Main ── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { height: 56px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 28px; flex-shrink: 0; }
+.topbar h2 { font-size: 16px; font-weight: 600; }
+.topbar .breadcrumb { font-family: 'Space Mono'; font-size: 10px; letter-spacing: .14em; color: var(--muted); }
+.content { flex: 1; overflow-y: auto; padding: 28px; }
+
+/* ── Cards / Tables ── */
+.card { background: var(--navy2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.card-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--border); }
+.card-header h3 { font-size: 15px; font-weight: 600; }
+.kicker { font-family: 'Space Mono'; font-size: 9px; letter-spacing: .2em; color: var(--lime); }
+table { width: 100%; border-collapse: collapse; }
+thead th { font-family: 'Space Mono'; font-size: 9px; letter-spacing: .14em; color: var(--muted); padding: 11px 16px; text-align: left; font-weight: 400; border-bottom: 1px solid var(--border); }
+tbody tr { border-bottom: 1px solid rgba(196,239,63,.07); transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(196,239,63,.04); }
+tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
+.badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-family: 'Space Mono'; font-size: 9px; letter-spacing: .1em; }
+.badge-active { background: rgba(196,239,63,.15); color: var(--lime); }
+.badge-inactive { background: rgba(239,68,68,.12); color: #fca5a5; }
+.badge-padel { background: rgba(43,107,240,.2); color: #93c5fd; }
+.badge-pilates { background: rgba(168,85,247,.2); color: #d8b4fe; }
+.row-actions { display: flex; gap: 6px; }
+.btn-icon { padding: 5px 10px; border-radius: 7px; font-size: 12px; font-weight: 600; background: transparent; border: 1px solid rgba(244,245,238,.15); color: var(--muted); transition: all .12s; }
+.btn-icon:hover { background: rgba(196,239,63,.12); color: var(--lime); border-color: rgba(196,239,63,.3); }
+.btn-icon.danger:hover { background: rgba(239,68,68,.12); color: #fca5a5; border-color: rgba(239,68,68,.3); }
+
+/* ── Buttons ── */
+.btn-sm { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: all .15s; }
+.btn-lime { background: var(--lime); color: var(--navy); border: none; }
+.btn-lime:hover { opacity: .88; }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid rgba(244,245,238,.18); }
+.btn-ghost:hover { background: rgba(244,245,238,.07); color: var(--cream); }
+.btn-danger { background: rgba(239,68,68,.12); color: #fca5a5; border: 1px solid rgba(239,68,68,.25); }
+.btn-danger:hover { background: rgba(239,68,68,.22); }
+
+/* ── Modal ── */
+.modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(7,15,36,.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal { background: var(--navy2); border: 1px solid var(--border); border-radius: 18px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; box-shadow: 0 40px 80px rgba(0,0,0,.6); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 22px 24px; border-bottom: 1px solid var(--border); }
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.modal-close { background: none; color: var(--muted); font-size: 22px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+.modal-close:hover { color: var(--cream); background: rgba(244,245,238,.08); }
+.modal-body { padding: 24px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-family: 'Space Mono'; font-size: 9px; letter-spacing: .16em; color: rgba(196,239,63,.8); }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(196,239,63,.22);
+  background: var(--navy); color: var(--cream); font-size: 14px; outline: none;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--lime); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.form-group select option { background: var(--navy); }
+.form-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(196,239,63,.07); }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-row span { font-size: 13px; }
+.toggle { position: relative; width: 36px; height: 20px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: rgba(244,245,238,.15); border-radius: 999px; cursor: pointer; transition: .2s; }
+.toggle input:checked + .toggle-slider { background: var(--lime); }
+.toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: .2s; }
+.toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+/* ── Stats strip ── */
+.stats-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.stat-card { background: var(--navy2); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+.stat-card .stat-num { font-size: 28px; font-weight: 700; color: var(--lime); line-height: 1; }
+.stat-card .stat-label { font-family: 'Space Mono'; font-size: 9px; letter-spacing: .18em; color: var(--muted); margin-top: 6px; }
+
+/* ── Toast ── */
+#toast { position: fixed; bottom: 28px; right: 28px; z-index: 500; display: flex; flex-direction: column; gap: 8px; }
+.toast-msg { padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; animation: slideIn .2s ease; }
+.toast-msg.success { background: rgba(196,239,63,.2); border: 1px solid rgba(196,239,63,.4); color: var(--lime); }
+.toast-msg.error { background: rgba(239,68,68,.18); border: 1px solid rgba(239,68,68,.4); color: #fca5a5; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-state .icon { font-size: 42px; margin-bottom: 14px; }
+.empty-state p { font-size: 14px; }
+
+/* ── Loading ── */
+.loading { display: flex; align-items: center; justify-content: center; padding: 60px; color: var(--muted); gap: 10px; font-family: 'Space Mono'; font-size: 11px; letter-spacing: .14em; }
+.spinner { width: 20px; height: 20px; border: 2px solid rgba(196,239,63,.2); border-top-color: var(--lime); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ── API URL config — set TAKEOFF_API_URL to your Railway deployment ── -->
+<script>window.TAKEOFF_API_URL = '';</script>
+<script src="adminApi.js"></script>
+
+<div id="toast"></div>
+
+<!-- ── Login ── -->
+<div id="login-screen" style="display:none;">
+  <div class="login-card">
+    <div class="logo">TAKE OFF CLUB</div>
+    <h1>Admin Panel</h1>
+    <p>Sign in with your administrator credentials.</p>
+    <div class="field">
+      <label>EMAIL</label>
+      <input id="login-email" type="email" placeholder="admin@takeoff.tn" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── Dashboard ── -->
+<div id="app" style="display:none;">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand">TAKE OFF</div>
+      <div class="sub">Admin Panel</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">OVERVIEW</div>
+      <div class="nav-item active" onclick="navigate('dashboard')" id="nav-dashboard">
+        <span class="icon">◆</span> Dashboard
+      </div>
+      <div class="nav-section">CONTENT</div>
+      <div class="nav-item" onclick="navigate('coaches')" id="nav-coaches">
+        <span class="icon">◎</span> Coaches
+      </div>
+      <div class="nav-section">OPERATIONS</div>
+      <div class="nav-item" onclick="navigate('inquiries')" id="nav-inquiries">
+        <span class="icon">✉</span> Inquiries
+      </div>
+      <div class="nav-item" onclick="navigate('orders')" id="nav-orders">
+        <span class="icon">↗</span> Orders
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-info">
+        <strong id="admin-name">Admin</strong>
+        <span id="admin-role" style="font-family:'Space Mono';font-size:9px;letter-spacing:.14em;color:var(--lime);"></span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div class="topbar">
+      <div>
+        <div class="breadcrumb">TAKE OFF ADMIN</div>
+        <h2 id="page-title">Dashboard</h2>
+      </div>
+    </div>
+    <div class="content" id="page-content"></div>
+  </div>
+</div>
+
+<!-- ── Coach Modal ── -->
+<div class="modal-overlay" id="coach-modal" style="display:none;" onclick="if(event.target===this)closeCoachModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="coach-modal-title">Add Coach</h3>
+      <button class="modal-close" onclick="closeCoachModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="coach-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>FIRST NAME</label>
+          <input id="coach-firstName" type="text" placeholder="Ahmed">
+        </div>
+        <div class="form-group">
+          <label>LAST NAME</label>
+          <input id="coach-lastName" type="text" placeholder="Ben Salah">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>ROLE TITLE</label>
+          <input id="coach-roleTitle" type="text" placeholder="Head Padel Coach">
+        </div>
+        <div class="form-group">
+          <label>ACTIVITY</label>
+          <select id="coach-activity">
+            <option value="PADEL">Padel</option>
+            <option value="PILATES">Pilates</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>BIO</label>
+          <textarea id="coach-bio" rows="4" placeholder="Coach biography..."></textarea>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>SPECIALTIES</label>
+          <input id="coach-specs" type="text" placeholder="Technique, Tactics, Physical conditioning">
+          <div class="form-hint">Comma-separated list</div>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>ACHIEVEMENTS</label>
+          <input id="coach-achievements" type="text" placeholder="National champion 2020, FIP Level 3">
+          <div class="form-hint">Comma-separated list</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>PHOTO URL</label>
+          <input id="coach-photoUrl" type="text" placeholder="https://... or /uploads/coaches/...">
+        </div>
+        <div class="form-group">
+          <label>DISPLAY ORDER</label>
+          <input id="coach-displayOrder" type="number" min="1" placeholder="1">
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="toggle-row">
+          <span>Active</span>
+          <label class="toggle"><input type="checkbox" id="coach-active" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>Show on Padel preview (home section, max 4)</span>
+          <label class="toggle"><input type="checkbox" id="coach-showOnPadelPreview"><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeCoachModal()">Cancel</button>
+      <button class="btn-sm btn-lime" onclick="saveCoach()" id="coach-save-btn">Save coach</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete confirm modal ── -->
+<div class="modal-overlay" id="confirm-modal" style="display:none;" onclick="if(event.target===this)closeConfirm()">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>Confirm delete</h3>
+      <button class="modal-close" onclick="closeConfirm()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-message" style="color:var(--muted);line-height:1.6;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-sm btn-danger" onclick="confirmAction()" id="confirm-ok-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+var _page = 'dashboard';
+var _adminData = null;
+var _coaches = [];
+var _confirmFn = null;
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+window.addEventListener('load', function () {
+  window.addEventListener('admin:unauthorized', function () { showLogin(); });
+  window.addEventListener('admin:logout', function () { showLogin(); });
+
+  if (window.adminApi && window.adminApi.isLoggedIn()) {
+    showDashboard();
+    navigate('dashboard');
+  } else {
+    showLogin();
+  }
+});
+
+window.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') {
+    closeCoachModal();
+    closeConfirm();
+  }
+});
+
+// ── Auth ───────────────────────────────────────────────────────────────────
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  setTimeout(() => { var el = document.getElementById('login-email'); if (el) el.focus(); }, 50);
+}
+
+function showDashboard() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+async function doLogin() {
+  var email = (document.getElementById('login-email').value || '').trim();
+  var password = document.getElementById('login-password').value || '';
+  var errEl = document.getElementById('login-error');
+  var btn = document.getElementById('login-btn');
+
+  errEl.style.display = 'none';
+  if (!email || !password) { showLoginError('Please enter email and password.'); return; }
+  if (!window.adminApi || !window.adminApi.isOnline()) {
+    showLoginError('API URL not configured. Set window.TAKEOFF_API_URL in index.html.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  try {
+    var data = await window.adminApi.auth.login(email, password);
+    _adminData = data;
+    document.getElementById('admin-name').textContent = data.name || email;
+    document.getElementById('admin-role').textContent = data.role || '';
+    showDashboard();
+    navigate('dashboard');
+    toast('Welcome back, ' + (data.name || 'admin') + '.', 'success');
+  } catch (e) {
+    showLoginError(e.status === 401 ? 'Invalid email or password.' : (e.message || 'Login failed.'));
+  }
+  btn.disabled = false;
+  btn.textContent = 'Sign in';
+}
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+    doLogin();
+  }
+});
+
+function showLoginError(msg) {
+  var el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function doLogout() {
+  if (window.adminApi) window.adminApi.auth.logout();
+  showLogin();
+}
+
+// ── Router ─────────────────────────────────────────────────────────────────
+function navigate(page) {
+  _page = page;
+  document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.remove('active'); });
+  var navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+
+  var titles = { dashboard: 'Dashboard', coaches: 'Coaches', inquiries: 'Coaching Inquiries', orders: 'Orders' };
+  document.getElementById('page-title').textContent = titles[page] || page;
+
+  var content = document.getElementById('page-content');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading…</div>';
+
+  if (page === 'dashboard') renderDashboard();
+  else if (page === 'coaches') renderCoaches();
+  else if (page === 'inquiries') renderInquiries();
+  else if (page === 'orders') renderOrders();
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+async function renderDashboard() {
+  var content = document.getElementById('page-content');
+  content.innerHTML = `
+    <div class="stats-strip" id="stats-strip">
+      <div class="stat-card"><div class="stat-num">—</div><div class="stat-label">COACHES ACTIVE</div></div>
+      <div class="stat-card"><div class="stat-num">—</div><div class="stat-label">OPEN INQUIRIES</div></div>
+      <div class="stat-card"><div class="stat-num">—</div><div class="stat-label">ORDERS TODAY</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="kicker">QUICK LINKS</div><h3>Jump to</h3></div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;padding:20px;">
+        <div onclick="navigate('coaches')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
+          <div style="font-size:22px;margin-bottom:8px;">◎</div>
+          <div style="font-weight:600;margin-bottom:4px;">Manage Coaches</div>
+          <div style="font-size:12px;color:var(--muted);">Add, edit, reorder coaches</div>
+        </div>
+        <div onclick="navigate('inquiries')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
+          <div style="font-size:22px;margin-bottom:8px;">✉</div>
+          <div style="font-weight:600;margin-bottom:4px;">Coaching Inquiries</div>
+          <div style="font-size:12px;color:var(--muted);">Review and respond</div>
+        </div>
+        <div onclick="navigate('orders')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
+          <div style="font-size:22px;margin-bottom:8px;">↗</div>
+          <div style="font-weight:600;margin-bottom:4px;">Orders</div>
+          <div style="font-size:12px;color:var(--muted);">View and manage orders</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (!window.adminApi || !window.adminApi.isOnline()) return;
+  try {
+    var coaches = await window.adminApi.coaches.list();
+    var active = coaches.filter(function (c) { return c.active; }).length;
+    var strip = document.getElementById('stats-strip');
+    if (strip) strip.children[0].querySelector('.stat-num').textContent = active;
+  } catch (_) {}
+  try {
+    var inqData = await window.adminApi.inquiries.list(0);
+    var strip = document.getElementById('stats-strip');
+    if (strip && inqData) strip.children[1].querySelector('.stat-num').textContent = inqData.totalElements || 0;
+  } catch (_) {}
+  try {
+    var ordData = await window.adminApi.orders.list(0);
+    var strip = document.getElementById('stats-strip');
+    if (strip && ordData) strip.children[2].querySelector('.stat-num').textContent = ordData.totalElements || 0;
+  } catch (_) {}
+}
+
+// ── Coaches ────────────────────────────────────────────────────────────────
+async function renderCoaches() {
+  var content = document.getElementById('page-content');
+  if (!window.adminApi || !window.adminApi.isOnline()) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">⚡</div><p>API not configured. Set <code>window.TAKEOFF_API_URL</code> in index.html.</p></div>';
+    return;
+  }
+  try {
+    _coaches = await window.adminApi.coaches.list() || [];
+    renderCoachesTable();
+  } catch (e) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + (e.message || 'Failed to load coaches.') + '</p></div>';
+  }
+}
+
+function renderCoachesTable() {
+  var content = document.getElementById('page-content');
+  var padel = _coaches.filter(function (c) { return c.activity === 'PADEL'; });
+  var pilates = _coaches.filter(function (c) { return c.activity === 'PILATES'; });
+
+  content.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+      <button class="btn-sm btn-lime" onclick="openCoachModal()">+ Add coach</button>
+    </div>
+    ${buildCoachSection('PADEL COACHES', padel)}
+    <div style="height:20px;"></div>
+    ${buildCoachSection('PILATES INSTRUCTORS', pilates)}
+  `;
+}
+
+function buildCoachSection(title, coaches) {
+  if (!coaches.length) return `
+    <div class="card">
+      <div class="card-header"><div><div class="kicker">${title}</div><h3>No coaches yet</h3></div></div>
+      <div class="empty-state"><div class="icon">◎</div><p>Add the first coach to get started.</p></div>
+    </div>`;
+
+  var rows = coaches.map(function (c) {
+    var activityBadge = c.activity === 'PADEL'
+      ? '<span class="badge badge-padel">PADEL</span>'
+      : '<span class="badge badge-pilates">PILATES</span>';
+    var statusBadge = c.active
+      ? '<span class="badge badge-active">ACTIVE</span>'
+      : '<span class="badge badge-inactive">INACTIVE</span>';
+    var preview = c.showOnPadelPreview
+      ? '<span class="badge badge-active" style="margin-left:4px;">PREVIEW</span>'
+      : '';
+    return `<tr>
+      <td style="width:32px;cursor:grab;color:var(--muted);font-size:16px;" title="Drag to reorder">⠿</td>
+      <td><strong>${esc(c.firstName)} ${esc(c.lastName)}</strong><br><span style="font-size:11px;color:var(--muted);">${esc(c.roleTitle)}</span></td>
+      <td>${activityBadge}${preview}</td>
+      <td style="font-family:'Space Mono';font-size:10px;color:var(--muted);">#${c.displayOrder}</td>
+      <td>${statusBadge}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-icon" onclick='editCoach(${JSON.stringify(c)})'>Edit</button>
+          <button class="btn-icon danger" onclick="deleteCoach('${c.id}','${esc(c.firstName)} ${esc(c.lastName)}')">Delete</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="card">
+    <div class="card-header">
+      <div><div class="kicker">${title}</div><h3>${coaches.length} coach${coaches.length !== 1 ? 'es' : ''}</h3></div>
+    </div>
+    <table>
+      <thead><tr>
+        <th></th><th>NAME</th><th>ACTIVITY</th><th>ORDER</th><th>STATUS</th><th>ACTIONS</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function openCoachModal(coach) {
+  document.getElementById('coach-modal-title').textContent = coach ? 'Edit Coach' : 'Add Coach';
+  document.getElementById('coach-id').value = coach ? coach.id : '';
+  document.getElementById('coach-firstName').value = coach ? coach.firstName : '';
+  document.getElementById('coach-lastName').value = coach ? coach.lastName : '';
+  document.getElementById('coach-roleTitle').value = coach ? coach.roleTitle : '';
+  document.getElementById('coach-activity').value = coach ? coach.activity : 'PADEL';
+  document.getElementById('coach-bio').value = coach ? coach.bio : '';
+  document.getElementById('coach-specs').value = coach ? (coach.specs || []).join(', ') : '';
+  document.getElementById('coach-achievements').value = coach ? (coach.achievements || []).join(', ') : '';
+  document.getElementById('coach-photoUrl').value = coach ? (coach.photoUrl || '') : '';
+  document.getElementById('coach-displayOrder').value = coach ? coach.displayOrder : '';
+  document.getElementById('coach-active').checked = coach ? coach.active : true;
+  document.getElementById('coach-showOnPadelPreview').checked = coach ? coach.showOnPadelPreview : false;
+  document.getElementById('coach-modal').style.display = 'flex';
+  document.getElementById('coach-firstName').focus();
+}
+
+function editCoach(coach) { openCoachModal(coach); }
+
+function closeCoachModal() {
+  document.getElementById('coach-modal').style.display = 'none';
+}
+
+async function saveCoach() {
+  var id = document.getElementById('coach-id').value;
+  var btn = document.getElementById('coach-save-btn');
+  var dto = {
+    firstName: document.getElementById('coach-firstName').value.trim(),
+    lastName: document.getElementById('coach-lastName').value.trim(),
+    roleTitle: document.getElementById('coach-roleTitle').value.trim(),
+    activity: document.getElementById('coach-activity').value,
+    bio: document.getElementById('coach-bio').value.trim(),
+    specs: document.getElementById('coach-specs').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean),
+    achievements: document.getElementById('coach-achievements').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean),
+    photoUrl: document.getElementById('coach-photoUrl').value.trim() || null,
+    displayOrder: parseInt(document.getElementById('coach-displayOrder').value) || 0,
+    active: document.getElementById('coach-active').checked,
+    showOnPadelPreview: document.getElementById('coach-showOnPadelPreview').checked,
+  };
+
+  if (!dto.firstName || !dto.lastName || !dto.roleTitle || !dto.bio) {
+    toast('Please fill in all required fields.', 'error'); return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    if (id) {
+      await window.adminApi.coaches.update(id, dto);
+      toast('Coach updated.', 'success');
+    } else {
+      await window.adminApi.coaches.create(dto);
+      toast('Coach created.', 'success');
+    }
+    closeCoachModal();
+    renderCoaches();
+  } catch (e) {
+    toast(e.message || 'Save failed.', 'error');
+  }
+  btn.disabled = false; btn.textContent = 'Save coach';
+}
+
+function deleteCoach(id, name) {
+  _confirmFn = async function () {
+    try {
+      await window.adminApi.coaches.delete(id);
+      toast(name + ' deleted.', 'success');
+      closeConfirm();
+      renderCoaches();
+    } catch (e) { toast(e.message || 'Delete failed.', 'error'); }
+  };
+  document.getElementById('confirm-message').textContent = 'Delete "' + name + '"? This cannot be undone.';
+  document.getElementById('confirm-modal').style.display = 'flex';
+}
+
+// ── Inquiries ──────────────────────────────────────────────────────────────
+async function renderInquiries() {
+  var content = document.getElementById('page-content');
+  if (!window.adminApi || !window.adminApi.isOnline()) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">⚡</div><p>API not configured.</p></div>';
+    return;
+  }
+  try {
+    var data = await window.adminApi.inquiries.list(0);
+    var items = (data && data.content) || [];
+    if (!items.length) {
+      content.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">✉</div><p>No inquiries yet.</p></div></div>';
+      return;
+    }
+    var rows = items.map(function (inq) {
+      return `<tr>
+        <td style="font-family:'Space Mono';font-size:10px;color:var(--muted);">${new Date(inq.createdAt).toLocaleDateString()}</td>
+        <td><strong>${esc(inq.name || '—')}</strong></td>
+        <td>${esc(inq.phone || '—')}</td>
+        <td>${esc(inq.email || '—')}</td>
+        <td style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);">${esc(inq.motivations || '—')}</td>
+      </tr>`;
+    }).join('');
+    content.innerHTML = `<div class="card">
+      <div class="card-header"><div><div class="kicker">COACHING INQUIRIES</div><h3>${data.totalElements || items.length} total</h3></div></div>
+      <table>
+        <thead><tr><th>DATE</th><th>NAME</th><th>PHONE</th><th>EMAIL</th><th>MOTIVATION</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + (e.message || 'Failed to load.') + '</p></div>';
+  }
+}
+
+// ── Orders ─────────────────────────────────────────────────────────────────
+async function renderOrders() {
+  var content = document.getElementById('page-content');
+  if (!window.adminApi || !window.adminApi.isOnline()) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">⚡</div><p>API not configured.</p></div>';
+    return;
+  }
+  try {
+    var data = await window.adminApi.orders.list(0);
+    var items = (data && data.content) || [];
+    if (!items.length) {
+      content.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">↗</div><p>No orders yet.</p></div></div>';
+      return;
+    }
+    var rows = items.map(function (o) {
+      return `<tr>
+        <td style="font-family:'Space Mono';font-size:10px;color:var(--lime);">${esc(o.orderRef)}</td>
+        <td style="font-family:'Space Mono';font-size:10px;color:var(--muted);">${new Date(o.createdAt).toLocaleDateString()}</td>
+        <td><span class="badge" style="background:rgba(255,255,255,.07);color:var(--cream);">${esc(o.status)}</span></td>
+        <td>${esc(o.deliveryMethod)}</td>
+        <td>${esc(o.paymentMethod)}</td>
+        <td style="font-weight:700;color:var(--lime);">${o.totalDt} DT</td>
+      </tr>`;
+    }).join('');
+    content.innerHTML = `<div class="card">
+      <div class="card-header"><div><div class="kicker">ORDERS</div><h3>${data.totalElements || items.length} total</h3></div></div>
+      <table>
+        <thead><tr><th>REF</th><th>DATE</th><th>STATUS</th><th>DELIVERY</th><th>PAYMENT</th><th>TOTAL</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + (e.message || 'Failed to load.') + '</p></div>';
+  }
+}
+
+// ── Confirm modal ──────────────────────────────────────────────────────────
+function closeConfirm() {
+  document.getElementById('confirm-modal').style.display = 'none';
+  _confirmFn = null;
+}
+function confirmAction() {
+  if (_confirmFn) _confirmFn();
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg, type) {
+  var container = document.getElementById('toast');
+  var el = document.createElement('div');
+  el.className = 'toast-msg ' + (type || 'success');
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(function () { el.remove(); }, 3500);
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

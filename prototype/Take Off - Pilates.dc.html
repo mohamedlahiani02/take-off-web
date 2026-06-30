@@ -398,7 +398,7 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   loaderRef = React.createRef();
-  state = { dayIdx: 0, reserved: {}, quoteIdx: 0, openFaq: 0, openInstructor: null, _authTick: 0, _cartTick: 0 };
+  state = { dayIdx: 0, reserved: {}, quoteIdx: 0, openFaq: 0, openInstructor: null, _authTick: 0, _cartTick: 0, _instructors: null };
 
   componentDidMount() {
     setTimeout(() => { const l = this.loaderRef.current; if (l) { l.style.opacity = '0'; l.style.visibility = 'hidden'; } }, 1500);
@@ -408,6 +408,14 @@ class Component extends DCLogic {
     if (window.takeOffCart) {
       window.takeOffCart.subscribe(() => this.setState(s => ({ _cartTick: s._cartTick + 1 })));
     }
+    (async () => {
+      if (window.takeOffApi && window.takeOffApi.isOnline()) {
+        try {
+          const data = await window.takeOffApi.coaches.list('PILATES', false);
+          if (data && data.length) this.setState({ _instructors: data });
+        } catch (_) {}
+      }
+    })();
   }
 
   _scheduleData() {
@@ -511,7 +519,15 @@ class Component extends DCLogic {
 
     const cartCount = window.takeOffCart ? window.takeOffCart.getCount() : 0;
 
-    const instrData = this._instrData();
+    const apiInstr = this.state._instructors;
+    const instrData = apiInstr ? apiInstr.map((c, i) => ({
+      name: c.firstName + ' ' + c.lastName,
+      role: c.roleTitle,
+      slot: 'pil-inst-' + (i + 1),
+      bio: c.bio,
+      specs: c.specs,
+      teaches: [],
+    })) : this._instrData();
     const instructors = instrData.map((instr, idx) => Object.assign({}, instr, {
       open: () => this.setState({ openInstructor: idx }),
     }));
