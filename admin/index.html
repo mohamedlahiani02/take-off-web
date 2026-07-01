@@ -242,6 +242,13 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
       <div class="nav-item" onclick="navigate('content')" id="nav-content">
         <span class="icon">▤</span> Site Content
       </div>
+      <div class="nav-item" onclick="navigate('media')" id="nav-media">
+        <span class="icon">🖼</span> Media Library
+      </div>
+      <div class="nav-section">SETTINGS</div>
+      <div class="nav-item" onclick="navigate('admins')" id="nav-admins">
+        <span class="icon">👤</span> Admin Accounts
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="admin-info">
@@ -690,7 +697,7 @@ function navigate(page) {
 
   var titles = { dashboard: 'Dashboard', coaches: 'Coaches', users: 'Users', courts: 'Court Calendar',
     classes: 'Pilates Classes', tournaments: 'Tournaments', inquiries: 'Coaching Inquiries', orders: 'Orders',
-    products: 'Products', packs: 'Packs & Plans', content: 'Site Content' };
+    products: 'Products', packs: 'Packs & Plans', content: 'Site Content', media: 'Media Library', admins: 'Admin Accounts' };
   document.getElementById('page-title').textContent = titles[page] || page;
 
   var content = document.getElementById('page-content');
@@ -707,6 +714,8 @@ function navigate(page) {
   else if (page === 'products') renderProducts();
   else if (page === 'packs') renderPacks();
   else if (page === 'content') renderContent();
+  else if (page === 'media') renderMedia();
+  else if (page === 'admins') renderAdmins();
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
@@ -1909,14 +1918,22 @@ async function openTournament(id) {
       return '<tr><td style="font-family:Space Mono;font-size:11px;">'+esc((r.userId||'').slice(0,8))+'</td><td>'+esc(r.categoryLabel||'—')+'</td><td>'+esc(r.paymentStatus)+'</td><td>'+esc(r.status)+'</td><td><div class="row-actions">'+actions+'</div></td></tr>';
     }).join('');
     var body =
-      '<div class="form-row"><div class="form-group"><label>STATUS</label><select id="t-status" onchange="setTStatus(\''+id+'\',this.value)">'+statusOpts+'</select></div>' +
-      '<div class="form-group"><label>&nbsp;</label><button class="btn-sm btn-ghost" onclick="dupTournament(\''+id+'\')">Duplicate as template</button></div></div>' +
-      '<div class="kicker" style="margin:14px 0 6px;">REGISTRATION FORM FIELDS</div>'+fieldsList+
-      '<div style="margin:8px 0 18px;"><button class="btn-sm btn-ghost" onclick="addFieldForm(\''+id+'\')">+ Add field</button></div>' +
-      '<div class="kicker" style="margin-bottom:6px;">REGISTRATIONS ('+(d.confirmedCount)+' confirmed, '+(d.waitlistCount)+' waitlist)</div>' +
-      '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;"><button class="btn-sm btn-lime" onclick="manualRegForm(\''+id+'\')">+ Register member</button></div>' +
-      '<table><thead><tr><th>USER</th><th>CATEGORY</th><th>PAYMENT</th><th>STATUS</th><th></th></tr></thead><tbody>'+(regRows||'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px;">No registrations.</td></tr>')+'</tbody></table>';
-    openGenModal('Manage: '+t.title, body, null, null, 640);
+      '<div style="display:flex;gap:8px;margin-bottom:18px;">' +
+        '<button class="btn-sm btn-lime" id="t-tab-details" onclick="tShowTab(\'details\')">Details</button>' +
+        '<button class="btn-sm btn-ghost" id="t-tab-pricing" onclick="tShowTab(\'pricing\')">Pricing &amp; Promos</button>' +
+      '</div>' +
+      '<div id="t-panel-details">' +
+        '<div class="form-row"><div class="form-group"><label>STATUS</label><select id="t-status" onchange="setTStatus(\''+id+'\',this.value)">'+statusOpts+'</select></div>' +
+        '<div class="form-group"><label>&nbsp;</label><button class="btn-sm btn-ghost" onclick="dupTournament(\''+id+'\')">Duplicate as template</button></div></div>' +
+        '<div class="kicker" style="margin:14px 0 6px;">REGISTRATION FORM FIELDS</div>'+fieldsList+
+        '<div style="margin:8px 0 18px;"><button class="btn-sm btn-ghost" onclick="addFieldForm(\''+id+'\')">+ Add field</button></div>' +
+        '<div class="kicker" style="margin-bottom:6px;">REGISTRATIONS ('+(d.confirmedCount)+' confirmed, '+(d.waitlistCount)+' waitlist)</div>' +
+        '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;"><button class="btn-sm btn-lime" onclick="manualRegForm(\''+id+'\')">+ Register member</button></div>' +
+        '<table><thead><tr><th>USER</th><th>CATEGORY</th><th>PAYMENT</th><th>STATUS</th><th></th></tr></thead><tbody>'+(regRows||'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px;">No registrations.</td></tr>')+'</tbody></table>' +
+      '</div>' +
+      '<div id="t-panel-pricing" style="display:none;"><div id="t-pricing-body"><div class="loading"><div class="spinner"></div>Loading…</div></div></div>';
+    openGenModal('Manage: '+t.title, body, null, null, 680);
+    setTimeout(function(){ tSetPricingId(id); tShowTab('details'); }, 0);
   } catch(e){ toast(e.message||'Failed.','error'); }
 }
 async function setTStatus(id,status){ try{ await window.adminApi.tournaments.setStatus(id,status); toast('Status updated.','success'); }catch(e){ toast(e.message||'Failed.','error'); } }
@@ -2591,6 +2608,189 @@ function editSetting(key, valueJson) {
     var k=gv('st-key'); if(!k){ toast('Key required.','error'); return; }
     try { await window.adminApi.content.saveSetting({ key:k, value:{ value: gv('st-val') } }); toast('Saved.','success'); closeGenModal(); renderGlobalSettings(); }catch(e){ toast(e.message||'Failed.','error'); }
   });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MEDIA LIBRARY
+// ════════════════════════════════════════════════════════════════════════════
+async function renderMedia() {
+  var content = document.getElementById('page-content');
+  content.innerHTML = '<div style="display:flex;justify-content:flex-end;margin-bottom:18px;"><label class="btn-sm btn-lime" style="cursor:pointer;">⬆ Upload<input type="file" accept="image/*" multiple style="display:none;" onchange="mediaUpload(this)"></label></div>' +
+    '<div id="media-grid"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
+  try {
+    var items = await window.adminApi.media.list() || [];
+    var grid = document.getElementById('media-grid');
+    if (!items.length) { grid.innerHTML = '<div class="empty-state"><div class="icon">🖼</div><p>No media uploaded yet.</p></div>'; return; }
+    grid.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;">' +
+      items.map(function(m) {
+        var date = m.uploadedAt ? new Date(m.uploadedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+        var fname = (m.fileName||m.url||'').split('/').pop();
+        return '<div class="card" style="padding:0;overflow:hidden;">' +
+          '<div style="position:relative;aspect-ratio:1/1;background:var(--navy);overflow:hidden;">' +
+            '<img src="'+esc(m.url)+'" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\'">' +
+          '</div>' +
+          '<div style="padding:10px 12px;">' +
+            '<div style="font-size:12px;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;" title="'+esc(fname)+'">'+esc(fname)+'</div>' +
+            '<div style="font-family:Space Mono;font-size:10px;color:var(--muted);margin-bottom:8px;">'+esc(date)+'</div>' +
+            '<button class="btn-sm btn-ghost" style="width:100%;" onclick="mediaCopy(\''+esc(m.url)+'\')">Copy URL</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+  } catch(e) {
+    document.getElementById('media-grid').innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>';
+  }
+}
+async function mediaUpload(input) {
+  var files = Array.from(input.files||[]);
+  if (!files.length) return;
+  var n = 0;
+  for (var f of files) {
+    try { await window.adminApi.media.upload(f, 'content'); n++; } catch(e) { toast('Upload failed: '+esc(e.message),'error'); }
+  }
+  if (n) { toast(n+' file(s) uploaded.','success'); renderMedia(); }
+  input.value = '';
+}
+function mediaCopy(url) {
+  if (navigator.clipboard) { navigator.clipboard.writeText(url).then(function(){ toast('URL copied!','success'); }).catch(function(){ mediaFallbackCopy(url); }); }
+  else { mediaFallbackCopy(url); }
+}
+function mediaFallbackCopy(url) {
+  var ta = document.createElement('textarea'); ta.value = url; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  toast('URL copied!','success');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ADMIN ACCOUNTS
+// ════════════════════════════════════════════════════════════════════════════
+async function renderAdmins() {
+  var content = document.getElementById('page-content');
+  content.innerHTML = '<div style="display:flex;justify-content:flex-end;margin-bottom:18px;"><button class="btn-sm btn-lime" onclick="openCreateAdmin()">+ Add admin</button></div>' +
+    '<div id="admins-list"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
+  try {
+    var admins = await window.adminApi.admins.list() || [];
+    var list = document.getElementById('admins-list');
+    if (!admins.length) { list.innerHTML = '<div class="empty-state"><div class="icon">👤</div><p>No admins yet.</p></div>'; return; }
+    list.innerHTML = '<div class="card"><table><thead><tr><th>NAME</th><th>EMAIL</th><th>ROLE</th><th>STATUS</th><th>SINCE</th><th></th></tr></thead><tbody>' +
+      admins.map(function(a) {
+        var since = a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+        var activeLabel = a.active ? '<span style="color:var(--lime);font-family:Space Mono;font-size:10px;">ACTIVE</span>' : '<span style="color:var(--muted);font-family:Space Mono;font-size:10px;">INACTIVE</span>';
+        return '<tr>' +
+          '<td style="font-weight:600;">'+esc(a.name)+'</td>' +
+          '<td style="font-family:Space Mono;font-size:11px;color:var(--muted);">'+esc(a.email)+'</td>' +
+          '<td><span style="padding:3px 8px;border-radius:999px;background:rgba(196,239,63,.1);color:var(--lime);font-family:Space Mono;font-size:10px;">'+esc(a.role)+'</span></td>' +
+          '<td>'+activeLabel+'</td>' +
+          '<td style="font-family:Space Mono;font-size:11px;color:var(--muted);">'+esc(since)+'</td>' +
+          '<td><button class="btn-icon" onclick="toggleAdminActive(\''+a.id+'\','+(a.active?'false':'true')+')">'+( a.active?'Deactivate':'Activate')+'</button></td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+  } catch(e) {
+    document.getElementById('admins-list').innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>';
+  }
+}
+function openCreateAdmin() {
+  var roles = ['SUPER_ADMIN','MANAGER','RECEPTION','COACH'];
+  var body = '<div class="form-row">'+fld('NAME','adm-name','text','')+'</div>' +
+    '<div class="form-row">'+fld('EMAIL','adm-email','email','')+'</div>' +
+    '<div class="form-row">'+fld('TEMPORARY PASSWORD','adm-pass','password','')+'</div>' +
+    '<div class="form-group"><label>ROLE</label><select id="adm-role" style="width:100%;padding:9px;border-radius:7px;border:1px solid rgba(196,239,63,.22);background:var(--navy);color:var(--cream);font-size:13px;">' +
+    roles.map(function(r){ return '<option value="'+r+'">'+r+'</option>'; }).join('') + '</select></div>';
+  openGenModal('Add admin account', body, 'Create', async function(){
+    var name=gv('adm-name'),email=gv('adm-email'),pass=gv('adm-pass'),role=document.getElementById('adm-role').value;
+    if (!name||!email||!pass) { toast('All fields required.','error'); return; }
+    try { await window.adminApi.admins.create({name:name,email:email,password:pass,role:role}); toast('Admin created.','success'); closeGenModal(); renderAdmins(); }
+    catch(e){ toast(e.message||'Failed.','error'); }
+  },500);
+}
+async function toggleAdminActive(id, active) {
+  try { await window.adminApi.admins.toggleActive(id, active); toast(active?'Activated.':'Deactivated.','success'); renderAdmins(); }
+  catch(e){ toast(e.message||'Failed.','error'); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TOURNAMENT PRICING
+// ════════════════════════════════════════════════════════════════════════════
+function tShowTab(tab) {
+  var details = document.getElementById('t-panel-details');
+  var pricing = document.getElementById('t-panel-pricing');
+  var btnD = document.getElementById('t-tab-details');
+  var btnP = document.getElementById('t-tab-pricing');
+  if (!details || !pricing) return;
+  if (tab === 'details') {
+    details.style.display = ''; pricing.style.display = 'none';
+    if (btnD) { btnD.className = 'btn-sm btn-lime'; } if (btnP) { btnP.className = 'btn-sm btn-ghost'; }
+  } else {
+    details.style.display = 'none'; pricing.style.display = '';
+    if (btnD) { btnD.className = 'btn-sm btn-ghost'; } if (btnP) { btnP.className = 'btn-sm btn-lime'; }
+    var tId = pricing.getAttribute('data-tid');
+    if (tId) renderTournamentPricing(tId);
+  }
+}
+function tSetPricingId(tId) {
+  var pricing = document.getElementById('t-panel-pricing');
+  if (pricing) pricing.setAttribute('data-tid', tId);
+}
+async function renderTournamentPricing(tId) {
+  var el = document.getElementById('t-pricing-body');
+  if (!el) return;
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading…</div>';
+  try {
+    var tiers = await window.adminApi.tournaments.pricingTiers(tId) || [];
+    var promos = await window.adminApi.tournaments.promoCodes(tId) || [];
+    el.innerHTML =
+      '<div class="card" style="margin-bottom:16px;">' +
+        '<div class="card-header"><div><div class="kicker">TICKET TIERS</div><h3>Price tiers</h3></div>' +
+        '<button class="btn-sm btn-lime" onclick="openAddTier(\''+tId+'\')">+ Add tier</button></div>' +
+        '<table><thead><tr><th>TIER NAME</th><th>PRICE</th><th>MAX</th><th>SOLD</th><th></th></tr></thead><tbody>' +
+        (tiers.length ? tiers.map(function(ti){
+          return '<tr><td>'+esc(ti.name)+'</td><td style="font-family:Space Mono;">'+esc(String(ti.price))+' DT</td>' +
+            '<td>'+esc(String(ti.maxCount||'∞'))+'</td><td>'+esc(String(ti.soldCount||0))+'</td>' +
+            '<td><button class="btn-icon danger" onclick="delTier(\''+tId+'\',\''+ti.id+'\')">×</button></td></tr>';
+        }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No tiers yet.</td></tr>') +
+        '</tbody></table></div>' +
+      '<div class="card">' +
+        '<div class="card-header"><div><div class="kicker">PROMO CODES</div><h3>Discount codes</h3></div>' +
+        '<button class="btn-sm btn-lime" onclick="openAddPromo(\''+tId+'\')">+ Add code</button></div>' +
+        '<table><thead><tr><th>CODE</th><th>DISCOUNT</th><th>USES</th><th>STATUS</th><th></th></tr></thead><tbody>' +
+        (promos.length ? promos.map(function(pr){
+          var disc = pr.discountPct ? pr.discountPct+'%' : (pr.discountFlat ? pr.discountFlat+' DT' : '—');
+          var uses = (pr.usedCount||0) + (pr.usageLimit ? ' / '+pr.usageLimit : '');
+          var status = pr.active ? '<span style="color:var(--lime);font-family:Space Mono;font-size:10px;">ACTIVE</span>' : '<span style="color:var(--muted);font-family:Space Mono;font-size:10px;">OFF</span>';
+          return '<tr><td style="font-family:Space Mono;color:var(--lime);">'+esc(pr.code)+'</td><td>'+esc(disc)+'</td><td>'+esc(uses)+'</td><td>'+status+'</td>' +
+            '<td><button class="btn-icon danger" onclick="delPromo(\''+tId+'\',\''+pr.id+'\')">×</button></td></tr>';
+        }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No promo codes.</td></tr>') +
+        '</tbody></table></div>';
+  } catch(e) { if(el) el.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
+}
+function openAddTier(tId) {
+  var body = fld('TIER NAME','tier-name','text','','e.g. Early Bird') +
+    fld('PRICE (DT)','tier-price','number','','80') +
+    fld('MAX SPOTS (leave blank = unlimited)','tier-max','number','','');
+  openGenModal('Add price tier', body, 'Save', async function(){
+    var name=gv('tier-name'),price=parseFloat(gv('tier-price')),max=gv('tier-max');
+    if (!name||isNaN(price)) { toast('Name and price required.','error'); return; }
+    try { await window.adminApi.tournaments.savePricingTier(tId,{name:name,price:price,maxCount:max?parseInt(max):null}); toast('Tier saved.','success'); closeGenModal(); renderTournamentPricing(tId); }
+    catch(e){ toast(e.message||'Failed.','error'); }
+  },480);
+}
+async function delTier(tId,tierId) {
+  try { await window.adminApi.tournaments.deletePricingTier(tId,tierId); toast('Deleted.','success'); renderTournamentPricing(tId); }
+  catch(e){ toast(e.message||'Failed.','error'); }
+}
+function openAddPromo(tId) {
+  var body = fld('CODE','pc-code','text','','TAKEOFF10') +
+    '<div class="form-row">'+fld('DISCOUNT %','pc-pct','number','','10')+fld('OR FLAT DT','pc-flat','number','','')+'</div>' +
+    fld('USAGE LIMIT (blank = unlimited)','pc-limit','number','','');
+  openGenModal('Add promo code', body, 'Save', async function(){
+    var code=gv('pc-code'),pct=gv('pc-pct'),flat=gv('pc-flat'),limit=gv('pc-limit');
+    if (!code) { toast('Code required.','error'); return; }
+    try { await window.adminApi.tournaments.savePromoCode(tId,{code:code.toUpperCase(),discountPct:pct?parseFloat(pct):null,discountFlat:flat?parseFloat(flat):null,usageLimit:limit?parseInt(limit):null}); toast('Promo code saved.','success'); closeGenModal(); renderTournamentPricing(tId); }
+    catch(e){ toast(e.message||'Failed.','error'); }
+  },480);
+}
+async function delPromo(tId,codeId) {
+  try { await window.adminApi.tournaments.deletePromoCode(tId,codeId); toast('Deleted.','success'); renderTournamentPricing(tId); }
+  catch(e){ toast(e.message||'Failed.','error'); }
 }
 
 // ── Confirm modal ──────────────────────────────────────────────────────────
