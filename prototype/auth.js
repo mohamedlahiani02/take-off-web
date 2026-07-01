@@ -322,6 +322,7 @@
   function showDrawer(tab) {
     if (!auth.user) { showModal('login'); return; }
     drawerTab = (['bookings', 'packs', 'orders', 'profile'].indexOf(tab) >= 0) ? tab : 'bookings';
+    _drData.orders = null;
     if (!drawerRoot) { drawerRoot = document.createElement('div'); document.body.appendChild(drawerRoot); }
     renderDrawer();
     document.addEventListener('keydown', onEscDrawer);
