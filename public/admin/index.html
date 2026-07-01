@@ -1955,7 +1955,8 @@ async function regSet(regId,tid,status){ try{ await window.adminApi.tournaments.
 // SITE CONTENT (Epic I) — Padel page CMS by rubrique + global settings
 // ════════════════════════════════════════════════════════════════════════════
 var _cmsTab = 'padel';
-var _padel = {};                 // sectionKey -> content (merged defaults+saved)
+var _padel = {};
+var _pilates = {};
 var _cmsRows = [], _cmsRender = null;
 var CINP = 'padding:9px;border-radius:7px;border:1px solid rgba(196,239,63,.22);background:var(--navy);color:var(--cream);font-size:13px;';
 
@@ -1996,12 +1997,17 @@ async function cmsRowImg(i, field, input) {
 async function renderContent() {
   var content = document.getElementById('page-content');
   content.innerHTML =
-    '<div style="display:flex;gap:8px;margin-bottom:18px;">' +
+    '<div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">' +
     '<button class="btn-sm ' + (_cmsTab==='padel'?'btn-lime':'btn-ghost') + '" onclick="_cmsTab=\'padel\';renderContent()">Padel page</button>' +
+    '<button class="btn-sm ' + (_cmsTab==='pilates'?'btn-lime':'btn-ghost') + '" onclick="_cmsTab=\'pilates\';renderContent()">Pilates page</button>' +
     '<button class="btn-sm ' + (_cmsTab==='settings'?'btn-lime':'btn-ghost') + '" onclick="_cmsTab=\'settings\';renderContent()">Global settings</button>' +
-    '<div style="flex:1;"></div><a class="btn-sm btn-ghost" href="/padel" target="_blank">↗ View live Padel page</a></div>' +
+    '<div style="flex:1;"></div>' +
+    (_cmsTab==='padel' ? '<a class="btn-sm btn-ghost" href="/padel" target="_blank">↗ View live Padel page</a>' : '') +
+    (_cmsTab==='pilates' ? '<a class="btn-sm btn-ghost" href="/pilates" target="_blank">↗ View live Pilates page</a>' : '') +
+    '</div>' +
     '<div id="cms-body"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
   if (_cmsTab === 'settings') return renderGlobalSettings();
+  if (_cmsTab === 'pilates') return renderPilatesCms();
   return renderPadelCms();
 }
 
@@ -2115,6 +2121,168 @@ async function savePadelSection(sectionKey, content) {
   try {
     await window.adminApi.content.saveSection({ page: 'padel', sectionKey: sectionKey, content: content });
     toast('Saved — live now.', 'success'); closeGenModal(); renderPadelCms();
+  } catch (e) { toast(e.message || 'Failed.', 'error'); }
+}
+
+// ── Pilates CMS ──────────────────────────────────────────────────────────────
+var PILATES_DEFAULTS = {
+  hero: { kicker: 'Take Off Club — Pilates', headline: 'Redefine your strength,\none session at a time.', subtitle: 'Reformer and mat flows in a calm, light-filled studio. Build a stronger, more balanced you — booked around your week.', stats: [{ big: '450+', label: 'SESSIONS / MONTH' }, { big: '70+', label: 'CLASSES WEEKLY' }, { big: '96%', label: 'FEEL STRONGER' }] },
+  approach: { kicker: 'Our Approach', heading: 'Inclusive pilates for every body', body: 'No two bodies move the same. Our instructors adapt every flow to your level — first session or hundredth — so you always move with control, confidence, and ease.', points: ['Adapted for every level and body', 'Small groups, real attention', 'Reformer, mat, duo & private'] },
+  classes: { kicker: 'Our Classes', heading: 'Discover the class that moves you', items: [{ name: 'Reformer Flow', level: 'INTERMEDIATE', dur: '55 MIN', desc: 'Spring-loaded resistance for long, controlled, full-body strength.', photoUrl: '' }, { name: 'Mat Foundations', level: 'BEGINNER', dur: '50 MIN', desc: 'Core fundamentals and breath — the perfect place to begin.', photoUrl: '' }, { name: 'Sculpt & Tone', level: 'ADVANCED', dur: '55 MIN', desc: 'Higher tempo, deeper burn. Define and strengthen every muscle.', photoUrl: '' }] },
+  journey: { kicker: 'How it works', heading: 'Your journey starts here', steps: [{ n: '01', title: 'Choose your class', desc: 'Browse reformer, mat, sculpt and more — filtered to your level.' }, { n: '02', title: 'Reserve your spot', desc: 'Pick a time that fits your week. Live spot counts, instant booking.' }, { n: '03', title: 'Show up & flow', desc: 'Arrive, breathe, move. We handle the rest — props and all.' }] },
+  testimonials: { kicker: 'Member Stories', heading: 'Real stories from our members', items: [{ text: 'I came in stiff and stressed. Six weeks later I stand taller, sleep better, and actually look forward to Mondays.', name: 'Amira B.', tag: 'MEMBER · 8 MONTHS' }, { text: 'The instructors notice everything. Every cue is for my body — I have never felt stronger or more supported.', name: 'Khalil R.', tag: 'MEMBER · 1 YEAR' }, { text: 'Reformer flow is my reset button. Calm mind, strong core, and a community that feels like home.', name: 'Sonia M.', tag: 'MEMBER · 4 MONTHS' }] },
+  faq: { kicker: 'FAQ', heading: 'Your questions, answered', items: [{ q: 'Do I need experience to start?', a: 'Not at all. Our Mat Foundations and All-Levels reformer classes are built for first-timers.' }, { q: 'What should I bring?', a: 'Just comfortable clothing and grip socks. We provide all reformers, mats, and props.' }, { q: 'How do reservations work?', a: 'Pick a day in the schedule, reserve your spot, and it lands in your cart.' }, { q: 'Can I freeze or share my pack?', a: 'Class packs are valid for 3 months and can be paused once.' }, { q: 'Is there parking at the studio?', a: 'Yes — free member parking on-site.' }] },
+};
+
+async function renderPilatesCms() {
+  var body = document.getElementById('cms-body');
+  try {
+    var sections = await window.adminApi.content.page('pilates') || [];
+    _pilates = {};
+    sections.forEach(function (s) { _pilates[s.sectionKey] = s.content; });
+    function pm(k) { return Object.assign({}, PILATES_DEFAULTS[k], _pilates[k] || {}); }
+    var hero = pm('hero'), ap = pm('approach'), cl = pm('classes'), jn = pm('journey'), ts = pm('testimonials'), fq = pm('faq');
+    function card(title, sub, onclick) {
+      return '<div class="card" style="margin-bottom:14px;"><div class="card-header"><div><div class="kicker">RUBRIQUE</div><h3>' + esc(title) + '</h3></div>' +
+        '<button class="btn-sm btn-lime" onclick="' + onclick + '">Edit</button></div>' +
+        '<div style="padding:16px 22px;color:var(--muted);font-size:13px;">' + sub + '</div></div>';
+    }
+    body.innerHTML =
+      card('Hero', esc((hero.headline||'').replace(/\n/g,' ')) + ' · ' + (hero.stats||[]).length + ' stats', 'editPilatesHero()') +
+      card('Our Approach', esc(ap.heading) + ' · ' + (ap.points||[]).length + ' bullet points', 'editPilatesApproach()') +
+      card('Our Classes', esc(cl.heading) + ' · ' + (cl.items||[]).length + ' class cards (photo upload)', 'editPilatesClasses()') +
+      card('How it works / Journey', esc(jn.heading) + ' · ' + (jn.steps||[]).length + ' steps', 'editPilatesJourney()') +
+      card('Member Stories / Testimonials', esc(ts.heading) + ' · ' + (ts.items||[]).length + ' quotes', 'editPilatesTestimonials()') +
+      card('FAQ', esc(fq.heading) + ' · ' + (fq.items||[]).length + ' questions', 'editPilatesFaq()') +
+      '<div class="form-hint" style="margin-top:8px;">Changes publish immediately. Empty fields fall back to built-in defaults.</div>';
+  } catch (e) { body.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message||'Failed.') + '</p></div>'; }
+}
+
+function editPilatesHero() {
+  var h = Object.assign({}, PILATES_DEFAULTS.hero, _pilates.hero || {});
+  cmsRowsInitFromArray(h.stats || []);
+  var body = '<div class="form-row full">' + fld('KICKER','plh-kicker','text',h.kicker) + '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>HEADLINE (line breaks allowed)</label><textarea id="plh-headline" rows="2">' + esc(h.headline) + '</textarea></div></div>' +
+    '<div class="form-row full"><div class="form-group"><label>SUBTITLE</label><textarea id="plh-subtitle">' + esc(h.subtitle) + '</textarea></div></div>' +
+    '<div class="form-group"><label>HERO STATS</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({big:\'\',label:\'\'})">+ Add stat</button></div>';
+  openGenModal('Edit Pilates Hero', body, 'Save', async function () {
+    await savePilatesSection('hero', { kicker: gv('plh-kicker'), headline: document.getElementById('plh-headline').value, subtitle: document.getElementById('plh-subtitle').value, stats: _cmsRows.filter(function(r){return r.big||r.label;}) });
+  }, 560);
+  _cmsRender = renderStatRows; renderStatRows();
+}
+
+function editPilatesApproach() {
+  var a = Object.assign({}, PILATES_DEFAULTS.approach, _pilates.approach || {});
+  cmsRowsInitFromArray((a.points||[]).map(function(p){ return { text: p }; }));
+  var body = '<div class="form-row">' + fld('KICKER','pla-kicker','text',a.kicker) + fld('HEADING','pla-heading','text',a.heading) + '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>BODY TEXT</label><textarea id="pla-body">' + esc(a.body) + '</textarea></div></div>' +
+    '<div class="form-group"><label>BULLET POINTS</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({text:\'\'})">+ Add point</button></div>';
+  openGenModal('Edit "Our Approach"', body, 'Save', async function () {
+    await savePilatesSection('approach', { kicker: gv('pla-kicker'), heading: gv('pla-heading'), body: document.getElementById('pla-body').value, points: _cmsRows.map(function(r){ return r.text||''; }).filter(Boolean) });
+  }, 560);
+  _cmsRender = renderTextRows; renderTextRows();
+}
+function renderTextRows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    return '<div style="display:flex;gap:8px;margin-bottom:6px;">' +
+      '<input value="' + esc(r.text||'') + '" placeholder="Bullet point…" oninput="_cmsRows[' + i + '].text=this.value" style="flex:1;' + CINP + '">' +
+      '<button type="button" class="btn-icon danger" onclick="cmsDel(' + i + ')">×</button></div>';
+  }).join('');
+}
+
+function editPilatesClasses() {
+  var c = Object.assign({}, PILATES_DEFAULTS.classes, _pilates.classes || {});
+  cmsRowsInitFromArray(c.items || []);
+  var body = '<div class="form-row">' + fld('KICKER','plc-kicker','text',c.kicker) + fld('HEADING','plc-heading','text',c.heading) + '</div>' +
+    '<div class="form-group"><label>CLASS CARDS</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({name:\'\',level:\'\',dur:\'\',desc:\'\',photoUrl:\'\'})">+ Add class</button></div>';
+  openGenModal('Edit "Our Classes"', body, 'Save', async function () {
+    await savePilatesSection('classes', { kicker: gv('plc-kicker'), heading: gv('plc-heading'), items: _cmsRows.filter(function(r){return r.name;}) });
+  }, 600);
+  _cmsRender = renderClassRows; renderClassRows();
+}
+function renderClassRows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    var thumb = r.photoUrl ? '<img src="' + esc(r.photoUrl) + '" style="width:46px;height:46px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">' : '<span style="width:46px;height:46px;border-radius:6px;background:var(--navy);display:inline-block;"></span>';
+    return '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">' +
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">' + thumb +
+        '<div style="flex:1;display:flex;gap:6px;"><input value="' + esc(r.name||'') + '" placeholder="Name" oninput="_cmsRows[' + i + '].name=this.value" style="flex:1;' + CINP + '"><input value="' + esc(r.level||'') + '" placeholder="LEVEL" oninput="_cmsRows[' + i + '].level=this.value" style="width:120px;' + CINP + '"><input value="' + esc(r.dur||'') + '" placeholder="55 MIN" oninput="_cmsRows[' + i + '].dur=this.value" style="width:90px;' + CINP + '"></div>' +
+        '<input type="file" accept="image/*" id="clsf-' + i + '" style="display:none;" onchange="cmsRowImg(' + i + ',\'photoUrl\',this)">' +
+        '<button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'clsf-' + i + '\').click()">⬆</button>' +
+        '<button type="button" class="btn-icon danger" onclick="cmsDel(' + i + ')">×</button></div>' +
+      '<input value="' + esc(r.desc||'') + '" placeholder="Description" oninput="_cmsRows[' + i + '].desc=this.value" style="width:100%;' + CINP + '"></div>';
+  }).join('');
+}
+
+function editPilatesJourney() {
+  var j = Object.assign({}, PILATES_DEFAULTS.journey, _pilates.journey || {});
+  cmsRowsInitFromArray(j.steps || []);
+  var body = '<div class="form-row">' + fld('KICKER','plj-kicker','text',j.kicker) + fld('HEADING','plj-heading','text',j.heading) + '</div>' +
+    '<div class="form-group"><label>STEPS</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({n:\'\',title:\'\',desc:\'\'})">+ Add step</button></div>';
+  openGenModal('Edit "How it works"', body, 'Save', async function () {
+    await savePilatesSection('journey', { kicker: gv('plj-kicker'), heading: gv('plj-heading'), steps: _cmsRows.filter(function(r){return r.title;}) });
+  }, 560);
+  _cmsRender = renderStepRows; renderStepRows();
+}
+function renderStepRows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    return '<div style="display:flex;gap:8px;margin-bottom:6px;">' +
+      '<input value="' + esc(r.n||'') + '" placeholder="01" oninput="_cmsRows[' + i + '].n=this.value" style="width:54px;' + CINP + '">' +
+      '<input value="' + esc(r.title||'') + '" placeholder="Title" oninput="_cmsRows[' + i + '].title=this.value" style="flex:1;' + CINP + '">' +
+      '<input value="' + esc(r.desc||'') + '" placeholder="Description" oninput="_cmsRows[' + i + '].desc=this.value" style="flex:2;' + CINP + '">' +
+      '<button type="button" class="btn-icon danger" onclick="cmsDel(' + i + ')">×</button></div>';
+  }).join('');
+}
+
+function editPilatesTestimonials() {
+  var t = Object.assign({}, PILATES_DEFAULTS.testimonials, _pilates.testimonials || {});
+  cmsRowsInitFromArray(t.items || []);
+  var body = '<div class="form-row">' + fld('KICKER','plt-kicker','text',t.kicker) + fld('HEADING','plt-heading','text',t.heading) + '</div>' +
+    '<div class="form-group"><label>QUOTES</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({text:\'\',name:\'\',tag:\'\'})">+ Add quote</button></div>';
+  openGenModal('Edit "Member Stories"', body, 'Save', async function () {
+    await savePilatesSection('testimonials', { kicker: gv('plt-kicker'), heading: gv('plt-heading'), items: _cmsRows.filter(function(r){return r.text;}) });
+  }, 580);
+  _cmsRender = renderQuoteRows; renderQuoteRows();
+}
+function renderQuoteRows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    return '<div style="border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px;">' +
+      '<textarea oninput="_cmsRows[' + i + '].text=this.value" rows="2" placeholder="Quote text…" style="width:100%;margin-bottom:5px;' + CINP + '">' + esc(r.text||'') + '</textarea>' +
+      '<div style="display:flex;gap:6px;">' +
+        '<input value="' + esc(r.name||'') + '" placeholder="Name" oninput="_cmsRows[' + i + '].name=this.value" style="flex:1;' + CINP + '">' +
+        '<input value="' + esc(r.tag||'') + '" placeholder="MEMBER · 8 MONTHS" oninput="_cmsRows[' + i + '].tag=this.value" style="flex:2;' + CINP + '">' +
+        '<button type="button" class="btn-icon danger" onclick="cmsDel(' + i + ')">×</button></div></div>';
+  }).join('');
+}
+
+function editPilatesFaq() {
+  var f = Object.assign({}, PILATES_DEFAULTS.faq, _pilates.faq || {});
+  cmsRowsInitFromArray(f.items || []);
+  var body = '<div class="form-row">' + fld('KICKER','plf-kicker','text',f.kicker) + fld('HEADING','plf-heading','text',f.heading) + '</div>' +
+    '<div class="form-group"><label>QUESTIONS</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({q:\'\',a:\'\'})">+ Add Q&amp;A</button></div>';
+  openGenModal('Edit FAQ', body, 'Save', async function () {
+    await savePilatesSection('faq', { kicker: gv('plf-kicker'), heading: gv('plf-heading'), items: _cmsRows.filter(function(r){return r.q;}) });
+  }, 580);
+  _cmsRender = renderQARows; renderQARows();
+}
+function renderQARows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    return '<div style="border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px;">' +
+      '<div style="display:flex;gap:6px;margin-bottom:5px;">' +
+        '<input value="' + esc(r.q||'') + '" placeholder="Question" oninput="_cmsRows[' + i + '].q=this.value" style="flex:1;' + CINP + '">' +
+        '<button type="button" class="btn-icon danger" onclick="cmsDel(' + i + ')">×</button></div>' +
+      '<textarea oninput="_cmsRows[' + i + '].a=this.value" rows="2" placeholder="Answer…" style="width:100%;' + CINP + '">' + esc(r.a||'') + '</textarea></div>';
+  }).join('');
+}
+
+async function savePilatesSection(sectionKey, content) {
+  try {
+    await window.adminApi.content.saveSection({ page: 'pilates', sectionKey: sectionKey, content: content });
+    toast('Saved — live now.', 'success'); closeGenModal(); renderPilatesCms();
   } catch (e) { toast(e.message || 'Failed.', 'error'); }
 }
 
