@@ -621,11 +621,6 @@ class Component extends DCLogic {
       };
     });
 
-    const faqs = faqItems.map((f, i) => {
-      const open = this.state.openFaq === i;
-      return { q: f.q, a: f.a, rot: open ? 'rotate(45deg)' : 'rotate(0deg)', maxH: open ? '200px' : '0px', mt: open ? '14px' : '0px', toggle: () => this.setState({ openFaq: open ? -1 : i }) };
-    });
-
     const products = [
       { name: 'Grip Socks', cat: 'Essentials', price: 28, tag: 'MUST-HAVE', slot: 'pil-prod-1' },
       { name: 'Studio Towel', cat: 'Essentials', price: 34, tag: 'SOFT', slot: 'pil-prod-2' },
@@ -699,6 +694,10 @@ class Component extends DCLogic {
       { q: 'Is there parking at the studio?', a: 'Yes — free member parking on-site, plus the padel courts are right next door if you want to combine sessions.' },
     ];
     const faqItems = (cF.items && cF.items.length) ? cF.items : faqDefault;
+    const faqs = faqItems.map((f, i) => {
+      const open = this.state.openFaq === i;
+      return { q: f.q, a: f.a, rot: open ? 'rotate(45deg)' : 'rotate(0deg)', maxH: open ? '200px' : '0px', mt: open ? '14px' : '0px', toggle: () => this.setState({ openFaq: open ? -1 : i }) };
+    });
 
     return {
       loaderRef: this.loaderRef,
