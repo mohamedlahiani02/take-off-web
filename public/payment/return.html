@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Take Off — Payment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: #0c2350;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    /* ── logo ── */
+    .logo {
+      position: fixed;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.55);
+      text-decoration: none;
+    }
+    .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #c4ef3f; flex-shrink: 0; }
+
+    /* ── card ── */
+    .card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 20px;
+      padding: 52px 48px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      backdrop-filter: blur(12px);
+      animation: cardIn .5s cubic-bezier(.2,.7,.2,1) both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── icon circle ── */
+    .icon-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+    }
+    .icon-wrap.spin-ring {
+      background: rgba(196,239,63,.1);
+      border: 2px solid rgba(196,239,63,.25);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .icon-wrap.success { background: rgba(196,239,63,.15); border: 2px solid rgba(196,239,63,.4); }
+    .icon-wrap.fail    { background: rgba(244,160,160,.12); border: 2px solid rgba(244,160,160,.35); }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(196,239,63,.3); }
+      50%       { box-shadow: 0 0 0 12px rgba(196,239,63,.0); }
+    }
+
+    /* ── spinner ── */
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(196,239,63,.25);
+      border-top-color: #c4ef3f;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── typography ── */
+    .tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .32em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .tag.lime  { color: #c4ef3f; }
+    .tag.dim   { color: rgba(255,255,255,.4); }
+    .tag.red   { color: #f4a0a0; }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -.02em;
+      margin-bottom: 10px;
+    }
+
+    .sub {
+      font-size: 15px;
+      line-height: 1.6;
+      color: rgba(255,255,255,.6);
+      margin-bottom: 32px;
+    }
+
+    /* ── ref pill ── */
+    .ref-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(196,239,63,.1);
+      border: 1px solid rgba(196,239,63,.25);
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      letter-spacing: .06em;
+      color: #c4ef3f;
+      margin-bottom: 32px;
+    }
+    .ref-pill-label { color: rgba(196,239,63,.55); font-size: 10px; letter-spacing: .28em; text-transform: uppercase; }
+
+    /* ── buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 999px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: transform .2s, box-shadow .2s, background .15s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary {
+      background: #c4ef3f;
+      color: #0c2350;
+      box-shadow: 0 4px 20px rgba(196,239,63,.25);
+    }
+    .btn-primary:hover { background: #d4ff52; box-shadow: 0 8px 28px rgba(196,239,63,.35); }
+    .btn-ghost {
+      background: rgba(255,255,255,.07);
+      color: rgba(255,255,255,.75);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.12); }
+
+    .btn-row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    /* ── progress bar ── */
+    .progress-bar {
+      height: 3px;
+      background: rgba(255,255,255,.08);
+      border-radius: 999px;
+      margin-bottom: 28px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #c4ef3f;
+      border-radius: 999px;
+      transition: width .4s ease;
+    }
+
+    .status-hint {
+      font-size: 13px;
+      color: rgba(255,255,255,.38);
+      margin-top: -16px;
+      margin-bottom: 28px;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: .04em;
+    }
+
+    /* ── footer ── */
+    .footer {
+      position: fixed;
+      bottom: 24px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.2);
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 36px 24px; }
+      h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- set this to your Railway API URL before going live -->
+  <script>window.TAKEOFF_API_URL = 'https://take-off-api-production.up.railway.app';</script>
+
+  <a class="logo" href="/">
+    TAKE OFF <span class="logo-dot"></span> CLUB
+  </a>
+
+  <div class="card" id="card">
+    <!-- content injected by JS -->
+  </div>
+
+  <div class="footer">PADEL · PILATES</div>
+
+<script>
+(function () {
+  var BASE_URL = (window.TAKEOFF_API_URL || '').replace(/\/$/, '');
+  var MAX_POLLS = 20;   // 20 × 2s = 40 seconds max
+  var POLL_MS   = 2000;
+
+  var params    = new URLSearchParams(location.search);
+  var intentId  = params.get('intentId');
+  var token     = localStorage.getItem('takeoff_access') || null;
+  var pollCount = 0;
+  var timer     = null;
+  var card      = document.getElementById('card');
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function renderLoading(pct) {
+    card.innerHTML =
+      '<div class="tag dim">PROCESSING PAYMENT</div>' +
+      '<div class="icon-wrap spin-ring" style="margin-bottom:28px"><div class="spinner"></div></div>' +
+      '<h1>Verifying your payment</h1>' +
+      '<p class="sub">Please wait while we confirm your transaction with the payment provider.</p>' +
+      '<div class="progress-bar"><div class="progress-fill" id="pf" style="width:' + pct + '%"></div></div>' +
+      '<div class="status-hint">checking... (' + pollCount + '/' + MAX_POLLS + ')</div>';
+  }
+
+  function renderSuccess(data) {
+    var ref = esc(data.refId || data.ref || intentId);
+    var type = data.refType || '';
+    var label = type === 'order' ? 'Order ref' : type === 'court_booking' ? 'Booking ref' : type === 'pack' ? 'Pack ref' : 'Ref';
+    var homeHref = type.indexOf('booking') >= 0 ? '/#bookings' : type === 'order' ? '/#orders' : '/';
+
+    card.innerHTML =
+      '<div class="tag lime">PAYMENT CONFIRMED</div>' +
+      '<div class="icon-wrap success">✓</div>' +
+      '<h1>You\'re all set!</h1>' +
+      '<p class="sub">Your payment has been received and your ' + esc(type.replace('_', ' ') || 'purchase') + ' is confirmed.</p>' +
+      '<div class="ref-pill"><span class="ref-pill-label">' + esc(label) + '</span>' + ref + '</div>' +
+      '<div class="btn-row">' +
+        '<a class="btn btn-primary" href="' + esc(homeHref) + '">Back to Take Off →</a>' +
+      '</div>';
+  }
+
+  function renderFailed() {
+    card.innerHTML =
+      '<div class="tag red">PAYMENT FAILED</div>' +
+      '<div class="icon-wrap fail">✕</div>' +
+      '<h1>Payment not completed</h1>' +
+      '<p class="sub">Your transaction was declined or cancelled. No charge was made to your account.</p>' +
+      '<div class="btn-row">' +
+        '<a class="btn btn-primary" href="/">Try again</a>' +
+        '<a class="btn btn-ghost" href="/">Go home</a>' +
+      '</div>';
+  }
+
+  function renderTimeout() {
+    card.innerHTML =
+      '<div class="tag dim">PENDING</div>' +
+      '<div class="icon-wrap" style="background:rgba(255,200,80,.1);border:2px solid rgba(255,200,80,.3)">⏳</div>' +
+      '<h1>Still processing…</h1>' +
+      '<p class="sub">Your payment is taking longer than expected. Check your email for confirmation, or view your orders in your account.</p>' +
+      '<div class="btn-row">' +
+        '<a class="btn btn-primary" href="/#orders">View my orders</a>' +
+        '<a class="btn btn-ghost" href="/">Go home</a>' +
+      '</div>';
+  }
+
+  function renderError(msg) {
+    card.innerHTML =
+      '<div class="tag red">ERROR</div>' +
+      '<div class="icon-wrap fail">!</div>' +
+      '<h1>Something went wrong</h1>' +
+      '<p class="sub">' + esc(msg || 'We couldn\'t verify your payment. Please contact support if you were charged.') + '</p>' +
+      '<div class="btn-row">' +
+        '<a class="btn btn-primary" href="/">Go home</a>' +
+      '</div>';
+  }
+
+  // ── polling ───────────────────────────────────────────────────────────────
+
+  async function poll() {
+    if (!BASE_URL) { renderError('API not configured.'); return; }
+
+    pollCount++;
+    var pct = Math.min(95, Math.round((pollCount / MAX_POLLS) * 100));
+    renderLoading(pct);
+
+    try {
+      var headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+
+      var res = await fetch(BASE_URL + '/api/v1/payments/' + encodeURIComponent(intentId) + '/status', {
+        headers: headers,
+      });
+
+      if (!res.ok) {
+        if (res.status === 404) { renderError('Payment record not found.'); return; }
+        throw new Error('HTTP ' + res.status);
+      }
+
+      var data = await res.json();
+      var status = (data.status || '').toUpperCase();
+
+      if (status === 'PAID' || status === 'COMPLETED' || status === 'SUCCESS') {
+        renderSuccess(data);
+        return;
+      }
+
+      if (status === 'FAILED' || status === 'CANCELLED' || status === 'REJECTED') {
+        renderFailed();
+        return;
+      }
+
+      // still PENDING — keep polling
+      if (pollCount >= MAX_POLLS) {
+        renderTimeout();
+        return;
+      }
+
+      timer = setTimeout(poll, POLL_MS);
+
+    } catch (e) {
+      if (pollCount >= MAX_POLLS) {
+        renderTimeout();
+      } else {
+        // network blip — retry silently
+        timer = setTimeout(poll, POLL_MS);
+      }
+    }
+  }
+
+  // ── entry ─────────────────────────────────────────────────────────────────
+
+  if (!intentId) {
+    renderError('No payment reference found in URL. If you completed a payment, please check your account for confirmation.');
+    return;
+  }
+
+  // first poll immediately
+  poll();
+
+  // cleanup on navigate away
+  window.addEventListener('beforeunload', function () {
+    if (timer) clearTimeout(timer);
+  });
+
+})();
+</script>
+</body>
+</html>
