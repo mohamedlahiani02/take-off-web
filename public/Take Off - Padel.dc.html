@@ -449,6 +449,8 @@ class Component extends DCLogic {
     openCoachIdx: null,
     _coachPreview: null,
     _cms: null,
+    _liveCourts: null,   // [{id, name, activity}]
+    _liveSlots: {},      // { "courtId_YYYY-MM-DD": [SlotDto...] }
     // coaching form
     coachFormDone: false, coursSelected: {}, availGrid: {}, // key: "day|slot" => bool
     // plans
@@ -479,20 +481,53 @@ class Component extends DCLogic {
             this.setState({ _cms: map });
           }
         } catch (_) {}
+        try {
+          const courtList = await window.takeOffApi.courts.list();
+          if (courtList && courtList.length) {
+            this.setState({ _liveCourts: courtList });
+            await this._fetchSlots(0, courtList);
+          }
+        } catch (_) {}
       }
     })();
+  }
+
+  _dateStr(dateIdx) {
+    const d = new Date(); d.setDate(d.getDate() + dateIdx);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  async _fetchSlots(dateIdx, courtList) {
+    const courts = courtList || this.state._liveCourts;
+    if (!courts || !window.takeOffApi || !window.takeOffApi.isOnline()) return;
+    const date = this._dateStr(dateIdx);
+    const newSlots = Object.assign({}, this.state._liveSlots);
+    await Promise.all(courts.filter(c => c.activity === 'PADEL').map(async c => {
+      const key = c.id + '_' + date;
+      if (newSlots[key]) return;
+      try {
+        const slots = await window.takeOffApi.courts.slots(c.id, date);
+        if (slots) newSlots[key] = slots;
+      } catch (_) {}
+    }));
+    this.setState({ _liveSlots: newSlots });
+  }
+
+  _pickDate(idx) {
+    this.setState({ dateIdx: idx });
+    this._fetchSlots(idx, null);
   }
 
   _dates() {
     const dows = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const mons = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    const base = new Date(2026, 5, 13);
+    const base = new Date(); base.setHours(0, 0, 0, 0);
     return Array.from({ length: 15 }, (_, i) => {
       const d = new Date(base); d.setDate(base.getDate() + i);
       return { key: i, dow: i === 0 ? 'TODAY' : dows[d.getDay()], dayNum: d.getDate(), month: mons[d.getMonth()] };
     });
   }
-  _times() { return ['09:00', '10:30', '12:00', '13:30', '15:00', '16:30', '18:00', '19:30', '21:00']; }
+  _times() { return ['07:00', '08:30', '10:00', '11:30', '13:00', '14:30', '16:00', '17:30', '19:00', '20:30']; }
   _booked(dateIdx, courtIdx, timeIdx) { return ((dateIdx * 31 + courtIdx * 17 + timeIdx * 13 + 7) % 5) === 0; }
   _price(mode) { return mode === 'full' ? 80 : 20; }
 
@@ -511,19 +546,54 @@ class Component extends DCLogic {
     this.setState(s => { const sel = Object.assign({}, s.selected); delete sel[id]; return { selected: sel }; });
   }
   _confirm() {
-    const doConfirm = () => {
+    const doConfirm = async () => {
       const dates = this._dates();
       const entries = Object.entries(this.state.selected).filter(([, v]) => v === 'share' || v === 'full');
       if (!entries.length) return;
-      entries.forEach(([k, mode]) => {
+      const liveCourts = this.state._liveCourts;
+      const courtDefs = (liveCourts && liveCourts.filter(c => c.activity === 'PADEL').length)
+        ? liveCourts.filter(c => c.activity === 'PADEL')
+        : null;
+      const liveSlots = this.state._liveSlots;
+
+      for (const [k, mode] of entries) {
         const [di, ci, ti] = k.split('|').map(Number);
-        const d = dates[di]; const court = 'Court ' + (ci + 1); const time = this._times()[ti];
+        const d = dates[di];
+        const times = this._times();
+        const courtName = courtDefs ? courtDefs[ci].name : 'Court ' + (ci + 1);
+        const time = times[ti];
         const modeLabel = mode === 'full' ? 'Full court' : 'Share';
         const raw = this._price(mode);
-        const item = { name: court + ' · ' + time, sub: d.dow + ' ' + d.dayNum + ' ' + d.month + ' · ' + modeLabel, price: raw + ' DT', _raw: raw, kind: 'booking' };
+
+        // If we have live API, book via API
+        if (window.takeOffApi && window.takeOffApi.isOnline() && courtDefs && courtDefs[ci]) {
+          const court = courtDefs[ci];
+          const dateStr = this._dateStr(di);
+          const slotKey = court.id + '_' + dateStr;
+          const slotData = liveSlots[slotKey] && liveSlots[slotKey][ti];
+          if (slotData && slotData.startsAt) {
+            try {
+              await window.takeOffApi.courts.book(
+                court.id, slotData.startsAt,
+                mode === 'full' ? 'FULL' : 'SHARE',
+                'PAY_AT_CLUB'
+              );
+              // Refresh slots for this date/court
+              const updated = Object.assign({}, this.state._liveSlots);
+              delete updated[slotKey];
+              this.setState({ _liveSlots: updated });
+              this._fetchSlots(di, liveCourts);
+            } catch (err) {
+              alert(err.message || 'Booking failed. Please try again.');
+              continue;
+            }
+          }
+        }
+
+        const item = { name: courtName + ' · ' + time, sub: d.dow + ' ' + d.dayNum + ' ' + d.month + ' · ' + modeLabel, price: raw + ' DT', _raw: raw, kind: 'booking' };
         if (window.takeOffAuth) window.takeOffAuth.recordBooking(item);
         if (window.takeOffCart) window.takeOffCart.add(item);
-      });
+      }
       this.setState({ selected: {} });
     };
     if (window.takeOffAuth) { window.takeOffAuth.requireAuth(doConfirm); } else { doConfirm(); }
@@ -598,20 +668,46 @@ class Component extends DCLogic {
     const dateVals = dates.map((d, i) => ({
       dow: d.dow, dayNum: d.dayNum, month: d.month,
       bg: i === di ? LIME : '#0f1f44', fg: i === di ? NAVY : '#f4f5ee', bd: i === di ? LIME : 'rgba(196,239,63,.18)',
-      pick: () => this.setState({ dateIdx: i }),
+      pick: () => this._pickDate(i),
     }));
 
     const times = this._times();
-    const courts = [0, 1].map(ci => ({
-      name: 'Court ' + (ci + 1), surface: ci === 0 ? 'PANORAMIC GLASS' : 'CLASSIC',
+    const liveCourts = this.state._liveCourts;
+    const liveSlots = this.state._liveSlots;
+    const dateStr = this._dateStr(di);
+
+    // Build court list from API or fallback to 2 hardcoded courts
+    const courtDefs = (liveCourts && liveCourts.filter(c => c.activity === 'PADEL').length)
+      ? liveCourts.filter(c => c.activity === 'PADEL').map((c, ci) => ({ id: c.id, name: c.name, surface: ci === 0 ? 'PANORAMIC GLASS' : 'CLASSIC' }))
+      : [{ id: null, name: 'Court 1', surface: 'PANORAMIC GLASS' }, { id: null, name: 'Court 2', surface: 'CLASSIC' }];
+
+    const courts = courtDefs.map((court, ci) => ({
+      name: court.name, surface: court.surface,
       slots: times.map((t, ti) => {
         const id = di + '|' + ci + '|' + ti;
-        const booked = this._booked(di, ci, ti);
         const mode = this.state.selected[id];
         const isChoosing = mode === 'choosing';
+
+        // Live availability: check the slot with this time
+        let booked = false, blocked = false;
+        if (court.id) {
+          const slotKey = court.id + '_' + dateStr;
+          const courtSlots = liveSlots[slotKey];
+          if (courtSlots) {
+            const live = courtSlots[ti];
+            if (live && !live.available) {
+              booked = live.reason === 'BOOKED';
+              blocked = live.reason === 'BLOCKED';
+            }
+          }
+        } else {
+          booked = this._booked(di, ci, ti);
+        }
+
         let bg, fg, bd, cursor = 'pointer', deco = 'none', hasBadge = null, badge = '', badgeFg = LIME, span = '1';
-        if (booked) {
+        if (booked || blocked) {
           bg = 'rgba(244,245,238,.05)'; fg = 'rgba(244,245,238,.3)'; bd = 'transparent'; cursor = 'not-allowed'; deco = 'line-through';
+          if (blocked) { badge = 'BLOCKED'; hasBadge = true; badgeFg = 'rgba(244,100,100,.8)'; deco = 'none'; }
         } else if (isChoosing) {
           span = 'span 2'; bg = NAVY; fg = '#f4f5ee'; bd = LIME;
         } else if (mode === 'share') {
@@ -626,7 +722,7 @@ class Component extends DCLogic {
           isChoosing: isChoosing ? true : null,
           notChoosing: isChoosing ? null : true,
           hasBadge, badge, badgeFg,
-          toggle: booked ? () => {} : () => this._tapSlot(id),
+          toggle: (booked || blocked) ? () => {} : () => this._tapSlot(id),
           pickShare: () => this._setMode(id, 'share'),
           pickFull: () => this._setMode(id, 'full'),
         };
