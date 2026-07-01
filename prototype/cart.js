@@ -616,6 +616,10 @@
             };
             var order = await client.orders.place(payload);
             _orderId = order && order.orderRef ? order.orderRef : ('TKO-' + Date.now().toString(36).toUpperCase());
+            // Sync fresh wallet balance after payment
+            if (_d.pay === 'wallet' && window.takeOffAuth && window.takeOffAuth.refreshWallet) {
+              window.takeOffAuth.refreshWallet();
+            }
             // Redirect to Konnect for card payments
             if (_d.pay === 'card' && client.payments && client.isOnline()) {
               try {
