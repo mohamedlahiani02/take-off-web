@@ -2127,11 +2127,17 @@ async function savePadelSection(sectionKey, content) {
 // ── Pilates CMS ──────────────────────────────────────────────────────────────
 var PILATES_DEFAULTS = {
   hero: { kicker: 'Take Off Club — Pilates', headline: 'Redefine your strength,\none session at a time.', subtitle: 'Reformer and mat flows in a calm, light-filled studio. Build a stronger, more balanced you — booked around your week.', stats: [{ big: '450+', label: 'SESSIONS / MONTH' }, { big: '70+', label: 'CLASSES WEEKLY' }, { big: '96%', label: 'FEEL STRONGER' }] },
-  approach: { kicker: 'Our Approach', heading: 'Inclusive pilates for every body', body: 'No two bodies move the same. Our instructors adapt every flow to your level — first session or hundredth — so you always move with control, confidence, and ease.', points: ['Adapted for every level and body', 'Small groups, real attention', 'Reformer, mat, duo & private'] },
+  approach: { kicker: 'Our Approach', heading: 'Inclusive pilates for every body', body: 'No two bodies move the same. Our instructors adapt every flow to your level — first session or hundredth — so you always move with control, confidence, and ease.', points: ['Adapted for every level and body', 'Small groups, real attention', 'Reformer, mat, duo & private'], photo1: '', photo2: '' },
   classes: { kicker: 'Our Classes', heading: 'Discover the class that moves you', items: [{ name: 'Reformer Flow', level: 'INTERMEDIATE', dur: '55 MIN', desc: 'Spring-loaded resistance for long, controlled, full-body strength.', photoUrl: '' }, { name: 'Mat Foundations', level: 'BEGINNER', dur: '50 MIN', desc: 'Core fundamentals and breath — the perfect place to begin.', photoUrl: '' }, { name: 'Sculpt & Tone', level: 'ADVANCED', dur: '55 MIN', desc: 'Higher tempo, deeper burn. Define and strengthen every muscle.', photoUrl: '' }] },
   journey: { kicker: 'How it works', heading: 'Your journey starts here', steps: [{ n: '01', title: 'Choose your class', desc: 'Browse reformer, mat, sculpt and more — filtered to your level.' }, { n: '02', title: 'Reserve your spot', desc: 'Pick a time that fits your week. Live spot counts, instant booking.' }, { n: '03', title: 'Show up & flow', desc: 'Arrive, breathe, move. We handle the rest — props and all.' }] },
+  instructors: { kicker: 'The Team', heading: 'Guided by passionate experts', description: 'Certified instructors who tailor every cue to help you move better and feel stronger.' },
   testimonials: { kicker: 'Member Stories', heading: 'Real stories from our members', items: [{ text: 'I came in stiff and stressed. Six weeks later I stand taller, sleep better, and actually look forward to Mondays.', name: 'Amira B.', tag: 'MEMBER · 8 MONTHS' }, { text: 'The instructors notice everything. Every cue is for my body — I have never felt stronger or more supported.', name: 'Khalil R.', tag: 'MEMBER · 1 YEAR' }, { text: 'Reformer flow is my reset button. Calm mind, strong core, and a community that feels like home.', name: 'Sonia M.', tag: 'MEMBER · 4 MONTHS' }] },
-  faq: { kicker: 'FAQ', heading: 'Your questions, answered', items: [{ q: 'Do I need experience to start?', a: 'Not at all. Our Mat Foundations and All-Levels reformer classes are built for first-timers.' }, { q: 'What should I bring?', a: 'Just comfortable clothing and grip socks. We provide all reformers, mats, and props.' }, { q: 'How do reservations work?', a: 'Pick a day in the schedule, reserve your spot, and it lands in your cart.' }, { q: 'Can I freeze or share my pack?', a: 'Class packs are valid for 3 months and can be paused once.' }, { q: 'Is there parking at the studio?', a: 'Yes — free member parking on-site.' }] },
+  schedule: { kicker: 'Reserve', heading: 'This week at a glance', description: 'Pick a day, reserve your spot. Live spot counts — book before they fill.' },
+  plans: { kicker: 'Membership', heading: 'Flexible plans for every lifestyle' },
+  shop: { kicker: 'The Studio Shop', heading: 'Take the practice home' },
+  faq: { kicker: 'FAQ', heading: 'Your questions, answered', description: 'Still curious? Reach the studio team any day of the week.', items: [{ q: 'Do I need experience to start?', a: 'Not at all. Our Mat Foundations and All-Levels reformer classes are built for first-timers.' }, { q: 'What should I bring?', a: 'Just comfortable clothing and grip socks. We provide all reformers, mats, and props.' }, { q: 'How do reservations work?', a: 'Pick a day in the schedule, reserve your spot, and it lands in your cart.' }, { q: 'Can I freeze or share my pack?', a: 'Class packs are valid for 3 months and can be paused once.' }, { q: 'Is there parking at the studio?', a: 'Yes — free member parking on-site.' }] },
+  cta: { kicker: 'Begin Today', headline: 'Start your pilates journey today', subtitle: 'Reconnect with your body. Your first session is the hardest to book and the easiest to love.', buttonLabel: 'Book your first class', photoUrl: '' },
+  privateSession: { kicker: 'Private & Duo Sessions', headline: 'Book a private or duo reformer session', description: 'One-on-one or duo sessions tailored entirely to your body and goals. Tell us what you need and an instructor will be in touch within 24 h.', bullets: ['Private reformer — 1-on-1 with an instructor', 'Duo reformer — bring a partner', 'Prenatal & rehab specialisations available'] },
 };
 
 async function renderPilatesCms() {
@@ -2141,7 +2147,9 @@ async function renderPilatesCms() {
     _pilates = {};
     sections.forEach(function (s) { _pilates[s.sectionKey] = s.content; });
     function pm(k) { return Object.assign({}, PILATES_DEFAULTS[k], _pilates[k] || {}); }
-    var hero = pm('hero'), ap = pm('approach'), cl = pm('classes'), jn = pm('journey'), ts = pm('testimonials'), fq = pm('faq');
+    var hero = pm('hero'), ap = pm('approach'), cl = pm('classes'), jn = pm('journey'),
+        instr = pm('instructors'), ts = pm('testimonials'), sch = pm('schedule'),
+        pl = pm('plans'), sh = pm('shop'), fq = pm('faq'), ct = pm('cta'), ps = pm('privateSession');
     function card(title, sub, onclick) {
       return '<div class="card" style="margin-bottom:14px;"><div class="card-header"><div><div class="kicker">RUBRIQUE</div><h3>' + esc(title) + '</h3></div>' +
         '<button class="btn-sm btn-lime" onclick="' + onclick + '">Edit</button></div>' +
@@ -2149,11 +2157,17 @@ async function renderPilatesCms() {
     }
     body.innerHTML =
       card('Hero', esc((hero.headline||'').replace(/\n/g,' ')) + ' · ' + (hero.stats||[]).length + ' stats', 'editPilatesHero()') +
-      card('Our Approach', esc(ap.heading) + ' · ' + (ap.points||[]).length + ' bullet points', 'editPilatesApproach()') +
+      card('Our Approach', esc(ap.heading) + ' · ' + (ap.points||[]).length + ' bullets · 2 photos', 'editPilatesApproach()') +
       card('Our Classes', esc(cl.heading) + ' · ' + (cl.items||[]).length + ' class cards (photo upload)', 'editPilatesClasses()') +
       card('How it works / Journey', esc(jn.heading) + ' · ' + (jn.steps||[]).length + ' steps', 'editPilatesJourney()') +
+      card('Instructors Section', esc(instr.heading) + ' · kicker + heading + description', 'editPilatesInstructors()') +
       card('Member Stories / Testimonials', esc(ts.heading) + ' · ' + (ts.items||[]).length + ' quotes', 'editPilatesTestimonials()') +
+      card('Schedule Section', esc(sch.heading) + ' · kicker + heading + description', 'editPilatesSchedule()') +
+      card('Plans / Membership', esc(pl.heading) + ' · kicker + heading', 'editPilatesPlans()') +
+      card('Shop Section', esc(sh.heading) + ' · kicker + heading', 'editPilatesShop()') +
       card('FAQ', esc(fq.heading) + ' · ' + (fq.items||[]).length + ' questions', 'editPilatesFaq()') +
+      card('Private Session Form', esc(ps.headline) + ' · ' + (ps.bullets||[]).length + ' bullet points', 'editPilatesPrivateSession()') +
+      card('Bottom CTA', esc(ct.headline) + ' · photo upload', 'editPilatesCta()') +
       '<div class="form-hint" style="margin-top:8px;">Changes publish immediately. Empty fields fall back to built-in defaults.</div>';
   } catch (e) { body.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message||'Failed.') + '</p></div>'; }
 }
@@ -2174,12 +2188,33 @@ function editPilatesHero() {
 function editPilatesApproach() {
   var a = Object.assign({}, PILATES_DEFAULTS.approach, _pilates.approach || {});
   cmsRowsInitFromArray((a.points||[]).map(function(p){ return { text: p }; }));
+  var p1thumb = a.photo1 ? '<img src="'+esc(a.photo1)+'" style="width:60px;height:80px;object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:8px;">' : '';
+  var p2thumb = a.photo2 ? '<img src="'+esc(a.photo2)+'" style="width:60px;height:80px;object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:8px;">' : '';
   var body = '<div class="form-row">' + fld('KICKER','pla-kicker','text',a.kicker) + fld('HEADING','pla-heading','text',a.heading) + '</div>' +
     '<div class="form-row full"><div class="form-group"><label>BODY TEXT</label><textarea id="pla-body">' + esc(a.body) + '</textarea></div></div>' +
-    '<div class="form-group"><label>BULLET POINTS</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({text:\'\'})">+ Add point</button></div>';
+    '<div class="form-group"><label>BULLET POINTS</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({text:\'\'})">+ Add point</button></div>' +
+    '<div class="form-row" style="margin-top:12px;">' +
+      '<div class="form-group"><label>PHOTO LEFT (tall, portrait)</label>' + p1thumb +
+        '<input type="file" accept="image/*" id="pla-p1-file" style="display:none;" onchange="plaCmsImg(\'photo1\',this)">' +
+        '<button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'pla-p1-file\').click()">⬆ Upload</button>' +
+        '<span id="pla-p1-status" class="form-hint" style="margin-left:8px;"></span></div>' +
+      '<div class="form-group"><label>PHOTO RIGHT (offset, portrait)</label>' + p2thumb +
+        '<input type="file" accept="image/*" id="pla-p2-file" style="display:none;" onchange="plaCmsImg(\'photo2\',this)">' +
+        '<button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'pla-p2-file\').click()">⬆ Upload</button>' +
+        '<span id="pla-p2-status" class="form-hint" style="margin-left:8px;"></span></div>' +
+    '</div>';
+  var _approachPhotos = { photo1: a.photo1 || '', photo2: a.photo2 || '' };
+  window._plaCmsImg = async function(field, input) {
+    var f = input.files[0]; if (!f) return;
+    var s = document.getElementById('pla-' + (field==='photo1'?'p1':'p2') + '-status');
+    if (s) s.textContent = 'Uploading…';
+    try { var res = await window.adminApi.media.upload(f, 'content'); _approachPhotos[field] = res.url; if (s) s.textContent = '✓'; } catch(e) { if(s) s.textContent = 'Error'; }
+    input.value = '';
+  };
+  window.plaCmsImg = window._plaCmsImg;
   openGenModal('Edit "Our Approach"', body, 'Save', async function () {
-    await savePilatesSection('approach', { kicker: gv('pla-kicker'), heading: gv('pla-heading'), body: document.getElementById('pla-body').value, points: _cmsRows.map(function(r){ return r.text||''; }).filter(Boolean) });
-  }, 560);
+    await savePilatesSection('approach', { kicker: gv('pla-kicker'), heading: gv('pla-heading'), body: document.getElementById('pla-body').value, points: _cmsRows.map(function(r){ return r.text||''; }).filter(Boolean), photo1: _approachPhotos.photo1, photo2: _approachPhotos.photo2 });
+  }, 620);
   _cmsRender = renderTextRows; renderTextRows();
 }
 function renderTextRows() {
@@ -2262,9 +2297,10 @@ function editPilatesFaq() {
   var f = Object.assign({}, PILATES_DEFAULTS.faq, _pilates.faq || {});
   cmsRowsInitFromArray(f.items || []);
   var body = '<div class="form-row">' + fld('KICKER','plf-kicker','text',f.kicker) + fld('HEADING','plf-heading','text',f.heading) + '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>SIDE DESCRIPTION</label><textarea id="plf-desc" rows="2">' + esc(f.description||'') + '</textarea></div></div>' +
     '<div class="form-group"><label>QUESTIONS</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({q:\'\',a:\'\'})">+ Add Q&amp;A</button></div>';
   openGenModal('Edit FAQ', body, 'Save', async function () {
-    await savePilatesSection('faq', { kicker: gv('plf-kicker'), heading: gv('plf-heading'), items: _cmsRows.filter(function(r){return r.q;}) });
+    await savePilatesSection('faq', { kicker: gv('plf-kicker'), heading: gv('plf-heading'), description: document.getElementById('plf-desc').value, items: _cmsRows.filter(function(r){return r.q;}) });
   }, 580);
   _cmsRender = renderQARows; renderQARows();
 }
@@ -2277,6 +2313,76 @@ function renderQARows() {
         '<button type="button" class="btn-icon danger" onclick="cmsDel(' + i + ')">×</button></div>' +
       '<textarea oninput="_cmsRows[' + i + '].a=this.value" rows="2" placeholder="Answer…" style="width:100%;' + CINP + '">' + esc(r.a||'') + '</textarea></div>';
   }).join('');
+}
+
+function editPilatesInstructors() {
+  var d = Object.assign({}, PILATES_DEFAULTS.instructors, _pilates.instructors || {});
+  var body = '<div class="form-row">' + fld('KICKER','plin-kicker','text',d.kicker) + fld('HEADING','plin-heading','text',d.heading) + '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>DESCRIPTION (right-side tagline)</label><textarea id="plin-desc" rows="2">' + esc(d.description||'') + '</textarea></div></div>';
+  openGenModal('Edit Instructors Section', body, 'Save', async function () {
+    await savePilatesSection('instructors', { kicker: gv('plin-kicker'), heading: gv('plin-heading'), description: document.getElementById('plin-desc').value });
+  }, 520);
+}
+
+function editPilatesSchedule() {
+  var d = Object.assign({}, PILATES_DEFAULTS.schedule, _pilates.schedule || {});
+  var body = '<div class="form-row">' + fld('KICKER','plsc-kicker','text',d.kicker) + fld('HEADING','plsc-heading','text',d.heading) + '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>DESCRIPTION (tagline)</label><textarea id="plsc-desc" rows="2">' + esc(d.description||'') + '</textarea></div></div>';
+  openGenModal('Edit Schedule Section', body, 'Save', async function () {
+    await savePilatesSection('schedule', { kicker: gv('plsc-kicker'), heading: gv('plsc-heading'), description: document.getElementById('plsc-desc').value });
+  }, 520);
+}
+
+function editPilatesPlans() {
+  var d = Object.assign({}, PILATES_DEFAULTS.plans, _pilates.plans || {});
+  var body = '<div class="form-row">' + fld('KICKER','plpl-kicker','text',d.kicker) + fld('HEADING','plpl-heading','text',d.heading) + '</div>' +
+    '<div class="form-hint">Plan pricing and features are managed in <strong>Packs &amp; Plans</strong>.</div>';
+  openGenModal('Edit Plans Section', body, 'Save', async function () {
+    await savePilatesSection('plans', { kicker: gv('plpl-kicker'), heading: gv('plpl-heading') });
+  }, 480);
+}
+
+function editPilatesShop() {
+  var d = Object.assign({}, PILATES_DEFAULTS.shop, _pilates.shop || {});
+  var body = '<div class="form-row">' + fld('KICKER','plsh-kicker','text',d.kicker) + fld('HEADING','plsh-heading','text',d.heading) + '</div>' +
+    '<div class="form-hint">Products come from the <strong>Products</strong> catalogue.</div>';
+  openGenModal('Edit Shop Section', body, 'Save', async function () {
+    await savePilatesSection('shop', { kicker: gv('plsh-kicker'), heading: gv('plsh-heading') });
+  }, 480);
+}
+
+function editPilatesPrivateSession() {
+  var d = Object.assign({}, PILATES_DEFAULTS.privateSession, _pilates.privateSession || {});
+  cmsRowsInitFromArray((d.bullets||[]).map(function(b){ return { text: b }; }));
+  var body = '<div class="form-row">' + fld('KICKER','plps-kicker','text',d.kicker) + fld('HEADLINE','plps-headline','text',d.headline) + '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>DESCRIPTION</label><textarea id="plps-desc" rows="3">' + esc(d.description||'') + '</textarea></div></div>' +
+    '<div class="form-group"><label>BULLET POINTS</label><div id="cms-rows"></div><button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({text:\'\'})">+ Add bullet</button></div>';
+  openGenModal('Edit Private Session Section', body, 'Save', async function () {
+    await savePilatesSection('privateSession', { kicker: gv('plps-kicker'), headline: gv('plps-headline'), description: document.getElementById('plps-desc').value, bullets: _cmsRows.map(function(r){ return r.text||''; }).filter(Boolean) });
+  }, 580);
+  _cmsRender = renderTextRows; renderTextRows();
+}
+
+function editPilatesCta() {
+  var d = Object.assign({}, PILATES_DEFAULTS.cta, _pilates.cta || {});
+  var pthumb = d.photoUrl ? '<img src="'+esc(d.photoUrl)+'" style="width:80px;height:60px;object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:8px;">' : '';
+  var _ctaPhoto = { url: d.photoUrl || '' };
+  var body = '<div class="form-row">' + fld('KICKER','plct-kicker','text',d.kicker) + fld('BUTTON LABEL','plct-btn','text',d.buttonLabel) + '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>HEADLINE</label><textarea id="plct-headline" rows="2">' + esc(d.headline||'') + '</textarea></div></div>' +
+    '<div class="form-row full"><div class="form-group"><label>SUBTITLE</label><textarea id="plct-subtitle">' + esc(d.subtitle||'') + '</textarea></div></div>' +
+    '<div class="form-group"><label>BACKGROUND PHOTO</label>' + pthumb +
+      '<input type="file" accept="image/*" id="plct-photo-file" style="display:none;" onchange="plCtaImg(this)">' +
+      '<button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'plct-photo-file\').click()">⬆ Upload</button>' +
+      '<span id="plct-photo-status" class="form-hint" style="margin-left:8px;"></span></div>';
+  window.plCtaImg = async function(input) {
+    var f = input.files[0]; if (!f) return;
+    var s = document.getElementById('plct-photo-status'); if(s) s.textContent = 'Uploading…';
+    try { var r = await window.adminApi.media.upload(f, 'content'); _ctaPhoto.url = r.url; if(s) s.textContent = '✓'; } catch(e) { if(s) s.textContent = 'Error'; }
+    input.value = '';
+  };
+  openGenModal('Edit Bottom CTA', body, 'Save', async function () {
+    await savePilatesSection('cta', { kicker: gv('plct-kicker'), headline: document.getElementById('plct-headline').value, subtitle: document.getElementById('plct-subtitle').value, buttonLabel: gv('plct-btn'), photoUrl: _ctaPhoto.url });
+  }, 560);
 }
 
 async function savePilatesSection(sectionKey, content) {
