@@ -210,11 +210,11 @@
     var shipping = cart.getShipping();
     var timbre = cart.getTimbre();
     var total = cart.getTotal();
-    var shipLabel = _d.delivery === 'pickup' ? 'GRATUIT · Retrait club' : shipping + ' DT';
+    var shipLabel = _d.delivery === 'pickup' ? 'FREE · Pickup' : shipping + ' DT';
 
     var rows = '';
     if (!hasItems) {
-      rows = '<div class="tk-empty">Votre panier est vide.<br>Réservez un terrain ou explorez la boutique.</div>';
+      rows = '<div class="tk-empty">Your cart is empty.<br>Book a court or grab some gear.</div>';
     } else {
       items.forEach(function(it, i) {
         var meta = [it.sub, it.size ? 'Size '+it.size : ''].filter(Boolean).join(' · ');
@@ -247,18 +247,18 @@
         '<button class="tk-ch-x" id="tk-x">×</button>'+
       '</div>'+
       '<div class="tk-body">'+rows+'</div>'+
-      (hasItems ? '<div class="tk-continue" id="tk-cont">← Continuer mes achats</div>' : '')+
+      (hasItems ? '<div class="tk-continue" id="tk-cont">← Continue shopping</div>' : '')+
       '<div class="tk-foot">'+
         (hasItems ?
           '<div class="tk-totals">'+
-            '<div class="tk-trow"><span class="tl">Sous-total</span><span class="tv">'+subtotal.toFixed(3)+' DT</span></div>'+
-            (timbre > 0 ? '<div class="tk-trow"><span class="tl">Timbre fiscal</span><span class="tv">'+timbre.toFixed(3)+' DT</span></div>' : '')+
-            '<div class="tk-trow"><span class="tl">Livraison</span><span class="tv">'+shipLabel+'</span></div>'+
+            '<div class="tk-trow"><span class="tl">Subtotal</span><span class="tv">'+subtotal.toFixed(3)+' DT</span></div>'+
+            (timbre > 0 ? '<div class="tk-trow"><span class="tl">Fiscal stamp</span><span class="tv">'+timbre.toFixed(3)+' DT</span></div>' : '')+
+            '<div class="tk-trow"><span class="tl">Delivery</span><span class="tv">'+shipLabel+'</span></div>'+
             '<div class="tk-trow grand"><span class="tl">TOTAL</span><span class="tv">'+total.toFixed(3)+' DT</span></div>'+
           '</div>'
         : '')+
         '<button class="tk-co-btn" id="tk-co-open"'+(hasItems?'':' disabled')+'>'+
-          (hasItems ? 'Commander →' : 'Panier vide')+
+          (hasItems ? 'Checkout →' : 'Cart is empty')+
         '</button>'+
       '</div>';
 
@@ -296,12 +296,12 @@
     var disc = cart.getDiscount();
     var ship = cart.getShipping();
     var shipLine = showDelivery
-      ? '<div class="tk-srow muted"><span>Livraison</span><span>'+(_d.delivery==='pickup'?'Gratuit':ship.toFixed(3)+' DT')+'</span></div>'
+      ? '<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':ship.toFixed(3)+' DT')+'</span></div>'
       : '';
-    var timbreLine = timbre > 0 ? '<div class="tk-srow muted"><span>Timbre fiscal</span><span>'+timbre.toFixed(3)+' DT</span></div>' : '';
-    var discLine = disc > 0 ? '<div class="tk-srow muted" style="color:#c4ef3f;"><span>Réduction ('+esc(_discountCode)+')</span><span>-'+disc.toFixed(3)+' DT</span></div>' : '';
+    var timbreLine = timbre > 0 ? '<div class="tk-srow muted"><span>Fiscal stamp</span><span>'+timbre.toFixed(3)+' DT</span></div>' : '';
+    var discLine = disc > 0 ? '<div class="tk-srow muted" style="color:#c4ef3f;"><span>Discount ('+esc(_discountCode)+')</span><span>-'+disc.toFixed(3)+' DT</span></div>' : '';
     return '<div class="tk-sbox">'+rows+'<hr class="tk-sdiv">'+
-      '<div class="tk-srow muted"><span>Sous-total</span><span>'+sub.toFixed(3)+' DT</span></div>'+
+      '<div class="tk-srow muted"><span>Subtotal</span><span>'+sub.toFixed(3)+' DT</span></div>'+
       timbreLine+shipLine+discLine+
       '<div class="tk-stotal"><span class="tk-stl">TOTAL</span><span class="tk-stv">'+cart.getTotal().toFixed(3)+' DT</span></div>'+
     '</div>';
@@ -352,36 +352,36 @@
       if (bookingOnly) {
         inner = '<div class="tk-success">'+
           '<div class="tk-s-icon">✓</div>'+
-          '<div class="tk-co-title" style="color:#c4ef3f;">Réservation confirmée</div>'+
-          '<div class="tk-s-id">RÉF '+refId+'</div>'+
+          '<div class="tk-co-title" style="color:#c4ef3f;">Booking confirmed</div>'+
+          '<div class="tk-s-id">REF '+refId+'</div>'+
           '<div class="tk-sbox" style="text-align:left;margin-bottom:16px;">'+
             itemRows+
             '<hr class="tk-sdiv">'+
-            '<div class="tk-stotal"><span class="tk-stl">TOTAL</span><span class="tk-stv">'+total.toFixed(3)+' DT</span></div>'+
+            '<div class="tk-stotal"><span class="tk-stl">TOTAL PAID</span><span class="tk-stv">'+total.toFixed(3)+' DT</span></div>'+
           '</div>'+
-          '<div style="font-size:13px;color:rgba(244,245,238,.6);line-height:1.65;margin-bottom:18px;">À bientôt sur le terrain. Votre créneau est réservé — arrivez 5 min avant.</div>'+
-          (!u?'<div class="tk-nudge" style="margin-bottom:18px;">Pas encore de compte ? <a id="tk-s-login">Créez-en un</a> pour gérer vos réservations.</div>':'')+
-          '<button class="tk-next-btn" id="tk-co-done">Fermer</button>'+
+          '<div style="font-size:13px;color:rgba(244,245,238,.6);line-height:1.65;margin-bottom:18px;">See you on the court. Your slot is reserved — arrive 5 min early.</div>'+
+          (!u?'<div class="tk-nudge" style="margin-bottom:18px;">No account yet? <a id="tk-s-login">Create one</a> to manage your bookings.</div>':'')+
+          '<button class="tk-next-btn" id="tk-co-done">Done</button>'+
         '</div>';
       } else {
         var delivInfo = _d.delivery==='pickup'
-          ? 'Retrait au club Take Off · Disponible sous 24–48h'
+          ? 'Pick up at Take Off Club · Ready in 24–48h'
           : esc(_d.address)+', '+esc(_d.city)+(_d.notes?' ('+esc(_d.notes)+')':'');
         inner = '<div class="tk-success">'+
           '<div class="tk-s-icon">✓</div>'+
-          '<div class="tk-co-title" style="color:#c4ef3f;">Commande passée</div>'+
-          '<div class="tk-s-id">COMMANDE '+refId+'</div>'+
+          '<div class="tk-co-title" style="color:#c4ef3f;">Order placed</div>'+
+          '<div class="tk-s-id">ORDER '+refId+'</div>'+
           '<div class="tk-sbox" style="text-align:left;margin-bottom:16px;">'+
             itemRows+
             '<hr class="tk-sdiv">'+
-            (cart.getTimbre()>0?'<div class="tk-srow muted"><span>Timbre fiscal</span><span>'+cart.getTimbre().toFixed(3)+' DT</span></div>':'')+
-            '<div class="tk-srow muted"><span>Livraison</span><span>'+(_d.delivery==='pickup'?'Gratuit':cart.getShipping().toFixed(3)+' DT')+'</span></div>'+
-            '<div class="tk-stotal"><span class="tk-stl">TOTAL PAYÉ</span><span class="tk-stv">'+total.toFixed(3)+' DT</span></div>'+
+            (cart.getTimbre()>0?'<div class="tk-srow muted"><span>Fiscal stamp</span><span>'+cart.getTimbre().toFixed(3)+' DT</span></div>':'')+
+            '<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':cart.getShipping().toFixed(3)+' DT')+'</span></div>'+
+            '<div class="tk-stotal"><span class="tk-stl">TOTAL PAID</span><span class="tk-stv">'+total.toFixed(3)+' DT</span></div>'+
           '</div>'+
           '<div style="font-size:13px;color:rgba(244,245,238,.6);line-height:1.65;margin-bottom:18px;">'+delivInfo+
-            (_d.delivery!=='pickup'?'<br><span style="opacity:.6">Délai estimé : 2–4 jours ouvrables · '+cart.getShipping().toFixed(3)+' DT livraison</span>':'')+'</div>'+
-          (!u?'<div class="tk-nudge" style="margin-bottom:18px;">Pas encore de compte ? <a id="tk-s-login">Créez-en un</a> pour suivre vos commandes.</div>':'')+
-          '<button class="tk-next-btn" id="tk-co-done">Fermer</button>'+
+            (_d.delivery!=='pickup'?'<br><span style="opacity:.6">Estimated: 2–4 business days · '+cart.getShipping().toFixed(3)+' DT delivery</span>':'')+'</div>'+
+          (!u?'<div class="tk-nudge" style="margin-bottom:18px;">No account yet? <a id="tk-s-login">Create one</a> to track orders and manage your bookings.</div>':'')+
+          '<button class="tk-next-btn" id="tk-co-done">Done</button>'+
         '</div>';
       }
 
@@ -406,97 +406,97 @@
     // ── Step 1: Contact ───────────────────────────────────────────────────────
     if (_step === 1) {
       var contactHint = bookingOnly
-        ? '<div class="tk-co-eyebrow">01 — VOS COORDONNÉES</div>'
-        : '<div class="tk-co-eyebrow">01 — VOS INFORMATIONS</div>';
+        ? '<div class="tk-co-eyebrow">01 — YOUR CONTACT DETAILS</div>'
+        : '<div class="tk-co-eyebrow">01 — YOUR DETAILS</div>';
       var phoneHint = bookingOnly
-        ? '<div class="tk-hint">+216 · 8 chiffres · pour les mises à jour de réservation</div>'
-        : '<div class="tk-hint">+216 · 8 chiffres · utilisé pour la livraison &amp; les mises à jour</div>';
+        ? '<div class="tk-hint">+216 · 8 digits · for booking updates</div>'
+        : '<div class="tk-hint">+216 · 8 digits · used for delivery &amp; updates</div>';
       inner =
         pip(1)+
         '<div class="tk-co-title">Contact</div>'+
         contactHint+
         sbox(false)+
         '<div class="tk-g2">'+
-          '<div><label class="tk-lbl">NOM COMPLET</label><input class="tk-inp" id="tk-name" placeholder="Sami Ben Ahmed" value="'+escA(_d.name||(u?u.name||'':''))+'"></div>'+
+          '<div><label class="tk-lbl">FULL NAME</label><input class="tk-inp" id="tk-name" placeholder="Sami Ben Ahmed" value="'+escA(_d.name||(u?u.name||'':''))+'"></div>'+
           '<div>'+
-            '<label class="tk-lbl">TÉLÉPHONE <span style="opacity:.4">(WhatsApp OK)</span></label>'+
+            '<label class="tk-lbl">PHONE <span style="opacity:.4">(WhatsApp OK)</span></label>'+
             '<input class="tk-inp" id="tk-phone" type="tel" placeholder="+216 XX XXX XXX" value="'+escA(_d.phone||(u?u.phone||'':''))+'">'+
             phoneHint+
           '</div>'+
         '</div>'+
-        (!bookingOnly ? '<label class="tk-lbl">EMAIL <span style="opacity:.4">(confirmation de commande)</span></label><input class="tk-inp" id="tk-email" type="email" placeholder="vous@email.com" value="'+escA(_d.email||(u?u.email||'':''))+'">' : '')+
-        (!u?'<div class="tk-nudge">Vous avez un compte ? <a id="tk-s1-in">Connectez-vous</a> pour pré-remplir vos coordonnées.</div>':'')+
-        '<div class="tk-actions"><button class="tk-next-btn" id="tk-next">Continuer →</button></div>';
+        (!bookingOnly ? '<label class="tk-lbl">EMAIL <span style="opacity:.4">(order confirmation)</span></label><input class="tk-inp" id="tk-email" type="email" placeholder="you@email.com" value="'+escA(_d.email||(u?u.email||'':''))+'">' : '')+
+        (!u?'<div class="tk-nudge">Have an account? <a id="tk-s1-in">Sign in</a> to pre-fill your details.</div>':'')+
+        '<div class="tk-actions"><button class="tk-next-btn" id="tk-next">Continue →</button></div>';
     }
 
     // ── Step 2: Delivery (products only) ─────────────────────────────────────
     if (_step === 2) {
       inner =
         pip(2)+
-        '<div class="tk-co-title">Livraison</div>'+
-        '<div class="tk-co-eyebrow">02 — MODE DE LIVRAISON</div>'+
+        '<div class="tk-co-title">Delivery</div>'+
+        '<div class="tk-co-eyebrow">02 — HOW DO YOU WANT TO RECEIVE IT?</div>'+
         '<div class="tk-radios">'+
           '<label class="tk-radio'+(_d.delivery==='pickup'?' sel':'')+'" data-del="pickup">'+
             '<input type="radio" name="tk-del" value="pickup" '+(_d.delivery==='pickup'?'checked':'')+'>'+
-            '<div><div class="tk-rl">Retrait au club <span style="color:#c4ef3f;font-weight:400;font-size:12px;">GRATUIT</span></div>'+
-            '<div class="tk-rs">Take Off Club · Tunis<br>Disponible dans les 24–48h après confirmation</div></div>'+
+            '<div><div class="tk-rl">Pick up at the club <span style="color:#c4ef3f;font-weight:400;font-size:12px;">FREE</span></div>'+
+            '<div class="tk-rs">Take Off Club · Tunis<br>Ready to collect within 24–48h of order confirmation</div></div>'+
           '</label>'+
           '<label class="tk-radio'+(_d.delivery==='deliver'?' sel':'')+'" data-del="deliver">'+
             '<input type="radio" name="tk-del" value="deliver" '+(_d.delivery==='deliver'?'checked':'')+'>'+
-            '<div><div class="tk-rl">Livraison à domicile <span style="color:rgba(244,245,238,.45);font-weight:400;font-size:12px;">à partir de 9 DT</span></div>'+
-            '<div class="tk-rs">Grand Tunis : 9 DT · Autres régions : 15 DT · 2–4 jours ouvrables</div></div>'+
+            '<div><div class="tk-rl">Deliver to my address <span style="color:rgba(244,245,238,.45);font-weight:400;font-size:12px;">from 9 DT</span></div>'+
+            '<div class="tk-rs">Tunis: 9 DT · Other regions: 15 DT · 2–4 business days</div></div>'+
           '</label>'+
         '</div>'+
         '<div id="tk-afields" style="display:'+(_d.delivery==='deliver'?'block':'none')+';">'+
-          '<label class="tk-lbl">ADRESSE</label>'+
+          '<label class="tk-lbl">STREET ADDRESS</label>'+
           '<input class="tk-inp" id="tk-addr" placeholder="12 Rue de Marseille, Apt 3" value="'+escA(_d.address)+'">'+
           '<div class="tk-g2" style="margin-top:0;">'+
-            '<div><label class="tk-lbl">VILLE / DÉLÉGATION</label><input class="tk-inp" id="tk-city" placeholder="Tunis" value="'+escA(_d.city)+'"></div>'+
-            '<div><label class="tk-lbl">REPÈRE / NOTES</label><input class="tk-inp" id="tk-notes" placeholder="Près Monoprix, portail bleu..." value="'+escA(_d.notes)+'"></div>'+
+            '<div><label class="tk-lbl">CITY / DELEGATION</label><input class="tk-inp" id="tk-city" placeholder="Tunis" value="'+escA(_d.city)+'"></div>'+
+            '<div><label class="tk-lbl">LANDMARK / NOTES</label><input class="tk-inp" id="tk-notes" placeholder="Near Monoprix, blue gate..." value="'+escA(_d.notes)+'"></div>'+
           '</div>'+
         '</div>'+
-        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Retour</button><button class="tk-next-btn" id="tk-next">Continuer →</button></div>';
+        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">Continue →</button></div>';
     }
 
     // ── Step 3: Payment ───────────────────────────────────────────────────────
     if (_step === 3) {
       var walletSubtitle = walletOk
-        ? walletBal.toFixed(3)+' DT disponible — suffisant'
-        : (u ? walletBal.toFixed(3)+' DT disponible — insuffisant pour cette commande' : 'Connectez-vous pour utiliser votre portefeuille');
+        ? walletBal.toFixed(3)+' DT available — sufficient'
+        : (u ? walletBal.toFixed(3)+' DT available — insufficient for this order' : 'Sign in to use your wallet');
       var payOptions = bookingOnly
-        ? radioHTML('pay_at_club', _d.pay, 'Payer au club', 'Règlement à la réception avant ou après votre session', false)+
-          radioHTML('wallet', _d.pay, '◆ Portefeuille Take Off · <span style="color:'+( walletOk?'#c4ef3f':'rgba(244,245,238,.4)')+'">'+walletBal.toFixed(3)+' DT</span>', walletSubtitle, !walletOk)+
-          radioHTML('card', _d.pay, 'Carte bancaire', 'Visa / Mastercard — paiement sécurisé', false)
-        : radioHTML('pay_at_club', _d.pay, 'Payer à la livraison / au club', 'En espèces à la livraison ou au retrait', false)+
-          radioHTML('wallet', _d.pay, '◆ Portefeuille Take Off · <span style="color:'+( walletOk?'#c4ef3f':'rgba(244,245,238,.4)')+'">'+walletBal.toFixed(3)+' DT</span>', walletSubtitle, !walletOk)+
-          radioHTML('card', _d.pay, 'Carte bancaire', 'Visa / Mastercard — paiement sécurisé', false);
-      var stepLabel = bookingOnly ? '02 — MODE DE PAIEMENT' : '03 — MODE DE PAIEMENT';
+        ? radioHTML('pay_at_club', _d.pay, 'Pay at the club', 'Settle at reception before or after your session', false)+
+          radioHTML('wallet', _d.pay, '◆ Club wallet · <span style="color:'+( walletOk?'#c4ef3f':'rgba(244,245,238,.4)')+'">'+walletBal.toFixed(3)+' DT</span>', walletSubtitle, !walletOk)+
+          radioHTML('card', _d.pay, 'Bank card', 'Visa / Mastercard — secure payment', false)
+        : radioHTML('pay_at_club', _d.pay, 'Cash on delivery / at pickup', 'Pay when you collect or when the courier arrives', false)+
+          radioHTML('wallet', _d.pay, '◆ Club wallet · <span style="color:'+( walletOk?'#c4ef3f':'rgba(244,245,238,.4)')+'">'+walletBal.toFixed(3)+' DT</span>', walletSubtitle, !walletOk)+
+          radioHTML('card', _d.pay, 'Bank card', 'Visa / Mastercard — secure payment', false);
+      var stepLabel = bookingOnly ? '02 — HOW DO YOU PAY?' : '03 — HOW DO YOU PAY?';
       var discApplied = _discountAmt > 0;
       inner =
         pip(3)+
-        '<div class="tk-co-title">Paiement</div>'+
+        '<div class="tk-co-title">Payment</div>'+
         '<div class="tk-co-eyebrow">'+stepLabel+'</div>'+
         sbox(!bookingOnly)+
         '<div class="tk-radios">'+payOptions+'</div>'+
         (!bookingOnly ?
           '<div style="margin-top:16px;">'+
-            '<label class="tk-lbl">CODE DE RÉDUCTION</label>'+
+            '<label class="tk-lbl">DISCOUNT CODE</label>'+
             '<div style="display:flex;gap:8px;">'+
-              '<input class="tk-inp" id="tk-disc" placeholder="ex: TAKEOFF10" value="'+escA(_discountCode)+'" style="flex:1;">'+
-              '<button id="tk-disc-apply" style="padding:11px 16px;border-radius:10px;background:'+(discApplied?'rgba(196,239,63,.15)':'rgba(196,239,63,.1)')+';border:1px solid rgba(196,239,63,.3);color:#c4ef3f;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:\'Space Grotesk\',sans-serif;">'+(discApplied?'✓ Appliqué':'Appliquer')+'</button>'+
+              '<input class="tk-inp" id="tk-disc" placeholder="e.g. TAKEOFF10" value="'+escA(_discountCode)+'" style="flex:1;">'+
+              '<button id="tk-disc-apply" style="padding:11px 16px;border-radius:10px;background:'+(discApplied?'rgba(196,239,63,.15)':'rgba(196,239,63,.1)')+';border:1px solid rgba(196,239,63,.3);color:#c4ef3f;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:\'Space Grotesk\',sans-serif;">'+(discApplied?'✓ Applied':'Apply')+'</button>'+
             '</div>'+
-            (discApplied ? '<div style="margin-top:5px;font-family:\'Space Mono\',monospace;font-size:10px;color:#c4ef3f;letter-spacing:.1em;">-'+_discountAmt.toFixed(3)+' DT déduits</div>' : '')+
+            (discApplied ? '<div style="margin-top:5px;font-family:\'Space Mono\',monospace;font-size:10px;color:#c4ef3f;letter-spacing:.1em;">-'+_discountAmt.toFixed(3)+' DT off</div>' : '')+
           '</div>'
         : '')+
-        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Retour</button><button class="tk-next-btn" id="tk-next">Vérifier →</button></div>';
+        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">Review →</button></div>';
     }
 
     // ── Step 4: Review & confirm ──────────────────────────────────────────────
     if (_step === 4) {
       var payLabels = {
-        pay_at_club: bookingOnly ? 'Payer au club' : 'Paiement à la livraison / au club',
-        wallet: 'Portefeuille Take Off ('+walletBal.toFixed(3)+' DT)',
-        card: 'Carte bancaire',
+        pay_at_club: bookingOnly ? 'Pay at the club' : 'Cash on delivery / at pickup',
+        wallet: 'Club wallet ('+walletBal.toFixed(3)+' DT)',
+        card: 'Bank card',
       };
       var itemRows4 = _items.map(function(it){
         return '<div class="tk-srow">'+
@@ -504,34 +504,34 @@
           '<span>'+((it._raw||0)*(it.qty||1)).toFixed(3)+' DT</span>'+
         '</div>';
       }).join('');
-      var stepLabel4 = bookingOnly ? '03 — CONFIRMER VOTRE RÉSERVATION' : '04 — VÉRIFICATION ET PAIEMENT';
-      var ctaLabel = bookingOnly ? 'Confirmer la réservation' : 'Passer la commande';
+      var stepLabel4 = bookingOnly ? '03 — CONFIRM YOUR BOOKING' : '04 — CONFIRM BEFORE PLACING YOUR ORDER';
+      var ctaLabel = bookingOnly ? 'Confirm booking' : 'Place order';
       var reviewRows = bookingOnly
         ? '<div class="tk-rrow"><span class="tk-rkey">CONTACT</span><span class="tk-rval">'+esc(_d.name)+' · '+esc(_d.phone)+'</span></div>'+
-          '<div class="tk-rrow" style="border:none;"><span class="tk-rkey">PAIEMENT</span><span class="tk-rval">'+esc(payLabels[_d.pay]||_d.pay)+'</span></div>'
+          '<div class="tk-rrow" style="border:none;"><span class="tk-rkey">PAYMENT</span><span class="tk-rval">'+esc(payLabels[_d.pay]||_d.pay)+'</span></div>'
         : (function(){
             var delivText = _d.delivery==='pickup'
-              ? 'Retrait au club · <span style="color:#c4ef3f;">Gratuit</span>'
-              : esc(_d.address)+', '+esc(_d.city)+(_d.notes?' ('+esc(_d.notes)+')':'')+'<br><span style="opacity:.55;font-size:12px;">2–4 jours ouvrables · '+cart.getShipping().toFixed(3)+' DT</span>';
+              ? 'Pick up at Take Off Club · <span style="color:#c4ef3f;">FREE</span>'
+              : esc(_d.address)+', '+esc(_d.city)+(_d.notes?' ('+esc(_d.notes)+')':'')+'<br><span style="opacity:.55;font-size:12px;">2–4 business days · '+cart.getShipping().toFixed(3)+' DT</span>';
             return '<div class="tk-rrow"><span class="tk-rkey">CONTACT</span><span class="tk-rval">'+esc(_d.name)+' · '+esc(_d.phone)+'<br><span style="opacity:.55;font-size:12px;">'+esc(_d.email)+'</span></span></div>'+
-              '<div class="tk-rrow"><span class="tk-rkey">LIVRAISON</span><span class="tk-rval">'+delivText+'</span></div>'+
-              '<div class="tk-rrow" style="border:none;"><span class="tk-rkey">PAIEMENT</span><span class="tk-rval">'+esc(payLabels[_d.pay]||_d.pay)+'</span></div>';
+              '<div class="tk-rrow"><span class="tk-rkey">DELIVERY</span><span class="tk-rval">'+delivText+'</span></div>'+
+              '<div class="tk-rrow" style="border:none;"><span class="tk-rkey">PAYMENT</span><span class="tk-rval">'+esc(payLabels[_d.pay]||_d.pay)+'</span></div>';
           })();
       inner =
         pip(4)+
-        '<div class="tk-co-title">Vérification</div>'+
+        '<div class="tk-co-title">Review</div>'+
         '<div class="tk-co-eyebrow">'+stepLabel4+'</div>'+
         '<div class="tk-sbox">'+
           itemRows4+
           '<hr class="tk-sdiv">'+
-          '<div class="tk-srow muted"><span>Sous-total</span><span>'+cart.getSubtotal().toFixed(3)+' DT</span></div>'+
-          (cart.getTimbre()>0?'<div class="tk-srow muted"><span>Timbre fiscal</span><span>'+cart.getTimbre().toFixed(3)+' DT</span></div>':'')+
-          (!bookingOnly?'<div class="tk-srow muted"><span>Livraison</span><span>'+(_d.delivery==='pickup'?'Gratuit':cart.getShipping().toFixed(3)+' DT')+'</span></div>':'')+
-          (cart.getDiscount()>0?'<div class="tk-srow muted" style="color:#c4ef3f;"><span>Réduction ('+esc(_discountCode)+')</span><span>-'+cart.getDiscount().toFixed(3)+' DT</span></div>':'')+
-          '<div class="tk-stotal"><span class="tk-stl">TOTAL COMMANDE</span><span class="tk-stv">'+cart.getTotal().toFixed(3)+' DT</span></div>'+
+          '<div class="tk-srow muted"><span>Subtotal</span><span>'+cart.getSubtotal().toFixed(3)+' DT</span></div>'+
+          (cart.getTimbre()>0?'<div class="tk-srow muted"><span>Fiscal stamp</span><span>'+cart.getTimbre().toFixed(3)+' DT</span></div>':'')+
+          (!bookingOnly?'<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':cart.getShipping().toFixed(3)+' DT')+'</span></div>':'')+
+          (cart.getDiscount()>0?'<div class="tk-srow muted" style="color:#c4ef3f;"><span>Discount ('+esc(_discountCode)+')</span><span>-'+cart.getDiscount().toFixed(3)+' DT</span></div>':'')+
+          '<div class="tk-stotal"><span class="tk-stl">ORDER TOTAL</span><span class="tk-stv">'+cart.getTotal().toFixed(3)+' DT</span></div>'+
         '</div>'+
         reviewRows+
-        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Retour</button><button class="tk-next-btn" id="tk-next">'+ctaLabel+'</button></div>';
+        '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">'+ctaLabel+'</button></div>';
     }
 
     coOv.innerHTML = '<div class="tk-co-card"><button class="tk-co-close" id="tk-co-x">×</button><div class="tk-co-inner">'+inner+'</div></div>';
@@ -543,8 +543,8 @@
       if (s1in) s1in.addEventListener('click', function(){ _hideEl('tk-co-ov'); if(window.takeOffAuth) window.takeOffAuth.openLogin(); });
       document.getElementById('tk-next').addEventListener('click', function(){
         var n=val('tk-name'), p=val('tk-phone'), e=val('tk-email');
-        if (!n.trim()) { flash('tk-name','Veuillez entrer votre nom'); return; }
-        if (!p.trim()) { flash('tk-phone','Veuillez entrer votre numéro de téléphone'); return; }
+        if (!n.trim()) { flash('tk-name','Please enter your name'); return; }
+        if (!p.trim()) { flash('tk-phone','Please enter your phone number'); return; }
         _d.name=n; _d.phone=p; _d.email=e;
         _step = bookingOnly ? 3 : 2;
         renderCheckout();
@@ -570,7 +570,7 @@
           _d.address = val('tk-addr');
           _d.city = val('tk-city') || 'Tunis';
           _d.notes = val('tk-notes');
-          if (!_d.address.trim()) { flash('tk-addr','Veuillez entrer votre adresse'); return; }
+          if (!_d.address.trim()) { flash('tk-addr','Please enter your address'); return; }
         }
         _step=3; renderCheckout();
       });
@@ -594,7 +594,7 @@
         discApplyBtn.addEventListener('click', function(){
           var code = val('tk-disc');
           var ok = applyDiscount(code);
-          if (!ok) { flash('tk-disc', 'Code invalide'); _discountCode=''; _discountAmt=0; }
+          if (!ok) { flash('tk-disc', 'Invalid code'); _discountCode=''; _discountAmt=0; }
           renderCheckout();
         });
       }
