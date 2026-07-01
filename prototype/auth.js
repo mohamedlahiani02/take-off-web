@@ -572,7 +572,18 @@
         '<div id="tk-name-view" style="font-size:15px;color:#f4f5ee;">' + esc(u.name || '') + '</div>' +
         '<div id="tk-name-edit" style="display:none;">' +
           '<input class="tk-inp" id="tk-name-inp" type="text" value="' + esc(u.name || '') + '" style="margin-bottom:8px;">' +
-          '<button id="tk-name-save" class="tk-btn" style="padding:10px;">Save</button>' +
+          '<button id="tk-name-save" class="tk-btn" style="padding:10px;">Save name</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-bottom:16px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">PHONE</div>' +
+          '<button id="tk-edit-phone" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">EDIT</button>' +
+        '</div>' +
+        '<div id="tk-phone-view" style="font-family:\'Space Mono\',monospace;font-size:13px;color:#f4f5ee;">' + esc(u.phone || '—') + '</div>' +
+        '<div id="tk-phone-edit" style="display:none;">' +
+          '<input class="tk-inp" id="tk-phone-inp" type="tel" value="' + esc(u.phone || '') + '" placeholder="+216 XX XXX XXX" style="margin-bottom:8px;">' +
+          '<button id="tk-phone-save" class="tk-btn" style="padding:10px;">Save phone</button>' +
         '</div>' +
       '</div>' +
       '<div style="margin-bottom:16px;">' +
@@ -607,6 +618,29 @@
       document.getElementById('tk-name-view').textContent = newName;
       document.getElementById('tk-name-view').style.display = 'block';
       document.getElementById('tk-name-edit').style.display = 'none';
+    };
+    var editPhoneBtn = document.getElementById('tk-edit-phone');
+    if (editPhoneBtn) {
+      editPhoneBtn.onclick = function () {
+        document.getElementById('tk-phone-view').style.display = 'none';
+        document.getElementById('tk-phone-edit').style.display = 'block';
+      };
+    }
+    var savePhoneBtn = document.getElementById('tk-phone-save');
+    if (savePhoneBtn) savePhoneBtn.onclick = async function () {
+      var raw = (document.getElementById('tk-phone-inp').value || '').trim();
+      var newPhone = normalizePhone(raw);
+      if (!/^\+216[0-9]{8}$/.test(newPhone)) {
+        toast('Enter a valid Tunisian phone (+216 followed by 8 digits).', 2500);
+        return;
+      }
+      var client = api();
+      if (client && client.isOnline()) { try { await client.auth.updateMe({ phone: newPhone }); } catch (e) { toast(e.message || 'Update failed.', 2500); return; } }
+      auth.user.phone = newPhone;
+      storageSet('takeoff_user', auth.user);
+      document.getElementById('tk-phone-view').textContent = newPhone;
+      document.getElementById('tk-phone-view').style.display = 'block';
+      document.getElementById('tk-phone-edit').style.display = 'none';
     };
   }
 
