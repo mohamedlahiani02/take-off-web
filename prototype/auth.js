@@ -51,17 +51,8 @@
           return { ok: false, error: e.message || 'Invalid credentials.' };
         }
       }
-      // offline fallback — match by phone
-      var users = storageGet('takeOffUsers') || {};
-      var normalized = normalizePhone(id);
-      var u = Object.keys(users).map(function (k) { return users[k]; })
-        .filter(function (x) { return x.phone === normalized; })[0];
-      if (!u) return { ok: false, error: 'No account found. Create one first.' };
-      if (u.password !== password) return { ok: false, error: 'Wrong password.' };
-      auth.user = u;
-      storageSet('takeoff_user', auth.user);
-      notify();
-      return { ok: true };
+      // offline — cannot authenticate without network
+      return { ok: false, error: 'No network connection — please try again when online.' };
     },
 
     register: async function (opts) {
@@ -84,16 +75,8 @@
           return { ok: false, error: e.message || 'Registration failed.' };
         }
       }
-      // offline fallback
-      var users = storageGet('takeOffUsers') || {};
-      if (users[email]) return { ok: false, error: 'Account already exists. Sign in instead.' };
-      var u = { email: email, name: name, phone: phone, password: password, tracks: tracks, walletDt: 0, points: 0, createdAt: new Date().toISOString() };
-      users[email] = u;
-      storageSet('takeOffUsers', users);
-      auth.user = u;
-      storageSet('takeoff_user', u);
-      notify();
-      return { ok: true };
+      // offline — cannot register without network
+      return { ok: false, error: 'No network connection — please try again when online.' };
     },
 
     logout: async function () {
@@ -538,7 +521,7 @@
       var statusColor = statusColors[o.status] || 'rgba(244,245,238,.5)';
       var itemsHTML = (o.items || []).map(function (it) {
         return '<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(244,245,238,.65);padding:3px 0;">' +
-          '<span>' + esc(it.productName || it.name || '') + (it.size ? ' (' + it.size + ')' : '') + ' ×' + (it.qty || 1) + '</span>' +
+          '<span>' + esc(it.productName || it.name || '') + (it.size ? ' (' + esc(it.size) + ')' : '') + ' ×' + (it.qty || 1) + '</span>' +
           '<span>' + ((it.unitPriceDt || 0) * (it.qty || 1)) + ' DT</span>' +
         '</div>';
       }).join('');
@@ -590,7 +573,7 @@
       '<div style="margin-bottom:16px;">' +
         '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:6px;">TRACKS</div>' +
         '<div>' + (u.tracks || []).map(function (t) {
-          return '<span style="padding:5px 12px;border-radius:999px;background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;margin-right:6px;">' + t.toUpperCase() + '</span>';
+          return '<span style="padding:5px 12px;border-radius:999px;background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;margin-right:6px;">' + esc(t).toUpperCase() + '</span>';
         }).join('') + '</div>' +
       '</div>' +
       (memberSince ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.35);margin-bottom:20px;">Member since ' + memberSince + '</div>' : '');
@@ -612,9 +595,19 @@
       var newName = (document.getElementById('tk-name-inp').value || '').trim();
       if (!newName) return;
       var client = api();
-      if (client && client.isOnline()) { try { await client.auth.updateMe({ name: newName }); } catch (e) {} }
-      auth.user.name = newName;
-      storageSet('takeoff_user', auth.user);
+      if (client && client.isOnline()) {
+        try {
+          await client.auth.updateMe({ name: newName });
+          auth.user.name = newName;
+          storageSet('takeoff_user', auth.user);
+        } catch (e) {
+          toast(e.message || 'Update failed.', 2500);
+          return;
+        }
+      } else {
+        auth.user.name = newName;
+        storageSet('takeoff_user', auth.user);
+      }
       document.getElementById('tk-uname-disp').textContent = newName;
       document.getElementById('tk-name-view').textContent = newName;
       document.getElementById('tk-name-view').style.display = 'block';

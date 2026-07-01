@@ -5,8 +5,7 @@
 
   function storageGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } }
   function storageSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
-  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function escA(s) { return String(s||'').replace(/"/g,'&quot;'); }
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
   var _sub = [];
   function notify() { _sub.forEach(function(fn){ try{fn();}catch(e){} }); }
@@ -18,8 +17,6 @@
   // Checkout persistent state
   var _step = 1;
   var _orderId = null;
-  var _discountCode = '';
-  var _discountAmt = 0;
   var _d = { name:'', email:'', phone:'', delivery:'pickup', address:'', city:'Tunis', notes:'', pay:'pay_at_club' };
 
   // Snapshots captured before cart.clear() so the success screen can show the real totals
@@ -61,7 +58,17 @@
     open: function() { renderDrawer(); _showEl('tk-cart-overlay'); _animIn('tk-cart-drawer'); },
     close: function() { _animOut('tk-cart-drawer'); _hideEl('tk-cart-overlay'); },
     toggle: function() { var d=document.getElementById('tk-cart-drawer'); d&&d.classList.contains('open')?cart.close():cart.open(); },
-    openCheckout: function() { if(!_items.length) return; _step=1; renderCheckout(); _showEl('tk-co-ov'); },
+    openCheckout: function() {
+      if (!_items.length) return;
+      try {
+        var saved = JSON.parse(sessionStorage.getItem('takeOffCheckout') || 'null');
+        if (saved && saved.step && saved.step !== 'success') {
+          _step = saved.step;
+          _d = Object.assign(_d, saved.d || {});
+        } else { _step = 1; }
+      } catch(e) { _step = 1; }
+      renderCheckout(); _showEl('tk-co-ov');
+    },
     getCount: function() { return _items.reduce(function(a,b){return a+(b.qty||1);},0); },
     getSubtotal: function() { return _items.reduce(function(a,b){return a+(b._raw||0)*(b.qty||1);},0); },
     getShipping: function() {
@@ -73,8 +80,7 @@
       var sub = cart.getSubtotal();
       return (!hasOnlyBookings() && sub >= 10) ? 1 : 0;
     },
-    getDiscount: function() { return _discountAmt; },
-    getTotal: function() { return Math.max(0, cart.getSubtotal() + cart.getShipping() + cart.getTimbre() - _discountAmt); },
+    getTotal: function() { return Math.max(0, cart.getSubtotal() + cart.getShipping() + cart.getTimbre()); },
     getItems: function() { return _items.slice(); },
     subscribe: function(fn) { _sub.push(fn); return function(){ _sub=_sub.filter(function(s){return s!==fn;}); }; },
   };
@@ -284,11 +290,6 @@
   }
 
   // ── Checkout ──────────────────────────────────────────────────────────────
-  function stepper(cur) {
-    var h = '<div class="tk-stepper">';
-    for (var i=1;i<=4;i++) h += '<div class="tk-pip '+(i<cur?'done':i===cur?'act':'')+'"></div>';
-    return h+'</div>';
-  }
 
   function sbox(showDelivery) {
     var rows = _items.map(function(it){
@@ -299,16 +300,14 @@
     }).join('');
     var sub = cart.getSubtotal();
     var timbre = cart.getTimbre();
-    var disc = cart.getDiscount();
     var ship = cart.getShipping();
     var shipLine = showDelivery
       ? '<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':ship.toFixed(3)+' DT')+'</span></div>'
       : '';
     var timbreLine = timbre > 0 ? '<div class="tk-srow muted"><span>Fiscal stamp</span><span>'+timbre.toFixed(3)+' DT</span></div>' : '';
-    var discLine = disc > 0 ? '<div class="tk-srow muted" style="color:#c4ef3f;"><span>Discount ('+esc(_discountCode)+')</span><span>-'+disc.toFixed(3)+' DT</span></div>' : '';
     return '<div class="tk-sbox">'+rows+'<hr class="tk-sdiv">'+
       '<div class="tk-srow muted"><span>Subtotal</span><span>'+sub.toFixed(3)+' DT</span></div>'+
-      timbreLine+shipLine+discLine+
+      timbreLine+shipLine+
       '<div class="tk-stotal"><span class="tk-stl">TOTAL</span><span class="tk-stv">'+cart.getTotal().toFixed(3)+' DT</span></div>'+
     '</div>';
   }
@@ -316,21 +315,10 @@
   function radioHTML(val, current, label, sub, disabled) {
     var sel = val===current && !disabled ? ' sel' : '';
     var dis = disabled ? ' dis' : '';
-    return '<label class="tk-radio'+sel+dis+'" data-val="'+escA(val)+'">'+
-      '<input type="radio" name="tk-pay" value="'+escA(val)+'" '+(val===current?'checked ':'')+( disabled?'disabled':'')+'>'+
+    return '<label class="tk-radio'+sel+dis+'" data-val="'+esc(val)+'">'+
+      '<input type="radio" name="tk-pay" value="'+esc(val)+'" '+(val===current?'checked ':'')+( disabled?'disabled':'')+'>'+
       '<div><div class="tk-rl">'+label+'</div><div class="tk-rs">'+sub+'</div></div>'+
     '</label>';
-  }
-
-  var DEMO_CODES = { 'TAKEOFF10': { pct: 10 }, 'WELCOME': { flat: 5 } };
-  function applyDiscount(code) {
-    var c = (code||'').trim().toUpperCase();
-    var rule = DEMO_CODES[c];
-    if (!rule) { _discountCode=''; _discountAmt=0; return false; }
-    var sub = cart.getSubtotal();
-    _discountCode = c;
-    _discountAmt = rule.pct ? Math.round(sub * rule.pct / 100 * 1000) / 1000 : (rule.flat || 0);
-    return true;
   }
 
   function renderCheckout() {
@@ -393,7 +381,7 @@
       }
 
       coOv.innerHTML = '<div class="tk-co-card"><div class="tk-co-inner">'+inner+'</div></div>';
-      document.getElementById('tk-co-done').addEventListener('click', function(){ _hideEl('tk-co-ov'); });
+      document.getElementById('tk-co-done').addEventListener('click', function(){ clearCheckoutState(); _hideEl('tk-co-ov'); });
       var sl = document.getElementById('tk-s-login');
       if (sl) sl.addEventListener('click', function(){ _hideEl('tk-co-ov'); if(window.takeOffAuth) window.takeOffAuth.openLogin(); });
       return;
@@ -424,14 +412,14 @@
         contactHint+
         sbox(false)+
         '<div class="tk-g2">'+
-          '<div><label class="tk-lbl">FULL NAME</label><input class="tk-inp" id="tk-name" placeholder="Sami Ben Ahmed" value="'+escA(_d.name||(u?u.name||'':''))+'"></div>'+
+          '<div><label class="tk-lbl">FULL NAME</label><input class="tk-inp" id="tk-name" placeholder="Sami Ben Ahmed" value="'+esc(_d.name||(u?u.name||'':''))+'"></div>'+
           '<div>'+
             '<label class="tk-lbl">PHONE <span style="opacity:.4">(WhatsApp OK)</span></label>'+
-            '<input class="tk-inp" id="tk-phone" type="tel" placeholder="+216 XX XXX XXX" value="'+escA(_d.phone||(u?u.phone||'':''))+'">'+
+            '<input class="tk-inp" id="tk-phone" type="tel" placeholder="+216 XX XXX XXX" value="'+esc(_d.phone||(u?u.phone||'':''))+'">'+
             phoneHint+
           '</div>'+
         '</div>'+
-        (!bookingOnly ? '<label class="tk-lbl">EMAIL <span style="opacity:.4">(order confirmation)</span></label><input class="tk-inp" id="tk-email" type="email" placeholder="you@email.com" value="'+escA(_d.email||(u?u.email||'':''))+'">' : '')+
+        (!bookingOnly ? '<label class="tk-lbl">EMAIL <span style="opacity:.4">(order confirmation)</span></label><input class="tk-inp" id="tk-email" type="email" placeholder="you@email.com" value="'+esc(_d.email||(u?u.email||'':''))+'">' : '')+
         (!u?'<div class="tk-nudge">Have an account? <a id="tk-s1-in">Sign in</a> to pre-fill your details.</div>':'')+
         '<div class="tk-actions"><button class="tk-next-btn" id="tk-next">Continue →</button></div>';
     }
@@ -456,10 +444,10 @@
         '</div>'+
         '<div id="tk-afields" style="display:'+(_d.delivery==='deliver'?'block':'none')+';">'+
           '<label class="tk-lbl">STREET ADDRESS</label>'+
-          '<input class="tk-inp" id="tk-addr" placeholder="12 Rue de Marseille, Apt 3" value="'+escA(_d.address)+'">'+
+          '<input class="tk-inp" id="tk-addr" placeholder="12 Rue de Marseille, Apt 3" value="'+esc(_d.address)+'">'+
           '<div class="tk-g2" style="margin-top:0;">'+
-            '<div><label class="tk-lbl">CITY / DELEGATION</label><input class="tk-inp" id="tk-city" placeholder="Tunis" value="'+escA(_d.city)+'"></div>'+
-            '<div><label class="tk-lbl">LANDMARK / NOTES</label><input class="tk-inp" id="tk-notes" placeholder="Near Monoprix, blue gate..." value="'+escA(_d.notes)+'"></div>'+
+            '<div><label class="tk-lbl">CITY / DELEGATION</label><input class="tk-inp" id="tk-city" placeholder="Tunis" value="'+esc(_d.city)+'"></div>'+
+            '<div><label class="tk-lbl">LANDMARK / NOTES</label><input class="tk-inp" id="tk-notes" placeholder="Near Monoprix, blue gate..." value="'+esc(_d.notes)+'"></div>'+
           '</div>'+
         '</div>'+
         '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">Continue →</button></div>';
@@ -478,23 +466,12 @@
           radioHTML('wallet', _d.pay, '◆ Club wallet · <span style="color:'+( walletOk?'#c4ef3f':'rgba(244,245,238,.4)')+'">'+walletBal.toFixed(3)+' DT</span>', walletSubtitle, !walletOk)+
           radioHTML('card', _d.pay, 'Bank card', 'Visa / Mastercard — secure payment', false);
       var stepLabel = bookingOnly ? '02 — HOW DO YOU PAY?' : '03 — HOW DO YOU PAY?';
-      var discApplied = _discountAmt > 0;
       inner =
         pip(3)+
         '<div class="tk-co-title">Payment</div>'+
         '<div class="tk-co-eyebrow">'+stepLabel+'</div>'+
         sbox(!bookingOnly)+
         '<div class="tk-radios">'+payOptions+'</div>'+
-        (!bookingOnly ?
-          '<div style="margin-top:16px;">'+
-            '<label class="tk-lbl">DISCOUNT CODE</label>'+
-            '<div style="display:flex;gap:8px;">'+
-              '<input class="tk-inp" id="tk-disc" placeholder="e.g. TAKEOFF10" value="'+escA(_discountCode)+'" style="flex:1;">'+
-              '<button id="tk-disc-apply" style="padding:11px 16px;border-radius:10px;background:'+(discApplied?'rgba(196,239,63,.15)':'rgba(196,239,63,.1)')+';border:1px solid rgba(196,239,63,.3);color:#c4ef3f;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:\'Space Grotesk\',sans-serif;">'+(discApplied?'✓ Applied':'Apply')+'</button>'+
-            '</div>'+
-            (discApplied ? '<div style="margin-top:5px;font-family:\'Space Mono\',monospace;font-size:10px;color:#c4ef3f;letter-spacing:.1em;">-'+_discountAmt.toFixed(3)+' DT off</div>' : '')+
-          '</div>'
-        : '')+
         '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">Review →</button></div>';
     }
 
@@ -534,7 +511,6 @@
           '<div class="tk-srow muted"><span>Subtotal</span><span>'+cart.getSubtotal().toFixed(3)+' DT</span></div>'+
           (cart.getTimbre()>0?'<div class="tk-srow muted"><span>Fiscal stamp</span><span>'+cart.getTimbre().toFixed(3)+' DT</span></div>':'')+
           (!bookingOnly?'<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':cart.getShipping().toFixed(3)+' DT')+'</span></div>':'')+
-          (cart.getDiscount()>0?'<div class="tk-srow muted" style="color:#c4ef3f;"><span>Discount ('+esc(_discountCode)+')</span><span>-'+cart.getDiscount().toFixed(3)+' DT</span></div>':'')+
           '<div class="tk-stotal"><span class="tk-stl">ORDER TOTAL</span><span class="tk-stv">'+cart.getTotal().toFixed(3)+' DT</span></div>'+
         '</div>'+
         reviewRows+
@@ -543,7 +519,7 @@
     }
 
     coOv.innerHTML = '<div class="tk-co-card"><button class="tk-co-close" id="tk-co-x">×</button><div class="tk-co-inner">'+inner+'</div></div>';
-    document.getElementById('tk-co-x').addEventListener('click', function(){ _hideEl('tk-co-ov'); });
+    document.getElementById('tk-co-x').addEventListener('click', function(){ clearCheckoutState(); _hideEl('tk-co-ov'); });
 
     // ── Step wiring ───────────────────────────────────────────────────────────
     if (_step === 1) {
@@ -555,6 +531,7 @@
         if (!p.trim()) { flash('tk-phone','Please enter your phone number'); return; }
         _d.name=n; _d.phone=p; _d.email=e;
         _step = bookingOnly ? 3 : 2;
+        saveCheckoutState();
         renderCheckout();
       });
     }
@@ -572,7 +549,7 @@
       document.querySelectorAll('.tk-radio[data-del]').forEach(function(r){
         r.addEventListener('click', function(){ setDel(r.getAttribute('data-del')); });
       });
-      document.getElementById('tk-back').addEventListener('click', function(){ _step=1; renderCheckout(); });
+      document.getElementById('tk-back').addEventListener('click', function(){ _step=1; saveCheckoutState(); renderCheckout(); });
       document.getElementById('tk-next').addEventListener('click', function(){
         if (_d.delivery==='deliver') {
           _d.address = val('tk-addr');
@@ -580,7 +557,7 @@
           _d.notes = val('tk-notes');
           if (!_d.address.trim()) { flash('tk-addr','Please enter your address'); return; }
         }
-        _step=3; renderCheckout();
+        _step=3; saveCheckoutState(); renderCheckout();
       });
     }
 
@@ -597,26 +574,18 @@
           if (inp && !inp.disabled) setPay(r.getAttribute('data-val'));
         });
       });
-      var discApplyBtn = document.getElementById('tk-disc-apply');
-      if (discApplyBtn) {
-        discApplyBtn.addEventListener('click', function(){
-          var code = val('tk-disc');
-          var ok = applyDiscount(code);
-          if (!ok) { flash('tk-disc', 'Invalid code'); _discountCode=''; _discountAmt=0; }
-          renderCheckout();
-        });
-      }
       document.getElementById('tk-back').addEventListener('click', function(){
         _step = bookingOnly ? 1 : 2;
+        saveCheckoutState();
         renderCheckout();
       });
       document.getElementById('tk-next').addEventListener('click', function(){
-        _step=4; renderCheckout();
+        _step=4; saveCheckoutState(); renderCheckout();
       });
     }
 
     if (_step === 4) {
-      document.getElementById('tk-back').addEventListener('click', function(){ _step=3; renderCheckout(); });
+      document.getElementById('tk-back').addEventListener('click', function(){ _step=3; saveCheckoutState(); renderCheckout(); });
       document.getElementById('tk-next').addEventListener('click', async function(){
         var btn = document.getElementById('tk-next');
         if (btn) { btn.disabled = true; btn.textContent = '...'; }
@@ -633,9 +602,9 @@
               deliveryAddress: _d.delivery === 'deliver' ? { addr: _d.address, city: _d.city, notes: _d.notes || '' } : null,
               paymentMethod: payMethodMap[_d.pay] || 'COD',
               deliveryFeeDt: cart.getShipping(),
-              discountCode: _discountCode || null,
+              discountCode: null,
               contact: { name: _d.name, email: _d.email, phone: _d.phone },
-              items: its.filter(function(it){ return it.kind !== 'pack'; }).map(function(it){
+              items: its.filter(function(it){ return it.kind !== 'pack' && it.kind !== 'booking'; }).map(function(it){
                 return {
                   productId: it.productId || null,
                   productName: it.name || it.n,
@@ -647,6 +616,17 @@
             };
             var order = await client.orders.place(payload);
             _orderId = order && order.orderRef ? order.orderRef : ('TKO-' + Date.now().toString(36).toUpperCase());
+            // Redirect to Konnect for card payments
+            if (_d.pay === 'card' && client.payments && client.isOnline()) {
+              try {
+                var intent = await client.payments.initiate('order', (order.id || _orderId).toString(), cart.getTotal(), window.location.origin + '/payment/return.html');
+                if (intent && intent.paymentUrl && intent.paymentUrl.indexOf('stub=true') === -1) {
+                  clearCheckoutState();
+                  window.location.href = intent.paymentUrl;
+                  return;
+                }
+              } catch(e) { /* fall through — show success in stub/offline mode */ }
+            }
           } catch (e) {
             if (btn) { btn.disabled = false; btn.textContent = ctaLabel; }
             var errEl = document.getElementById('tk-order-err');
@@ -662,12 +642,18 @@
         _confirmedTimbre = cart.getTimbre();
         _confirmedShipping = cart.getShipping();
         cart.clear();
-        _step = 'success'; renderCheckout();
+        _step = 'success'; clearCheckoutState(); renderCheckout();
       });
     }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+  function saveCheckoutState() {
+    try { sessionStorage.setItem('takeOffCheckout', JSON.stringify({ step: _step, d: _d })); } catch(e) {}
+  }
+  function clearCheckoutState() {
+    try { sessionStorage.removeItem('takeOffCheckout'); } catch(e) {}
+  }
   function val(id) { var el=document.getElementById(id); return el?el.value:''; }
   function flash(id, msg) {
     var el=document.getElementById(id);
