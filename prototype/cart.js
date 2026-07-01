@@ -22,6 +22,12 @@
   var _discountAmt = 0;
   var _d = { name:'', email:'', phone:'', delivery:'pickup', address:'', city:'Tunis', notes:'', pay:'pay_at_club' };
 
+  // Snapshots captured before cart.clear() so the success screen can show the real totals
+  var _confirmedTotal = 0;
+  var _confirmedItems = [];
+  var _confirmedTimbre = 0;
+  var _confirmedShipping = 0;
+
   // True when every item in the cart is a court booking or pack (no physical products)
   function hasOnlyBookings() {
     return _items.length > 0 && _items.every(function(it) {
@@ -341,8 +347,9 @@
 
     // ── Success ──────────────────────────────────────────────────────────────
     if (_step === 'success') {
+      total = _confirmedTotal;
       var refId = _orderId || ('TKO-'+Date.now().toString(36).toUpperCase());
-      var itemRows = _items.map(function(it){
+      var itemRows = _confirmedItems.map(function(it){
         return '<div class="tk-srow">'+
           '<span>'+esc(it.name)+(it.size?' · '+esc(it.size):'')+(it.qty>1?' × '+it.qty:'')+'</span>'+
           '<span style="color:#c4ef3f;">'+((it._raw||0)*(it.qty||1))+' DT</span>'+
@@ -374,12 +381,12 @@
           '<div class="tk-sbox" style="text-align:left;margin-bottom:16px;">'+
             itemRows+
             '<hr class="tk-sdiv">'+
-            (cart.getTimbre()>0?'<div class="tk-srow muted"><span>Fiscal stamp</span><span>'+cart.getTimbre().toFixed(3)+' DT</span></div>':'')+
-            '<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':cart.getShipping().toFixed(3)+' DT')+'</span></div>'+
+            (_confirmedTimbre>0?'<div class="tk-srow muted"><span>Fiscal stamp</span><span>'+_confirmedTimbre.toFixed(3)+' DT</span></div>':'')+
+            '<div class="tk-srow muted"><span>Delivery</span><span>'+(_d.delivery==='pickup'?'FREE':_confirmedShipping.toFixed(3)+' DT')+'</span></div>'+
             '<div class="tk-stotal"><span class="tk-stl">TOTAL PAID</span><span class="tk-stv">'+total.toFixed(3)+' DT</span></div>'+
           '</div>'+
           '<div style="font-size:13px;color:rgba(244,245,238,.6);line-height:1.65;margin-bottom:18px;">'+delivInfo+
-            (_d.delivery!=='pickup'?'<br><span style="opacity:.6">Estimated: 2–4 business days · '+cart.getShipping().toFixed(3)+' DT delivery</span>':'')+'</div>'+
+            (_d.delivery!=='pickup'?'<br><span style="opacity:.6">Estimated: 2–4 business days · '+_confirmedShipping.toFixed(3)+' DT delivery</span>':'')+'</div>'+
           (!u?'<div class="tk-nudge" style="margin-bottom:18px;">No account yet? <a id="tk-s-login">Create one</a> to track orders and manage your bookings.</div>':'')+
           '<button class="tk-next-btn" id="tk-co-done">Done</button>'+
         '</div>';
@@ -531,6 +538,7 @@
           '<div class="tk-stotal"><span class="tk-stl">ORDER TOTAL</span><span class="tk-stv">'+cart.getTotal().toFixed(3)+' DT</span></div>'+
         '</div>'+
         reviewRows+
+        '<div id="tk-order-err" style="display:none;color:#f4a0a0;font-size:13px;margin:8px 0;text-align:center;"></div>'+
         '<div class="tk-actions"><button class="tk-back-btn" id="tk-back">← Back</button><button class="tk-next-btn" id="tk-next">'+ctaLabel+'</button></div>';
     }
 
@@ -640,12 +648,19 @@
             var order = await client.orders.place(payload);
             _orderId = order && order.orderRef ? order.orderRef : ('TKO-' + Date.now().toString(36).toUpperCase());
           } catch (e) {
-            _orderId = 'TKO-' + Date.now().toString(36).toUpperCase();
+            if (btn) { btn.disabled = false; btn.textContent = ctaLabel; }
+            var errEl = document.getElementById('tk-order-err');
+            if (errEl) { errEl.textContent = 'Couldn\'t place order — please try again.'; errEl.style.display = 'block'; }
+            return;
           }
         } else {
           _orderId = 'TKO-' + Date.now().toString(36).toUpperCase();
         }
 
+        _confirmedTotal = cart.getTotal();
+        _confirmedItems = _items.slice();
+        _confirmedTimbre = cart.getTimbre();
+        _confirmedShipping = cart.getShipping();
         cart.clear();
         _step = 'success'; renderCheckout();
       });
