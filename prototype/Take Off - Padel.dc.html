@@ -857,6 +857,8 @@ class Component extends DCLogic {
     const coachModal = Object.assign({}, rawModal);
 
     // Packs plans
+    const cmsPlansEarly = (this.state._cms || {}).plans || {};
+    const plansCmsItems = cmsPlansEarly.items || [];
     const packsData = [
       { id: 'dropin', name: 'Drop-in', rawPrice: 20, matches: 1, months: 0, kicker: 'SANS ENGAGEMENT', price: '20', per: 'DT / match', accent: '#0a1733', bg: '#f4f5ee', fg: '#0a1733', bd: 'transparent', popular: null, feats: ['Un share, une session', 'Sans abonnement', 'Invités bienvenus', 'Matériel en location'], ctaLabel: 'Book now', btnBg: '#0a1733', btnFg: '#c4ef3f', href: '#book' },
       { id: 'pack10', name: 'Pack 10', rawPrice: 190, matches: 10, months: 3, kicker: 'ÉCONOMISEZ 5%', price: '190', per: 'DT · 10 matchs', accent: '#c4ef3f', bg: '#0f1f44', fg: '#fff', bd: 'rgba(196,239,63,.3)', popular: true, feats: ['10 matchs · économisez 5%', 'Valable 3 mois', 'Priorité réservation', 'Rechargeable'], ctaLabel: 'Get the pack', btnBg: '#c4ef3f', btnFg: '#0a1733' },
@@ -962,7 +964,6 @@ class Component extends DCLogic {
 
     const plansKicker = cmsPlans.kicker || '07 — PADEL PACKS';
     const plansHeading = cmsPlans.heading || 'Play more,\npay less';
-    const plansCmsItems = cmsPlans.items || [];
 
     const coachingFormKicker = cmsCoachingForm.kicker || '08 — COACHING ENQUIRY';
     const coachingFormHeading = cmsCoachingForm.heading || 'Book a coaching session';
