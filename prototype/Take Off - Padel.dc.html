@@ -262,12 +262,17 @@
 
   <!-- ░ TOURNAMENTS ░ -->
   <div id="tournaments" style="padding:9vh 5vw; background:#0a1733;">
-    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">02b — TOURNAMENTS</div>
-    <h2 class="anton" style="margin:14px 0 42px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff; max-width:860px;">Cups, americanos &amp; seasonal cups</h2>
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">{{ tournamentsKicker }}</div>
+    <h2 class="anton" style="margin:14px 0 42px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff; max-width:860px;">{{ tournamentsHeading }}</h2>
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px;">
       <sc-for list="{{ tournaments }}" as="t" hint-placeholder-count="3">
         <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.3); border-radius:20px; overflow:hidden; display:flex; flex-direction:column;">
-          <image-slot id="{{ t.slot }}" placeholder="Drop tournament photo" style="width:100%; height:140px; display:block;"></image-slot>
+          <sc-if value="{{ t.hasPhoto }}" hint-placeholder-val="">
+            <img src="{{ t.photoUrl }}" style="width:100%; height:140px; object-fit:cover; display:block;">
+          </sc-if>
+          <sc-if value="{{ t.noPhoto }}" hint-placeholder-val="">
+            <image-slot id="{{ t.slot }}" placeholder="Drop tournament photo" style="width:100%; height:140px; display:block;"></image-slot>
+          </sc-if>
           <div style="padding:22px; flex:1; display:flex; flex-direction:column; gap:14px;">
             <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
               <span style="padding:5px 12px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-family:'Space Mono'; font-size:10px; letter-spacing:.12em; font-weight:700;">{{ t.date }}</span>
@@ -297,10 +302,11 @@
   <div id="coaches" style="padding:9vh 5vw; background:#f4f5ee; color:#0a1733;">
     <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:42px;">
       <div>
-        <h2 class="anton" style="margin:0; font-size:clamp(40px,6.5vw,92px); line-height:.86;">Meet the<br>coaches behind<br><span style="color:#6a8a16;">champions</span></h2>
+        <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16; margin-bottom:14px;">{{ coachesKicker }}</div>
+        <h2 class="anton" style="margin:0; font-size:clamp(40px,6.5vw,92px); line-height:.86;">{{ coachesHeading }}</h2>
       </div>
       <div style="display:flex; flex-direction:column; align-items:flex-end; gap:16px;">
-        <p style="max-width:300px; font-size:14px; line-height:1.6; color:rgba(10,23,51,.6); margin:0;">Elite padel trainers dedicated to building skill, precision, and winning confidence.</p>
+        <p style="max-width:300px; font-size:14px; line-height:1.6; color:rgba(10,23,51,.6); margin:0;">{{ coachesDescription }}</p>
         <a href="Take Off - Coaches.dc.html" style="font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:#6a8a16; text-decoration:underline; cursor:pointer;">See all coaches →</a>
       </div>
     </div>
@@ -355,8 +361,8 @@
   <div id="shop" style="padding:9vh 5vw; background:#eceadf; color:#0a1733;">
     <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:40px;">
       <div>
-        <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16;">03 — THE PRO SHOP</div>
-        <h2 class="anton" style="margin:14px 0 0; font-size:clamp(40px,6vw,86px); line-height:.9;">Gear up</h2>
+        <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16;">{{ shopKicker }}</div>
+        <h2 class="anton" style="margin:14px 0 0; font-size:clamp(40px,6vw,86px); line-height:.9;">{{ shopHeading }}</h2>
       </div>
       <a href="Take Off - Store.dc.html" style="display:flex; align-items:center; gap:10px; padding:13px 22px; border-radius:999px; background:#0a1733; color:#c4ef3f; font-weight:600; cursor:pointer; text-decoration:none;" class="lift">View more →</a>
     </div>
@@ -385,8 +391,8 @@
 
   <!-- ░ PACKS ░ -->
   <div id="plans" style="padding:9vh 5vw; background:#0a1733;">
-    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">04 — PADEL PACKS</div>
-    <h2 class="anton" style="margin:14px 0 42px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff;">Play more,<br>pay less</h2>
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f;">{{ plansKicker }}</div>
+    <h2 class="anton" style="margin:14px 0 42px; font-size:clamp(40px,6vw,86px); line-height:.9; color:#fff; white-space:pre-line;">{{ plansHeading }}</h2>
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px;">
       <sc-for list="{{ plans }}" as="pl" hint-placeholder-count="4">
         <div class="lift" style="background:{{ pl.bg }}; border:1px solid {{ pl.bd }}; border-radius:22px; padding:30px; display:flex; flex-direction:column; gap:16px; color:{{ pl.fg }}; position:relative;">
@@ -412,12 +418,72 @@
     </div>
   </div>
 
+  <!-- ░ COACHING FORM ░ -->
+  <div id="coaching-form" style="padding:9vh 5vw; background:#0c1c3f;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:start; max-width:1100px; margin:0 auto;">
+      <div>
+        <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">{{ coachingFormKicker }}</div>
+        <h2 class="anton" style="margin:0 0 18px; font-size:clamp(36px,5vw,72px); line-height:.9; color:#fff;">{{ coachingFormHeading }}</h2>
+        <p style="font-size:15px; line-height:1.65; color:rgba(244,245,238,.65); margin:0 0 28px;">{{ coachingFormDescription }}</p>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <sc-for list="{{ coachingFormBullets }}" as="b" hint-placeholder-count="3">
+            <div style="display:flex; align-items:center; gap:12px; font-size:14px; color:rgba(244,245,238,.8);"><span style="color:#c4ef3f; font-weight:700; flex-shrink:0;">✓</span> {{ b }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#0a1733; border:1px solid rgba(196,239,63,.18); border-radius:22px; padding:34px;">
+        <sc-if value="{{ coachFormNotSubmitted }}" hint-placeholder-val="">
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div>
+                <label style="display:block; font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.5); margin-bottom:6px;">LAST NAME</label>
+                <input id="cf-nom" type="text" placeholder="Lahiani" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(196,239,63,.2); background:rgba(255,255,255,.05); color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; box-sizing:border-box; outline:none;">
+              </div>
+              <div>
+                <label style="display:block; font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.5); margin-bottom:6px;">FIRST NAME</label>
+                <input id="cf-prenom" type="text" placeholder="Mohamed" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(196,239,63,.2); background:rgba(255,255,255,.05); color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; box-sizing:border-box; outline:none;">
+              </div>
+            </div>
+            <div>
+              <label style="display:block; font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.5); margin-bottom:6px;">PHONE</label>
+              <input id="cf-tel" type="tel" placeholder="+216 XX XXX XXX" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(196,239,63,.2); background:rgba(255,255,255,.05); color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; box-sizing:border-box; outline:none;">
+            </div>
+            <div>
+              <label style="display:block; font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.5); margin-bottom:6px;">EMAIL</label>
+              <input id="cf-email" type="email" placeholder="you@example.com" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(196,239,63,.2); background:rgba(255,255,255,.05); color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; box-sizing:border-box; outline:none;">
+            </div>
+            <div>
+              <label style="display:block; font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.5); margin-bottom:10px;">SESSION TYPE</label>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <sc-for list="{{ coursTypes }}" as="ct" hint-placeholder-count="2">
+                  <div onClick="{{ ct.toggle }}" style="padding:10px 20px; border-radius:999px; border:1px solid rgba(196,239,63,.4); background:{{ ct.bg }}; color:{{ ct.fg }}; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em; cursor:pointer;">{{ ct.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div onClick="{{ submitCoachForm }}" style="padding:15px; border-radius:13px; text-align:center; font-weight:700; font-size:15px; cursor:pointer; background:#c4ef3f; color:#0a1733; margin-top:4px;" class="lift">Send enquiry →</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ coachFormSubmitted }}" hint-placeholder-val="">
+          <div style="text-align:center; padding:40px 20px;">
+            <div style="font-size:42px; margin-bottom:16px;">✓</div>
+            <div class="anton" style="font-size:28px; color:#c4ef3f; margin-bottom:10px;">Sent!</div>
+            <p style="color:rgba(244,245,238,.6); font-size:14px; line-height:1.6;">We'll be in touch within 24 h to schedule your session.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
   <!-- ░ CTA ░ -->
   <div style="position:relative; padding:13vh 5vw; background:#1b4dd1; overflow:hidden;">
+    <sc-if value="{{ ctaHasPhoto }}" hint-placeholder-val="">
+      <img src="{{ ctaPhotoUrl }}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.35;">
+    </sc-if>
     <div style="position:absolute; inset:0; background:radial-gradient(80% 120% at 100% 0%, rgba(196,239,63,.3), transparent 50%);"></div>
     <div style="position:relative; z-index:2; text-align:center;">
-      <h2 class="anton" style="margin:0; font-size:clamp(56px,11vw,180px); line-height:.84; color:#fff;">Ready to<br>play<span style="color:#c4ef3f;">?</span></h2>
-      <a href="#book" style="margin-top:34px; display:inline-flex; align-items:center; gap:14px; padding:17px 16px 17px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:17px;" class="lift">Book your court <span style="display:grid; place-items:center; width:36px; height:36px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
+      <h2 class="anton" style="margin:0; font-size:clamp(56px,11vw,180px); line-height:.84; color:#fff; white-space:pre-line;">{{ ctaHeadline }}</h2>
+      <p style="margin:20px auto 0; font-size:clamp(15px,1.3vw,20px); color:rgba(244,245,238,.75); max-width:520px; line-height:1.55;">{{ ctaSubtitle }}</p>
+      <a href="#book" style="margin-top:34px; display:inline-flex; align-items:center; gap:14px; padding:17px 16px 17px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:17px;" class="lift">{{ ctaButtonLabel }} <span style="display:grid; place-items:center; width:36px; height:36px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
     </div>
   </div>
 
@@ -759,11 +825,6 @@ class Component extends DCLogic {
       { date: 'AUG 02-04', title: 'Take Off Cup', format: 'KNOCKOUT · DOUBLES', prize: 'Cup + Pro racket prize pool', filled: 14, total: 32, slot: 'pad-tourn-2' },
       { date: 'SEP 20', title: 'Night Mixed', format: 'AMERICANO · MIXED', prize: '300 DT cash + bottles', filled: 8, total: 24, slot: 'pad-tourn-3' },
     ];
-    const tournaments = tournData.map(t => Object.assign({}, t, {
-      pct: Math.round(t.filled / t.total * 100),
-      signup: () => this._signupTournament(t),
-    }));
-
     const authUser = window.takeOffAuth && window.takeOffAuth.user;
 
     // Coaches with extended data
@@ -802,7 +863,14 @@ class Component extends DCLogic {
       { id: 'pack25', name: 'Pack 25', rawPrice: 450, matches: 25, months: 6, kicker: 'ÉCONOMISEZ 10%', price: '450', per: 'DT · 25 matchs', accent: '#c4ef3f', bg: '#0f1f44', fg: '#fff', bd: 'rgba(196,239,63,.2)', popular: null, feats: ['25 matchs · économisez 10%', 'Valable 6 mois', 'Coaching -10%', 'Transferrable une fois'], ctaLabel: 'Get the pack', btnBg: '#c4ef3f', btnFg: '#0a1733' },
       { id: 'pack50', name: 'Pack 50', rawPrice: 800, matches: 50, months: 12, kicker: 'ÉCONOMISEZ 20%', price: '800', per: 'DT · 50 matchs', accent: '#c4ef3f', bg: '#0f1f44', fg: '#fff', bd: 'rgba(196,239,63,.2)', popular: null, feats: ['50 matchs · économisez 20%', 'Valable 12 mois', 'Coaching -15% · Shop -10%', 'Invite 1 guest / mois'], ctaLabel: 'Get the pack', btnBg: '#c4ef3f', btnFg: '#0a1733' },
     ];
-    const plans = packsData.map(pk => Object.assign({}, pk, { cta: pk.href ? () => { window.location.hash = pk.href.slice(1); } : () => this._buyPack(pk) }));
+    const plans = packsData.map((pk, i) => {
+      const ci = plansCmsItems[i] || {};
+      const name = ci.name || pk.name;
+      const price = ci.price || pk.price;
+      const per = ci.unit || pk.per;
+      const feats = (ci.features && ci.features.length) ? ci.features : pk.feats;
+      return Object.assign({}, pk, { name, price, per, feats, cta: pk.href ? () => { window.location.hash = pk.href.slice(1); } : () => this._buyPack(pk) });
+    });
 
     // Coaching form
     const coursTypes = [
@@ -830,6 +898,12 @@ class Component extends DCLogic {
     const cmsHero = cms.hero || {};
     const cmsMtm = cms.more_than_a_match || {};
     const cmsPartners = cms.partners || {};
+    const cmsTournaments = cms.tournaments || {};
+    const cmsCoaches = cms.coaches || {};
+    const cmsShop = cms.shop || {};
+    const cmsPlans = cms.plans || {};
+    const cmsCoachingForm = cms.coachingForm || {};
+    const cmsCta = cms.cta || {};
 
     const heroKicker = cmsHero.kicker || 'TAKE OFF CLUB — PADEL · TUNIS';
     const heroHeadline = cmsHero.headline || 'Own the\nnight court.';
@@ -863,10 +937,57 @@ class Component extends DCLogic {
       logoUrl: p.logoUrl || '', hasLogo: p.logoUrl ? true : null, noLogo: p.logoUrl ? null : true,
     }));
 
+    const tournamentsKicker = cmsTournaments.kicker || '04 — COMPETE';
+    const tournamentsHeading = cmsTournaments.heading || 'Cups, americanos & seasonal cups';
+    const tournCmsItems = cmsTournaments.items || [];
+    const tournaments = tournData.map((t, i) => {
+      const ci = tournCmsItems[i] || {};
+      return Object.assign({}, t, {
+        title: ci.name || t.title,
+        date: ci.date || t.date,
+        photoUrl: ci.photoUrl || '',
+        hasPhoto: ci.photoUrl ? true : null,
+        noPhoto: ci.photoUrl ? null : true,
+        pct: Math.round(t.filled / t.total * 100),
+        signup: () => this._signupTournament(t),
+      });
+    });
+
+    const coachesKicker = cmsCoaches.kicker || '05 — COACHING';
+    const coachesHeading = cmsCoaches.heading || 'Train with the best';
+    const coachesDescription = cmsCoaches.description || 'Elite padel trainers dedicated to building skill, precision, and winning confidence.';
+
+    const shopKicker = cmsShop.kicker || '06 — SHOP';
+    const shopHeading = cmsShop.heading || 'Gear up';
+
+    const plansKicker = cmsPlans.kicker || '07 — PADEL PACKS';
+    const plansHeading = cmsPlans.heading || 'Play more,\npay less';
+    const plansCmsItems = cmsPlans.items || [];
+
+    const coachingFormKicker = cmsCoachingForm.kicker || '08 — COACHING ENQUIRY';
+    const coachingFormHeading = cmsCoachingForm.heading || 'Book a coaching session';
+    const coachingFormDescription = cmsCoachingForm.description || 'Private or group sessions with our certified padel coaches. Tell us what you need and we\'ll get back within 24 h.';
+    const coachingFormBullets = (cmsCoachingForm.bullets && cmsCoachingForm.bullets.length)
+      ? cmsCoachingForm.bullets
+      : ['Private 1-on-1 sessions', 'Group coaching (up to 4)', 'Video analysis available'];
+
+    const ctaHeadline = cmsCta.headline || 'Ready to\nplay?';
+    const ctaSubtitle = cmsCta.subtitle || 'Book a court in seconds, join a tournament, or grab a session with a pro.';
+    const ctaButtonLabel = cmsCta.buttonLabel || 'Book your court';
+    const ctaPhotoUrl = cmsCta.photoUrl || '';
+    const ctaHasPhoto = ctaPhotoUrl ? true : null;
+    const ctaNoPhoto = ctaPhotoUrl ? null : true;
+
     return {
       heroKicker, heroHeadline, heroSubtitle, heroCtaLabel,
       mtmKicker, mtmHeading,
       partnersKicker, partnersHeading, partnersFooter,
+      tournamentsKicker, tournamentsHeading,
+      coachesKicker, coachesHeading, coachesDescription,
+      shopKicker, shopHeading,
+      plansKicker, plansHeading,
+      coachingFormKicker, coachingFormHeading, coachingFormDescription, coachingFormBullets,
+      ctaHeadline, ctaSubtitle, ctaButtonLabel, ctaPhotoUrl, ctaHasPhoto, ctaNoPhoto,
       loaderRef: this.loaderRef,
       heroStats,
       dates: dateVals, courts,
@@ -882,15 +1003,12 @@ class Component extends DCLogic {
       stopCoachProp: (e) => { if (e && e.stopPropagation) e.stopPropagation(); },
       products,
       plans,
-      // coaching form
       coachFormSubmitted: this.state.coachFormDone ? true : null,
       coachFormNotSubmitted: this.state.coachFormDone ? null : true,
       coursTypes, showGroupField,
       availSlots, availDays,
       submitCoachForm: () => this._submitCoachForm(),
-      // partners
       partners,
-      // cart / nav
       cartCount,
       openCart: () => window.takeOffCart && window.takeOffCart.open(),
       openTakeOffMenu: () => window.takeOffMenu && window.takeOffMenu.open('padel'),
