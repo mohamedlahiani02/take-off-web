@@ -143,6 +143,15 @@
       return left <= 0;
     },
 
+    refreshWallet: async function () {
+      var client = api();
+      if (!client || !client.isOnline() || !auth.user) return;
+      try {
+        var user = await client.auth.me();
+        if (user) { auth.user = user; storageSet('takeoff_user', user); notify(); }
+      } catch (e) {}
+    },
+
     requireAuth: function (cb) {
       if (auth.user) { cb(); return; }
       _pendingCb = cb;
@@ -311,6 +320,19 @@
     document.addEventListener('keydown', onEscDrawer);
     // pre-fetch data for current tab
     fetchTabData(drawerTab);
+    // refresh wallet balance from server — update display in-place without rebuilding drawer
+    (function () {
+      var client = api();
+      if (!client || !client.isOnline()) return;
+      client.auth.me().then(function (user) {
+        if (!user) return;
+        auth.user = user;
+        storageSet('takeoff_user', user);
+        notify();
+        var walletEl = drawerRoot && drawerRoot.querySelector('.tk-wallet-val');
+        if (walletEl) walletEl.textContent = '◆ ' + (user.walletDt !== undefined ? user.walletDt : 0) + ' DT';
+      }).catch(function () {});
+    })();
   }
 
   function onEscDrawer(e) { if (e.key === 'Escape') { closeDrawer(); document.removeEventListener('keydown', onEscDrawer); } }
