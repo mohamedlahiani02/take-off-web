@@ -1983,6 +1983,48 @@ var PADEL_DEFAULTS = {
     footer: 'Want to become a partner? Contact the club.',
     items: [1,2,3,4,5,6,7,8].map(function () { return { name: 'PARTENAIRE', logoUrl: '' }; }),
   },
+  tournaments: {
+    kicker: '04 — COMPETE',
+    heading: 'Tournaments & americanos',
+    description: 'Seasonal cups, americano rounds, and singles ladders. Register solo or with your crew.',
+    items: [
+      { name: 'Spring Cup 2025', date: 'March 15', level: 'ALL LEVELS', photoUrl: '' },
+      { name: 'Americano Night', date: 'Every Friday', level: 'OPEN', photoUrl: '' },
+      { name: 'Singles Ladder', date: 'Ongoing', level: 'COMPETITIVE', photoUrl: '' },
+    ],
+  },
+  coaches: {
+    kicker: '05 — COACHING',
+    heading: 'Train with the best',
+    description: 'Private and group sessions with certified padel coaches. All levels welcome.',
+  },
+  shop: {
+    kicker: '06 — SHOP',
+    heading: 'Gear up at the club',
+  },
+  plans: {
+    kicker: '07 — PLANS',
+    heading: 'Flexible padel plans',
+    items: [
+      { name: 'Day Pass', price: '20', unit: 'DT/session', features: ['Court access', 'Equipment rental'] },
+      { name: 'Pack 10', price: '150', unit: 'DT (10 sessions)', features: ['Court access', 'Priority booking', 'Save 25%'] },
+      { name: 'Monthly', price: '200', unit: 'DT/month', features: ['Unlimited court access', 'Priority booking', 'Member events'] },
+      { name: 'VIP Annual', price: '1800', unit: 'DT/year', features: ['All Monthly perks', 'Guest passes', 'VIP lounge', 'Coach discount'] },
+    ],
+  },
+  coachingForm: {
+    kicker: '08 — COACHING ENQUIRY',
+    heading: 'Book a coaching session',
+    description: 'Private or group sessions with our certified padel coaches. Tell us what you need and we\'ll get back within 24 h.',
+    bullets: ['Private 1-on-1 sessions', 'Group coaching (up to 4)', 'Video analysis available'],
+  },
+  cta: {
+    kicker: '09 — JOIN',
+    headline: 'Ready to play?',
+    subtitle: 'Book a court in seconds, join a tournament, or grab a session with a pro.',
+    buttonLabel: 'Book a court now',
+    photoUrl: '',
+  },
 };
 
 function cmsAdd(tmpl) { _cmsRows.push(JSON.parse(JSON.stringify(tmpl))); if (_cmsRender) _cmsRender(); }
@@ -2019,15 +2061,23 @@ async function renderPadelCms() {
     sections.forEach(function (s) { _padel[s.sectionKey] = s.content; });
     function merged(k) { return Object.assign({}, PADEL_DEFAULTS[k], _padel[k] || {}); }
     var hero = merged('hero'), mtm = merged('more_than_a_match'), pt = merged('partners');
+    var trn = merged('tournaments'), cch = merged('coaches'), shp = merged('shop'),
+        pln = merged('plans'), cfm = merged('coachingForm'), cta2 = merged('cta');
     function card(title, sub, onclick) {
       return '<div class="card" style="margin-bottom:14px;"><div class="card-header"><div><div class="kicker">RUBRIQUE</div><h3>'+esc(title)+'</h3></div>' +
         '<button class="btn-sm btn-lime" onclick="'+onclick+'">Edit</button></div>' +
         '<div style="padding:16px 22px;color:var(--muted);font-size:13px;">'+sub+'</div></div>';
     }
     body.innerHTML =
-      card('Hero — "'+esc((hero.headline||'').replace(/\n/g,' '))+'"', 'Kicker, headline, subtitle, CTA label and the two hero stats.', 'editPadelHero()') +
-      card('More than a match', esc(mtm.heading)+' · '+(mtm.cards||[]).length+' format cards (title, description, photo).', 'editPadelMTM()') +
-      card('Trusted by — Partners', (pt.items||[]).length+' partner logos + heading and footer text.', 'editPadelPartners()') +
+      card('Hero — "'+esc((hero.headline||'').replace(/\n/g,' '))+'"', 'Kicker, headline, subtitle, CTA label and hero stats.', 'editPadelHero()') +
+      card('More than a match', esc(mtm.heading)+' · '+(mtm.cards||[]).length+' format cards', 'editPadelMTM()') +
+      card('Trusted by — Partners', (pt.items||[]).length+' partner logos + heading and footer', 'editPadelPartners()') +
+      card('Tournaments & Americanos', esc(trn.heading)+' · '+(trn.items||[]).length+' events', 'editPadelTournaments()') +
+      card('Coaches Section', esc(cch.heading)+' · kicker + heading + description', 'editPadelCoaches()') +
+      card('Shop Section', esc(shp.heading)+' · kicker + heading', 'editPadelShop()') +
+      card('Plans / Membership', esc(pln.heading)+' · '+(pln.items||[]).length+' plan cards', 'editPadelPlans()') +
+      card('Coaching Enquiry Form', esc(cfm.heading)+' · '+(cfm.bullets||[]).length+' bullet points', 'editPadelCoachingForm()') +
+      card('Bottom CTA', esc(cta2.headline)+' · photo upload', 'editPadelCta()') +
       '<div class="form-hint" style="margin-top:8px;">Changes publish to the live Padel page immediately. Empty fields fall back to the built-in defaults.</div>';
   } catch (e) { body.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
 }
@@ -2114,6 +2164,128 @@ function renderPartnerRows() {
       '<button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'ptf-'+i+'\').click()">⬆ Logo</button>' +
       '<button type="button" class="btn-icon danger" onclick="cmsDel('+i+')">×</button></div>';
   }).join('');
+}
+
+function editPadelTournaments() {
+  var t = Object.assign({}, PADEL_DEFAULTS.tournaments, _padel.tournaments || {});
+  cmsRowsInitFromArray(t.items || []);
+  var body =
+    '<div class="form-row full">'+fld('KICKER','pt2-kicker','text',t.kicker)+'</div>' +
+    '<div class="form-row full">'+fld('HEADING','pt2-heading','text',t.heading)+'</div>' +
+    '<div class="form-row full"><div class="form-group"><label>DESCRIPTION</label><textarea id="pt2-desc">'+esc(t.description||'')+'</textarea></div></div>' +
+    '<div class="form-group"><label>TOURNAMENT ITEMS</label><div id="cms-rows"></div>' +
+    '<button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({name:\'\',date:\'\',level:\'\',photoUrl:\'\'})">+ Add tournament</button></div>';
+  openGenModal('Edit Tournaments & Americanos', body, 'Save', async function () {
+    var content = { kicker: gv('pt2-kicker'), heading: gv('pt2-heading'),
+      description: document.getElementById('pt2-desc').value,
+      items: _cmsRows.filter(function(r){return r.name;}) };
+    await savePadelSection('tournaments', content);
+  }, 620);
+  _cmsRender = renderTournamentRows; renderTournamentRows();
+}
+function renderTournamentRows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    var thumb = r.photoUrl ? '<img src="'+esc(r.photoUrl)+'" style="width:46px;height:46px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">' : '<span style="width:46px;height:46px;border-radius:6px;background:var(--navy);display:inline-block;"></span>';
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:8px;">' + thumb +
+      '<div style="flex:1;display:flex;flex-direction:column;gap:5px;">' +
+        '<div style="display:flex;gap:6px;"><input value="'+esc(r.name||'')+'" placeholder="Tournament name" oninput="_cmsRows['+i+'].name=this.value" style="flex:1;'+CINP+'"><input value="'+esc(r.date||'')+'" placeholder="March 15" oninput="_cmsRows['+i+'].date=this.value" style="width:100px;'+CINP+'"><input value="'+esc(r.level||'')+'" placeholder="ALL LEVELS" oninput="_cmsRows['+i+'].level=this.value" style="width:130px;'+CINP+'"></div>' +
+      '</div>' +
+      '<input type="file" accept="image/*" id="trnf-'+i+'" style="display:none;" onchange="cmsRowImg('+i+',\'photoUrl\',this)">' +
+      '<div style="display:flex;flex-direction:column;gap:4px;"><button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'trnf-'+i+'\').click()">⬆</button>' +
+      '<button type="button" class="btn-icon danger" onclick="cmsDel('+i+')">×</button></div></div>';
+  }).join('');
+}
+
+function editPadelCoaches() {
+  var c = Object.assign({}, PADEL_DEFAULTS.coaches, _padel.coaches || {});
+  var body =
+    '<div class="form-row full">'+fld('KICKER','pco-kicker','text',c.kicker)+'</div>' +
+    '<div class="form-row full">'+fld('HEADING','pco-heading','text',c.heading)+'</div>' +
+    '<div class="form-row full"><div class="form-group"><label>DESCRIPTION</label><textarea id="pco-desc">'+esc(c.description||'')+'</textarea></div></div>';
+  openGenModal('Edit Coaches Section', body, 'Save', async function () {
+    var content = { kicker: gv('pco-kicker'), heading: gv('pco-heading'),
+      description: document.getElementById('pco-desc').value };
+    await savePadelSection('coaches', content);
+  }, 520);
+}
+
+function editPadelShop() {
+  var s = Object.assign({}, PADEL_DEFAULTS.shop, _padel.shop || {});
+  var body =
+    '<div class="form-row full">'+fld('KICKER','psh-kicker','text',s.kicker)+'</div>' +
+    '<div class="form-row full">'+fld('HEADING','psh-heading','text',s.heading)+'</div>' +
+    '<div class="form-hint">Products come from the Products catalogue.</div>';
+  openGenModal('Edit Shop Section', body, 'Save', async function () {
+    var content = { kicker: gv('psh-kicker'), heading: gv('psh-heading') };
+    await savePadelSection('shop', content);
+  }, 480);
+}
+
+function editPadelPlans() {
+  var p = Object.assign({}, PADEL_DEFAULTS.plans, _padel.plans || {});
+  cmsRowsInitFromArray(p.items || []);
+  var body =
+    '<div class="form-row full">'+fld('KICKER','pppl-kicker','text',p.kicker)+'</div>' +
+    '<div class="form-row full">'+fld('HEADING','pppl-heading','text',p.heading)+'</div>' +
+    '<div class="form-group"><label>PLAN CARDS</label><div id="cms-rows"></div>' +
+    '<button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({name:\'\',price:\'\',unit:\'\',features:[]})">+ Add plan</button></div>';
+  openGenModal('Edit Plans / Membership', body, 'Save', async function () {
+    var content = { kicker: gv('pppl-kicker'), heading: gv('pppl-heading'),
+      items: _cmsRows.filter(function(r){return r.name;}) };
+    await savePadelSection('plans', content);
+  }, 600);
+  _cmsRender = renderPlanRows; renderPlanRows();
+}
+function renderPlanRows() {
+  var el = document.getElementById('cms-rows'); if (!el) return;
+  el.innerHTML = _cmsRows.map(function (r, i) {
+    var feats = Array.isArray(r.features) ? r.features.join(', ') : (r.features||'');
+    return '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">' +
+      '<div style="display:flex;gap:6px;margin-bottom:6px;"><input value="'+esc(r.name||'')+'" placeholder="Plan name" oninput="_cmsRows['+i+'].name=this.value" style="flex:1;'+CINP+'"><input value="'+esc(r.price||'')+'" placeholder="150" oninput="_cmsRows['+i+'].price=this.value" style="width:80px;'+CINP+'"><input value="'+esc(r.unit||'')+'" placeholder="DT/month" oninput="_cmsRows['+i+'].unit=this.value" style="width:130px;'+CINP+'">' +
+      '<button type="button" class="btn-icon danger" onclick="cmsDel('+i+')">×</button></div>' +
+      '<input value="'+esc(feats)+'" placeholder="Feature 1, Feature 2…" oninput="_cmsRows['+i+'].features=this.value.split(\',\').map(function(s){return s.trim();}).filter(Boolean)" style="width:100%;'+CINP+'"></div>';
+  }).join('');
+}
+
+function editPadelCoachingForm() {
+  var c = Object.assign({}, PADEL_DEFAULTS.coachingForm, _padel.coachingForm || {});
+  cmsRowsInitFromArray((c.bullets || []).map(function(b){ return { text: b }; }));
+  var body =
+    '<div class="form-row full">'+fld('KICKER','pcf-kicker','text',c.kicker)+'</div>' +
+    '<div class="form-row full">'+fld('HEADING','pcf-heading','text',c.heading)+'</div>' +
+    '<div class="form-row full"><div class="form-group"><label>DESCRIPTION</label><textarea id="pcf-desc">'+esc(c.description||'')+'</textarea></div></div>' +
+    '<div class="form-group"><label>BULLET POINTS</label><div id="cms-rows"></div>' +
+    '<button type="button" class="btn-sm btn-ghost" style="margin-top:6px;" onclick="cmsAdd({text:\'\'})">+ Add bullet</button></div>';
+  openGenModal('Edit Coaching Enquiry Form', body, 'Save', async function () {
+    var content = { kicker: gv('pcf-kicker'), heading: gv('pcf-heading'),
+      description: document.getElementById('pcf-desc').value,
+      bullets: _cmsRows.map(function(r){return r.text||'';}).filter(Boolean) };
+    await savePadelSection('coachingForm', content);
+  }, 560);
+  _cmsRender = renderTextRows; renderTextRows();
+}
+
+function editPadelCta() {
+  var c = Object.assign({}, PADEL_DEFAULTS.cta, _padel.cta || {});
+  var body =
+    '<div class="form-row full">'+fld('KICKER','pdct-kicker','text',c.kicker)+'</div>' +
+    '<div class="form-row full"><div class="form-group"><label>HEADLINE</label><textarea id="pdct-headline" rows="2">'+esc(c.headline||'')+'</textarea></div></div>' +
+    '<div class="form-row full"><div class="form-group"><label>SUBTITLE</label><textarea id="pdct-subtitle">'+esc(c.subtitle||'')+'</textarea></div></div>' +
+    '<div class="form-row full">'+fld('BUTTON LABEL','pdct-btn','text',c.buttonLabel)+'</div>' +
+    '<div class="form-group"><label>PHOTO</label>' +
+    (c.photoUrl ? '<img src="'+esc(c.photoUrl)+'" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:8px;">' : '') +
+    '<input type="file" accept="image/*" id="pdct-photo" style="display:none;" onchange="(async function(f){if(!f)return;try{var a=await window.adminApi.media.upload(f,\'content\');document.getElementById(\'pdct-photo-url\').value=a.url;}catch(e){toast(e.message||\'Upload failed\',\'error\');}this.value=\'\';})(this.files[0])">' +
+    '<input type="hidden" id="pdct-photo-url" value="'+esc(c.photoUrl||'')+'">' +
+    '<button type="button" class="btn-sm btn-ghost" onclick="document.getElementById(\'pdct-photo\').click()">⬆ Upload photo</button></div>';
+  openGenModal('Edit Bottom CTA', body, 'Save', async function () {
+    var content = { kicker: gv('pdct-kicker'),
+      headline: document.getElementById('pdct-headline').value,
+      subtitle: document.getElementById('pdct-subtitle').value,
+      buttonLabel: gv('pdct-btn'),
+      photoUrl: gv('pdct-photo-url') };
+    await savePadelSection('cta', content);
+  }, 560);
 }
 
 function cmsRowsInitFromArray(a) { _cmsRows = (a || []).map(function (o) { return JSON.parse(JSON.stringify(o)); }); }
