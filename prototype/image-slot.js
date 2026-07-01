@@ -606,6 +606,16 @@
       const srcAttr = this.getAttribute('src') || '';
       this._userUrl = (stored && stored.u) || null;
       const url = this._userUrl || srcAttr;
+      // src still contains an unresolved template binding — hide until the
+      // DC runtime replaces it with a real value via attributeChangedCallback
+      if (url && url.indexOf('{{') !== -1) {
+        this._img.style.display = 'none';
+        this._img.removeAttribute('src');
+        this._ghost.removeAttribute('src');
+        this._empty.style.display = 'none';
+        this.removeAttribute('data-filled');
+        return;
+      }
       // Don't clobber an in-flight reframe with a store-triggered re-render.
       if (!this.hasAttribute('data-reframe')) {
         this._view = {

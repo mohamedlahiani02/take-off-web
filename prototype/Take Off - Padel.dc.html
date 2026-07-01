@@ -220,7 +220,7 @@
       <sc-for list="{{ formats }}" as="f" hint-placeholder-count="4">
         <div class="lift" style="position:relative; min-height:340px; border-radius:20px; overflow:hidden; cursor:pointer;">
           <sc-if value="{{ f.hasPhoto }}" hint-placeholder-val="">
-            <img src="{{ f.photoUrl }}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">
+            <image-slot src="{{ f.photoUrl }}" placeholder="" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
           </sc-if>
           <sc-if value="{{ f.noPhoto }}" hint-placeholder-val="">
             <image-slot id="{{ f.slot }}" placeholder="Drop photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
@@ -248,7 +248,7 @@
       <sc-for list="{{ partners }}" as="pt" hint-placeholder-count="8">
         <div class="lift" style="background:#dddbd0; border-radius:14px; height:120px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
           <sc-if value="{{ pt.hasLogo }}" hint-placeholder-val="">
-            <img src="{{ pt.logoUrl }}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; padding:14px;">
+            <image-slot src="{{ pt.logoUrl }}" fit="contain" placeholder="" style="position:absolute; inset:0; width:100%; height:100%; padding:14px;"></image-slot>
           </sc-if>
           <sc-if value="{{ pt.noLogo }}" hint-placeholder-val="">
             <image-slot id="{{ pt.slot }}" placeholder="Partner logo" style="position:absolute; inset:0; width:100%; height:100%; filter:grayscale(1) opacity(.55); transition:filter .3s;"></image-slot>
@@ -268,7 +268,7 @@
       <sc-for list="{{ tournaments }}" as="t" hint-placeholder-count="3">
         <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.3); border-radius:20px; overflow:hidden; display:flex; flex-direction:column;">
           <sc-if value="{{ t.hasPhoto }}" hint-placeholder-val="">
-            <img src="{{ t.photoUrl }}" style="width:100%; height:140px; object-fit:cover; display:block;">
+            <image-slot src="{{ t.photoUrl }}" placeholder="" style="width:100%; height:140px; display:block;"></image-slot>
           </sc-if>
           <sc-if value="{{ t.noPhoto }}" hint-placeholder-val="">
             <image-slot id="{{ t.slot }}" placeholder="Drop tournament photo" style="width:100%; height:140px; display:block;"></image-slot>
@@ -477,7 +477,7 @@
   <!-- ░ CTA ░ -->
   <div style="position:relative; padding:13vh 5vw; background:#1b4dd1; overflow:hidden;">
     <sc-if value="{{ ctaHasPhoto }}" hint-placeholder-val="">
-      <img src="{{ ctaPhotoUrl }}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.35;">
+      <image-slot src="{{ ctaPhotoUrl }}" placeholder="" style="position:absolute; inset:0; width:100%; height:100%; opacity:.35;"></image-slot>
     </sc-if>
     <div style="position:absolute; inset:0; background:radial-gradient(80% 120% at 100% 0%, rgba(196,239,63,.3), transparent 50%);"></div>
     <div style="position:relative; z-index:2; text-align:center;">
