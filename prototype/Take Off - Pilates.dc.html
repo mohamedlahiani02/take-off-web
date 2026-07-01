@@ -80,6 +80,8 @@
         <div style="margin-top:34px; display:flex; gap:14px; flex-wrap:wrap; animation:upP .8s .55s both;">
           <a href="#schedule" style="display:inline-flex; align-items:center; gap:12px; padding:16px 28px; border-radius:999px; background:#0c2350; color:#f4f5ee; font-weight:600; font-size:16px;" class="lift">Book a class <span>→</span></a>
           <a href="#classes" style="display:inline-flex; align-items:center; padding:16px 28px; border-radius:999px; border:1px solid rgba(12,35,80,.25); font-weight:600; font-size:16px;" class="lift">Explore classes</a>
+          <a href="tel:+21627314100" style="display:inline-flex; align-items:center; gap:8px; padding:16px 22px; border-radius:999px; background:#25D366; color:#fff; font-weight:700; font-size:15px;" class="lift">📞 +216 27 314 100</a>
+          <a href="https://wa.me/21627314100" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:16px 22px; border-radius:999px; border:2px solid #25D366; color:#25D366; font-weight:700; font-size:15px;" class="lift">💬 WhatsApp</a>
         </div>
         <div style="margin-top:48px; display:flex; gap:42px; flex-wrap:wrap; animation:upP .8s .7s both;">
           <sc-for list="{{ heroStats }}" as="st" hint-placeholder-count="3">
@@ -463,7 +465,7 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   loaderRef = React.createRef();
-  state = { dayIdx: 0, reserved: {}, quoteIdx: 0, openFaq: 0, openInstructor: null, _authTick: 0, _cartTick: 0, _instructors: null, _cms: null, _sessionTypes: {}, _pilatesFormDone: false, _liveSchedule: null };
+  state = { dayIdx: 0, reserved: {}, quoteIdx: 0, openFaq: 0, openInstructor: null, _authTick: 0, _cartTick: 0, _instructors: null, _cms: null, _sessionTypes: {}, _pilatesFormDone: false, _liveSchedule: null, _liveProducts: null };
 
   componentDidMount() {
     setTimeout(() => { const l = this.loaderRef.current; if (l) { l.style.opacity = '0'; l.style.visibility = 'hidden'; } }, 1500);
@@ -486,6 +488,11 @@ class Component extends DCLogic {
             sections.forEach((s) => { map[s.sectionKey] = s.content; });
             this.setState({ _cms: map });
           }
+        } catch (_) {}
+        try {
+          const prodData = await window.takeOffApi.products.list({ page: 0, size: 6 });
+          const items = (prodData && (prodData.content || prodData)) || [];
+          if (items.length) this.setState({ _liveProducts: items });
         } catch (_) {}
         try {
           // Fetch the current week (Mon–Sun) of live sessions
@@ -636,13 +643,23 @@ class Component extends DCLogic {
       };
     });
 
-    const products = [
-      { name: 'Grip Socks', cat: 'Essentials', price: 28, tag: 'MUST-HAVE', slot: 'pil-prod-1' },
-      { name: 'Studio Towel', cat: 'Essentials', price: 34, tag: 'SOFT', slot: 'pil-prod-2' },
-      { name: 'Resistance Band Set', cat: 'Training', price: 45, tag: 'SET OF 3', slot: 'pil-prod-3' },
-      { name: 'Studio Tote', cat: 'Lifestyle', price: 52, tag: 'CARRY', slot: 'pil-prod-4' },
-      { name: 'Seamless Leggings', cat: 'Apparel', price: 120, tag: 'NEW', slot: 'pil-prod-5' },
-    ].map(p => Object.assign({}, p, { add: () => this._addProduct(p) }));
+    const liveProds = this.state._liveProducts;
+    const products = (liveProds ? liveProds.slice(0, 6).map((p, i) => ({
+      name: p.name,
+      cat: p.category || p.categoryName || '',
+      price: Number(p.priceDt || p.price || 0),
+      tag: p.tags?.[0] || p.tagLabel || 'NEW',
+      slot: 'pil-prod-live-' + (i + 1),
+      photoUrl: p.photoUrl || p.imageUrl || null,
+      hasPhoto: p.photoUrl || p.imageUrl ? true : null,
+      noPhoto: p.photoUrl || p.imageUrl ? null : true,
+    })) : [
+      { name: 'Grip Socks', cat: 'Essentials', price: 28, tag: 'MUST-HAVE', slot: 'pil-prod-1', hasPhoto: null, noPhoto: true },
+      { name: 'Studio Towel', cat: 'Essentials', price: 34, tag: 'SOFT', slot: 'pil-prod-2', hasPhoto: null, noPhoto: true },
+      { name: 'Resistance Band Set', cat: 'Training', price: 45, tag: 'SET OF 3', slot: 'pil-prod-3', hasPhoto: null, noPhoto: true },
+      { name: 'Studio Tote', cat: 'Lifestyle', price: 52, tag: 'CARRY', slot: 'pil-prod-4', hasPhoto: null, noPhoto: true },
+      { name: 'Seamless Leggings', cat: 'Apparel', price: 120, tag: 'NEW', slot: 'pil-prod-5', hasPhoto: null, noPhoto: true },
+    ]).map(p => Object.assign({}, p, { add: () => this._addProduct(p) }));
 
     const cartCount = window.takeOffCart ? window.takeOffCart.getCount() : 0;
 
