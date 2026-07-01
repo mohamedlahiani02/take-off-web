@@ -108,13 +108,13 @@
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:center;">
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
         <sc-if value="{{ approachHasPhoto1 }}" hint-placeholder-val="">
-          <img src="{{ approachPhoto1 }}" style="width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:18px; display:block;">
+          <image-slot src="{{ approachPhoto1 }}" placeholder="" style="width:100%; aspect-ratio:3/4; border-radius:18px; display:block;"></image-slot>
         </sc-if>
         <sc-if value="{{ approachNoPhoto1 }}" hint-placeholder-val="">
           <image-slot id="pil-inc-1" placeholder="Drop photo" radius="18" style="width:100%; aspect-ratio:3/4;"></image-slot>
         </sc-if>
         <sc-if value="{{ approachHasPhoto2 }}" hint-placeholder-val="">
-          <img src="{{ approachPhoto2 }}" style="width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:18px; display:block; margin-top:40px;">
+          <image-slot src="{{ approachPhoto2 }}" placeholder="" style="width:100%; aspect-ratio:3/4; border-radius:18px; display:block; margin-top:40px;"></image-slot>
         </sc-if>
         <sc-if value="{{ approachNoPhoto2 }}" hint-placeholder-val="">
           <image-slot id="pil-inc-2" placeholder="Drop photo" radius="18" style="width:100%; aspect-ratio:3/4; margin-top:40px;"></image-slot>
@@ -143,7 +143,7 @@
       <sc-for list="{{ classes }}" as="cl" hint-placeholder-count="3">
         <div class="lift" style="background:#fff; border-radius:22px; overflow:hidden; border:1px solid rgba(12,35,80,.06);">
           <sc-if value="{{ cl.hasPhoto }}" hint-placeholder-val="">
-            <img src="{{ cl.photoUrl }}" style="width:100%; aspect-ratio:4/3; object-fit:cover; display:block;">
+            <image-slot src="{{ cl.photoUrl }}" placeholder="" style="width:100%; aspect-ratio:4/3; display:block;"></image-slot>
           </sc-if>
           <sc-if value="{{ cl.noPhoto }}" hint-placeholder-val="">
             <image-slot id="{{ cl.slot }}" placeholder="Drop class photo" style="width:100%; aspect-ratio:4/3;"></image-slot>
@@ -400,7 +400,7 @@
       </div>
       <div style="position:relative; align-self:stretch; min-height:300px;">
         <sc-if value="{{ ctaHasPhoto }}" hint-placeholder-val="">
-          <img src="{{ ctaPhotoUrl }}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;">
+          <image-slot src="{{ ctaPhotoUrl }}" placeholder="" style="position:absolute; inset:0; width:100%; height:100%; display:block;"></image-slot>
         </sc-if>
         <sc-if value="{{ ctaNoPhoto }}" hint-placeholder-val="">
           <image-slot id="pil-cta" placeholder="Drop a studio photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
