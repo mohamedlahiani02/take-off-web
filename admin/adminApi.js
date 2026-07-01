@@ -54,7 +54,8 @@
             return data;
           });
       },
-      logout: function () {
+      logout: async function () {
+        try { await request('POST', '/api/v1/admin/auth/logout'); } catch(e) {}
         clearToken();
         window.dispatchEvent(new CustomEvent('admin:logout'));
       },
@@ -70,6 +71,10 @@
 
     orders: {
       list: function (page) { return request('GET', '/api/v1/admin/orders?page=' + (page || 0)); },
+      get: function (id) { return request('GET', '/api/v1/admin/orders/' + id); },
+      updateStatus: function (id, action) {
+        return request('PATCH', '/api/v1/admin/orders/' + id + '/status', { action: action });
+      },
     },
 
     inquiries: {
@@ -92,6 +97,9 @@
       block: function (id) { return request('POST', '/api/v1/admin/users/' + id + '/block'); },
       unblock: function (id) { return request('POST', '/api/v1/admin/users/' + id + '/unblock'); },
       remove: function (id) { return request('DELETE', '/api/v1/admin/users/' + id); },
+      addWalletCredit: function (userId, amountDt) {
+        return request('POST', '/api/v1/admin/wallet/topup/' + userId, { amountDt: amountDt });
+      },
     },
 
     // ── Epic C: courts ──

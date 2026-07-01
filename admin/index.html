@@ -1032,18 +1032,77 @@ async function renderOrders() {
         <td>${esc(o.deliveryMethod)}</td>
         <td>${esc(o.paymentMethod)}</td>
         <td style="font-weight:700;color:var(--lime);">${o.totalDt} DT</td>
+        <td><div class="row-actions"><button class="btn-icon" onclick="openOrderDetail('${esc(o.id || o.orderRef)}')">View</button></div></td>
       </tr>`;
     }).join('');
     content.innerHTML = `<div class="card">
       <div class="card-header"><div><div class="kicker">ORDERS</div><h3>${data.totalElements || items.length} total</h3></div></div>
       <table>
-        <thead><tr><th>REF</th><th>DATE</th><th>STATUS</th><th>DELIVERY</th><th>PAYMENT</th><th>TOTAL</th></tr></thead>
+        <thead><tr><th>REF</th><th>DATE</th><th>STATUS</th><th>DELIVERY</th><th>PAYMENT</th><th>TOTAL</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
   } catch (e) {
     content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + (e.message || 'Failed to load.') + '</p></div>';
   }
+}
+
+async function openOrderDetail(orderId) {
+  try {
+    var o = await window.adminApi.orders.get(orderId);
+    var statusColors = { PENDING:'#f5c518', CONFIRMED:'#4fa3f7', PREPARING:'#f4a060', SHIPPED:'#4dc2b7', PICKUP_READY:'#c4ef3f', DELIVERED:'#4dce7a', PICKED_UP:'#4dce7a', CANCELLED:'#f4a0a0' };
+    var statusColor = statusColors[o.status] || 'var(--muted)';
+    var itemRows = (o.items || []).map(function (it) {
+      return '<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);padding:4px 0;">' +
+        '<span>' + esc(it.productName || it.name || '') + (it.size ? ' · ' + esc(it.size) : '') + ' ×' + (it.qty || 1) + '</span>' +
+        '<span style="color:var(--lime);">' + ((it.unitPriceDt || 0) * (it.qty || 1)).toFixed(3) + ' DT</span>' +
+      '</div>';
+    }).join('');
+
+    var canTransition = o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && o.status !== 'PICKED_UP';
+    var actionMap = {
+      PENDING:      [['confirm','Confirm'],['cancel','Cancel']],
+      CONFIRMED:    [['prepare','Preparing'],['cancel','Cancel']],
+      PREPARING:    [['ship','Ship'],['pickup_ready','Pickup Ready'],['cancel','Cancel']],
+      SHIPPED:      [['deliver','Deliver'],['cancel','Cancel']],
+      PICKUP_READY: [['picked_up','Picked Up'],['cancel','Cancel']],
+    };
+    var actions = (canTransition && actionMap[o.status]) || [];
+    var actionBtns = actions.map(function (a) {
+      var isDanger = a[0] === 'cancel';
+      return '<button class="btn-sm ' + (isDanger ? 'btn-danger' : 'btn-ghost') + '" style="margin-right:6px;" onclick="doOrderAction(\'' + esc(orderId) + '\',\'' + a[0] + '\')">' + a[1] + '</button>';
+    }).join('');
+
+    var body =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+        '<div style="font-family:\'Space Mono\';font-size:10px;letter-spacing:.14em;color:var(--muted);">STATUS</div>' +
+        '<span class="badge" style="background:rgba(255,255,255,.07);color:' + statusColor + ';">' + esc(o.status) + '</span>' +
+      '</div>' +
+      (o.contact ? '<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">' + esc(o.contact.name || '') + ' · ' + esc(o.contact.phone || '') + '</div>' : '') +
+      '<div style="background:var(--navy);border-radius:10px;padding:12px;margin-bottom:14px;">' + (itemRows || '<div style="color:var(--muted);font-size:13px;">No items</div>') + '</div>' +
+      '<div style="text-align:right;font-family:Anton,sans-serif;font-size:20px;color:var(--lime);margin-bottom:16px;">' + (o.totalDt || 0) + ' DT</div>' +
+      (actionBtns ? '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">' + actionBtns + '</div>' : '');
+
+    openGenModal(esc(o.orderRef || orderId), body, null, null, 580);
+  } catch (e) {
+    toast(e.message || 'Failed to load order.', 'error');
+  }
+}
+
+function doOrderAction(orderId, action) {
+  var labels = { confirm:'Confirm order', prepare:'Mark as Preparing', ship:'Mark as Shipped', deliver:'Mark as Delivered', pickup_ready:'Mark as Pickup Ready', picked_up:'Mark as Picked Up', cancel:'Cancel order' };
+  var label = labels[action] || action;
+  confirmDialog(label, 'Proceed with "' + label + '" for this order?', label, async function () {
+    try {
+      await window.adminApi.orders.updateStatus(orderId, action);
+      toast('Order updated.', 'success');
+      closeConfirm();
+      closeGenModal();
+      renderOrders();
+    } catch (e) {
+      toast(e.message || 'Failed.', 'error');
+    }
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════════════

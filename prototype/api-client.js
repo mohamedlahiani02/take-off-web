@@ -111,6 +111,17 @@
       updateMe: function (dto) {
         return request('PATCH', '/api/v1/auth/me', dto);
       },
+      forgotPassword: function (email) { return request('POST', '/api/v1/auth/forgot-password', { email: email }, true); },
+      resetPassword: function (token, newPassword) { return request('POST', '/api/v1/auth/reset-password', { token: token, newPassword: newPassword }, true); },
+    },
+
+    payments: {
+      initiate: function (refType, refId, amountDt, returnUrl) {
+        return request('POST', '/api/v1/payments/initiate', { refType: refType, refId: refId, amountDt: amountDt, returnUrl: returnUrl });
+      },
+      status: function (intentId) {
+        return request('GET', '/api/v1/payments/' + intentId + '/status');
+      },
     },
 
     orders: {
