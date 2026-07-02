@@ -70,7 +70,11 @@
     },
 
     orders: {
-      list: function (page) { return request('GET', '/api/v1/admin/orders?page=' + (page || 0)); },
+      list: function (status, page) {
+        var qs = 'page=' + (page || 0) + '&size=50';
+        if (status) qs += '&status=' + encodeURIComponent(status);
+        return request('GET', '/api/v1/admin/orders?' + qs);
+      },
       get: function (id) { return request('GET', '/api/v1/admin/orders/' + id); },
       updateStatus: function (id, action) {
         return request('PATCH', '/api/v1/admin/orders/' + id + '/status', { action: action });
@@ -166,6 +170,11 @@
       create: function (dto) { return request('POST', '/api/v1/admin/products', dto); },
       update: function (id, dto) { return request('PUT', '/api/v1/admin/products/' + id, dto); },
       remove: function (id) { return request('DELETE', '/api/v1/admin/products/' + id); },
+      adjustStock: function (id, delta, variantId) {
+        var body = { delta: delta };
+        if (variantId) body.variantId = variantId;
+        return request('PATCH', '/api/v1/admin/products/' + id + '/stock', body);
+      },
     },
 
     // ── Epic H3: inquiry pipeline ──
