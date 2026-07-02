@@ -138,6 +138,11 @@
     <div style="display:grid; grid-template-columns:1fr 320px; gap:26px; align-items:start;">
       <!-- courts -->
       <div style="display:flex; flex-direction:column; gap:22px;">
+        <sc-if value="{{ noCourts }}" hint-placeholder-val="">
+          <div style="padding:40px; text-align:center; color:rgba(244,245,238,.4); font-family:'Space Mono'; font-size:12px;">
+            Courts not set up yet — check back soon.
+          </div>
+        </sc-if>
         <sc-for list="{{ courts }}" as="court" hint-placeholder-count="2">
           <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.16); border-radius:20px; padding:22px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
@@ -310,6 +315,11 @@
       </div>
     </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;">
+      <sc-if value="{{ noCoaches }}" hint-placeholder-val="">
+        <div style="padding:40px; text-align:center; color:rgba(10,23,51,.4); font-family:'Space Mono'; font-size:12px; grid-column:1/-1;">
+          No coaches listed yet.
+        </div>
+      </sc-if>
       <sc-for list="{{ coaches }}" as="c" hint-placeholder-count="4">
         <div onClick="{{ c.open }}" class="lift" style="position:relative; aspect-ratio:3/4; border-radius:16px; overflow:hidden; cursor:pointer;">
           <image-slot id="{{ c.slot }}" placeholder="Drop coach photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
@@ -369,7 +379,7 @@
       <sc-for list="{{ products }}" as="p" hint-placeholder-count="6">
         <div style="background:#fff; border-radius:18px; overflow:hidden; border:1px solid rgba(10,23,51,.07);" class="lift">
           <div style="position:relative; aspect-ratio:1/1; background:#f4f5ee;">
-            <image-slot id="{{ p.slot }}" placeholder="Drop product photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+            <image-slot src="{{ p.photoSrc }}" placeholder="Drop product photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
             <div style="position:absolute; top:12px; left:12px; font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; padding:5px 9px; border-radius:999px; background:rgba(10,23,51,.85); color:#c4ef3f;">{{ p.tag }}</div>
           </div>
           <div style="padding:16px;">
@@ -516,6 +526,7 @@ class Component extends DCLogic {
     _cms: null,
     _liveCourts: null,   // [{id, name, activity}]
     _liveSlots: {},      // { "courtId_YYYY-MM-DD": [SlotDto...] }
+    _heroProducts: null, // [{id, name, priceDt, category, mainPhotoUrl}]
     // coaching form
     coachFormDone: false, coursSelected: {}, availGrid: {}, // key: "day|slot" => bool
     // plans
@@ -552,6 +563,11 @@ class Component extends DCLogic {
             this.setState({ _liveCourts: courtList });
             await this._fetchSlots(0, courtList);
           }
+        } catch (_) {}
+        try {
+          const prodResp = await window.takeOffApi.products.list({ page: 0, size: 6 });
+          const prods = prodResp && prodResp.content ? prodResp.content : (Array.isArray(prodResp) ? prodResp : []);
+          this.setState({ _heroProducts: prods });
         } catch (_) {}
       }
     })();
@@ -741,10 +757,10 @@ class Component extends DCLogic {
     const liveSlots = this.state._liveSlots;
     const dateStr = this._dateStr(di);
 
-    // Build court list from API or fallback to 2 hardcoded courts
+    // Build court list from API; empty when no courts are configured yet
     const courtDefs = (liveCourts && liveCourts.filter(c => c.activity === 'PADEL').length)
       ? liveCourts.filter(c => c.activity === 'PADEL').map((c, ci) => ({ id: c.id, name: c.name, surface: ci === 0 ? 'PANORAMIC GLASS' : 'CLASSIC' }))
-      : [{ id: null, name: 'Court 1', surface: 'PANORAMIC GLASS' }, { id: null, name: 'Court 2', surface: 'CLASSIC' }];
+      : [];
 
     const courts = courtDefs.map((court, ci) => ({
       name: court.name, surface: court.surface,
@@ -794,6 +810,8 @@ class Component extends DCLogic {
       }),
     }));
 
+    const noCourts = courtDefs.length === 0 ? true : null;
+
     const selEntries = Object.entries(this.state.selected).filter(([, v]) => v === 'share' || v === 'full');
     const selectionList = selEntries.map(([k, mode]) => {
       const [sdi, ci, ti] = k.split('|').map(Number); const d = dates[sdi];
@@ -808,14 +826,14 @@ class Component extends DCLogic {
     const committedKeys = selEntries.length;
     const selTotal = selEntries.reduce((acc, [, mode]) => acc + this._price(mode), 0);
 
-    const products = [
-      { name: 'TakeOff Pro Racket', cat: 'Rackets', price: 320, tag: 'BESTSELLER', slot: 'pad-prod-1' },
-      { name: 'Overgrip Pack ×3', cat: 'Grips', price: 24, tag: 'GRIP', slot: 'pad-prod-2' },
-      { name: 'Hand Protector', cat: 'Protection', price: 18, tag: 'PROTÈGE-MAIN', slot: 'pad-prod-3' },
-      { name: 'Pro Balls — Tube', cat: 'Balls', price: 15, tag: 'NEW', slot: 'pad-prod-4' },
-      { name: 'Court Racket Bag', cat: 'Bags', price: 145, tag: 'CARRY', slot: 'pad-prod-5' },
-      { name: 'Club Cap', cat: 'Apparel', price: 35, tag: 'LIFESTYLE', slot: 'pad-prod-6' },
-    ].map(p => Object.assign({}, p, { add: () => this._addProduct(p) }));
+    const products = (this.state._heroProducts || []).map(p => ({
+      name: p.name,
+      cat: p.category,
+      price: p.priceDt,
+      tag: p.category ? p.category.toUpperCase() : '',
+      photoSrc: p.mainPhotoUrl || '',
+      add: () => this._addProduct({ name: p.name, cat: p.category, price: p.priceDt }),
+    }));
 
     const cartCount = window.takeOffCart ? window.takeOffCart.getCount() : 0;
 
@@ -838,17 +856,9 @@ class Component extends DCLogic {
       bio: c.bio,
       specs: c.specs,
       achievements: c.achievements,
-    })) : [
-      { first: 'COACH', last: 'RAFAEL ORTIZ', role: 'Head Performance Coach', spec: 'Advanced technique, power play & strategy', slot: 'pad-coach-1',
-        name: 'RAFAEL ORTIZ', bio: "Formé en Espagne et actif sur le circuit mondial, Rafael est l'architecte du jeu offensif de Take Off. Il analyse chaque échange avec une précision chirurgicale et transforme les failles en armes.", specs: ['Technique avancée', 'Power play', 'Stratégie de jeu'], achievements: ["Champion national Espagne U21", "10 ans d'expérience coaching pro", "70+ joueurs en tournoi depuis 2020"] },
-      { first: 'COACH', last: 'SOFIA MARTINEZ', role: 'Technique & Footwork', spec: 'Ball control, movement & accuracy drills', slot: 'pad-coach-2',
-        name: 'SOFIA MARTINEZ', bio: "Sofia est la spécialiste du mouvement et de la précision. Ancienne joueuse internationale, elle lit le jeu à une longueur d'avance et transmet cette vision à ses élèves.", specs: ['Contrôle de balle', 'Déplacements', 'Précision'], achievements: ["Top 50 mondial (WPT)", "Spécialiste drill & répétition", "Certifiée FPP niveau 3"] },
-      { first: 'COACH', last: 'MARCO ALVAREZ', role: 'Tactical & Fitness', spec: 'Endurance, agility & aggressive play', slot: 'pad-coach-3',
-        name: 'MARCO ALVAREZ', bio: "Marco combine préparation physique et intelligence tactique. Ses séances de fitness padel sont reconnues pour transformer la condition athlétique de ses joueurs en seulement quelques semaines.", specs: ['Endurance padel', 'Jeu agressif', 'Conditionnement'], achievements: ["Prépa physique équipes pros en Andalousie", "Coach FIP certifié", "Expert en jeu de volée haute intensité"] },
-      { first: 'COACH', last: 'EMMA LAURENT', role: 'Youth & Beginner', spec: 'Intro programs & confidence building', slot: 'pad-coach-4',
-        name: 'EMMA LAURENT', bio: "Emma a développé le programme jeunesse de Take Off de zéro. Son approche bienveillante et pédagogique permet aux débutants de progresser rapidement tout en prenant confiance.", specs: ['Programme débutant', 'Cours jeunes (8-16 ans)', 'Confiance & fun'], achievements: ["Directrice pédagogique Take Off Junior", "200+ élèves débutants formés", "Certifiée psychologie sportive"] },
-    ];
+    })) : [];
     const coaches = coachesData.map((c, idx) => Object.assign({}, c, { open: () => this.setState({ openCoachIdx: idx }) }));
+    const noCoaches = coaches.length === 0 ? true : null;
 
     const openCoachIdx = this.state.openCoachIdx;
     const coachModalOpen = openCoachIdx !== null && openCoachIdx >= 0 ? true : null;
@@ -990,14 +1000,14 @@ class Component extends DCLogic {
       ctaHeadline, ctaSubtitle, ctaButtonLabel, ctaPhotoUrl, ctaHasPhoto, ctaNoPhoto,
       loaderRef: this.loaderRef,
       heroStats,
-      dates: dateVals, courts,
+      dates: dateVals, courts, noCourts,
       hasSelection: committedKeys ? true : null, noSelection: committedKeys ? null : true,
       selectionList, selCount: committedKeys, selTotal,
       confirmBooking: () => this._confirm(),
       confirmBg: committedKeys ? LIME : 'rgba(244,245,238,.1)', confirmFg: committedKeys ? NAVY : 'rgba(244,245,238,.4)',
       formats,
       tournaments,
-      coaches,
+      coaches, noCoaches,
       coachModalOpen, coachModal,
       closeCoachModal: () => this.setState({ openCoachIdx: null }),
       stopCoachProp: (e) => { if (e && e.stopPropagation) e.stopPropagation(); },
