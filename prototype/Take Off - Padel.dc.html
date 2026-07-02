@@ -44,13 +44,13 @@
   <!-- ░ NAV ░ -->
   <div style="position:fixed; top:0; left:0; right:0; z-index:90; display:flex; align-items:center; justify-content:space-between; padding:18px 5vw; background:rgba(10,23,51,.72); backdrop-filter:blur(14px); border-bottom:1px solid rgba(196,239,63,.14);">
     <a href="Take Off - Gateway.dc.html" style="display:flex; align-items:center; gap:11px;">
-      <img src="./Logo/LOGO.svg" alt="Take Off" style="width:78px; height:auto; display:block;">
-      <span style="font-weight:700; font-size:14px; letter-spacing:.14em;">TAKE OFF</span>
+      <img class="tk-nav-logo" src="./Logo/LOGO.svg" alt="Take Off" style="width:78px; height:auto; display:block;">
+      <span class="tk-nav-word" style="font-weight:700; font-size:14px; letter-spacing:.14em;">TAKE OFF</span>
       <span style="width:9px; height:9px; border-radius:50%; background:#c4ef3f;"></span>
-      <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:rgba(244,245,238,.55);">PADEL</span>
+      <span class="tk-nav-tag" style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:rgba(244,245,238,.55);">PADEL</span>
     </a>
     <div class="tk-nav-links" style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
-      <div onClick="{{ openTakeOffMenu }}" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:rgba(244,245,238,.85);">
+      <div onClick="{{ openTakeOffMenu }}" class="tk-nav-menu" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:rgba(244,245,238,.85);">
         <div style="display:flex; flex-direction:column; gap:4px;"><span style="width:20px; height:2px; background:#c4ef3f;"></span><span style="width:20px; height:2px; background:#c4ef3f;"></span></div>
         MORE
       </div>
@@ -71,7 +71,7 @@
   </div>
 
   <!-- ░ HERO ░ -->
-  <div style="position:relative; min-height:100vh; display:flex; align-items:flex-end; overflow:hidden;">
+  <div style="position:relative; min-height:100vh; min-height:100dvh; display:flex; align-items:flex-end; overflow:hidden;">
     <video autoplay muted loop playsinline preload="auto" poster="./photos/intense-padel-play-stockcake.webp" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;"><source src="./videos/padel-hero.mp4" type="video/mp4"></video>
     <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,23,51,.7) 0%, rgba(10,23,51,.35) 38%, rgba(10,23,51,.92) 100%); pointer-events:none;"></div>
     <div style="position:absolute; inset:0; background:radial-gradient(120% 80% at 80% 0%, rgba(43,107,240,.4), transparent 55%); pointer-events:none;"></div>
@@ -79,7 +79,7 @@
     <div class="tk-hero-bottom" style="position:relative; z-index:3; width:100%; padding:0 5vw 7vh; display:flex; align-items:flex-end; justify-content:space-between; gap:40px; flex-wrap:wrap;">
       <div style="max-width:880px;">
         <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.32em; color:#c4ef3f; margin-bottom:22px; animation:upP .7s .2s both;">{{ heroKicker }}</div>
-        <h1 class="anton" style="margin:0; font-size:clamp(64px,12vw,210px); line-height:.84; letter-spacing:.005em; color:#fff; text-shadow:0 14px 60px rgba(0,0,0,.45); white-space:pre-line; animation:upP .8s .3s both;">{{ heroHeadline }}</h1>
+        <h1 class="anton tk-hero-h1" style="margin:0; font-size:clamp(64px,12vw,210px); line-height:.84; letter-spacing:.005em; color:#fff; text-shadow:0 14px 60px rgba(0,0,0,.45); white-space:pre-line; animation:upP .8s .3s both;">{{ heroHeadline }}</h1>
         <p style="margin:26px 0 0; font-size:clamp(16px,1.4vw,21px); line-height:1.5; color:rgba(244,245,238,.82); max-width:480px; animation:upP .8s .45s both;">{{ heroSubtitle }}</p>
         <div style="margin-top:34px; display:flex; gap:14px; flex-wrap:wrap; animation:upP .8s .6s both;">
           <a href="#book" style="display:inline-flex; align-items:center; gap:14px; padding:16px 16px 16px 28px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:16px;" class="lift">{{ heroCtaLabel }} <span style="display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
@@ -89,7 +89,7 @@
         <!-- Phone CTA -->
         <div style="padding:20px 22px; background:rgba(10,23,51,.7); border:1px solid rgba(196,239,63,.3); border-radius:18px; backdrop-filter:blur(8px);">
           <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:10px;">RÉSERVATION SPONTANÉE</div>
-          <div class="anton" style="font-size:42px; color:#c4ef3f; line-height:1; letter-spacing:.01em; margin-bottom:6px;">+216 27 314 100</div>
+          <div class="anton tk-phone-num" style="font-size:42px; color:#c4ef3f; line-height:1; letter-spacing:.01em; margin-bottom:6px;">+216 27 314 100</div>
           <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:rgba(244,245,238,.6); margin-bottom:16px;">WHATSAPP DISPONIBLE 7/7</div>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <a href="tel:+21627314100" style="display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em;" class="lift">📞 CALL</a>
@@ -126,7 +126,7 @@
     </div>
 
     <!-- date pills -->
-    <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:30px;">
+    <div class="tk-date-strip" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:30px;">
       <sc-for list="{{ dates }}" as="d" hint-placeholder-count="15">
         <div onClick="{{ d.pick }}" style="flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:74px; padding:14px 10px; border-radius:14px; cursor:pointer; background:{{ d.bg }}; color:{{ d.fg }}; border:1px solid {{ d.bd }}; transition:all .2s ease;">
           <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.16em; opacity:.7;">{{ d.dow }}</span>
@@ -153,7 +153,7 @@
               </div>
               <span style="font-family:'Space Mono'; font-size:11px; letter-spacing:.14em; color:rgba(244,245,238,.5);">{{ court.surface }}</span>
             </div>
-            <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
+            <div class="tk-slot-strip" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
               <sc-for list="{{ court.slots }}" as="s" hint-placeholder-count="14">
                 <div style="flex:0 0 auto; min-width:{{ s.minW }}; border-radius:11px; overflow:hidden; transition:all .15s ease;">
                   <sc-if value="{{ s.isChoosing }}" hint-placeholder-val="">

@@ -610,7 +610,7 @@
         '</div>' +
         '<input class="tk-inp" id="tk-' + key + '-line1" type="text" value="' + esc((a && a.line1) || '') + '" placeholder="Street address" style="margin-bottom:8px;">' +
         '<input class="tk-inp" id="tk-' + key + '-line2" type="text" value="' + esc((a && a.line2) || '') + '" placeholder="Landmark / floor / building" style="margin-bottom:8px;">' +
-        '<div style="display:grid;grid-template-columns:1fr 90px;gap:8px;margin-bottom:8px;">' +
+        '<div class="tk-addr-grid-2" style="display:grid;grid-template-columns:1fr 90px;gap:8px;margin-bottom:8px;">' +
           '<input class="tk-inp" id="tk-' + key + '-city" type="text" value="' + esc((a && a.city) || '') + '" placeholder="City">' +
           '<input class="tk-inp" id="tk-' + key + '-postal" type="text" value="' + esc((a && a.postal) || '') + '" placeholder="ZIP">' +
         '</div>' +

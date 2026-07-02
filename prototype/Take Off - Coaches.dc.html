@@ -42,13 +42,13 @@
   <!-- NAV -->
   <div style="position:fixed; top:0; left:0; right:0; z-index:90; display:flex; align-items:center; justify-content:space-between; padding:18px 5vw; background:rgba(10,23,51,.72); backdrop-filter:blur(14px); border-bottom:1px solid rgba(196,239,63,.14);">
     <a href="Take Off - Gateway.dc.html" style="display:flex; align-items:center; gap:11px;">
-      <img src="./Logo/LOGO.svg" alt="Take Off" style="width:78px; height:auto; display:block;">
-      <span style="font-weight:700; font-size:14px; letter-spacing:.14em;">TAKE OFF</span>
+      <img class="tk-nav-logo" src="./Logo/LOGO.svg" alt="Take Off" style="width:78px; height:auto; display:block;">
+      <span class="tk-nav-word" style="font-weight:700; font-size:14px; letter-spacing:.14em;">TAKE OFF</span>
       <span style="width:9px; height:9px; border-radius:50%; background:#c4ef3f;"></span>
-      <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:rgba(244,245,238,.55);">COACHES</span>
+      <span class="tk-nav-tag" style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:rgba(244,245,238,.55);">COACHES</span>
     </a>
     <div class="tk-nav-links" style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
-      <div onClick="{{ openTakeOffMenu }}" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:rgba(244,245,238,.85);">
+      <div onClick="{{ openTakeOffMenu }}" class="tk-nav-menu" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:rgba(244,245,238,.85);">
         <div style="display:flex; flex-direction:column; gap:4px;"><span style="width:20px; height:2px; background:#c4ef3f;"></span><span style="width:20px; height:2px; background:#c4ef3f;"></span></div>
         MENU
       </div>
@@ -203,7 +203,7 @@
         <div style="margin-top:20px;">
           <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:12px;">AVAILABILITY</label>
           <div style="overflow-x:auto;">
-            <table style="border-collapse:collapse; font-size:12px; font-family:'Space Grotesk',sans-serif; min-width:420px;">
+            <table class="cf-avail-table" style="border-collapse:collapse; font-size:12px; font-family:'Space Grotesk',sans-serif; min-width:420px;">
               <thead>
                 <tr>
                   <th style="padding:8px 12px; font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; color:rgba(244,245,238,.4); text-align:left; font-weight:400;"></th>
@@ -218,7 +218,7 @@
                     <td style="padding:8px 12px; font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.7); white-space:nowrap;">{{ ad.label }}</td>
                     <sc-for list="{{ ad.cells }}" as="cell" hint-placeholder-count="4">
                       <td style="padding:6px 10px; text-align:center;">
-                        <div onClick="{{ cell.toggle }}" style="width:24px; height:24px; border-radius:6px; border:1px solid rgba(196,239,63,.35); background:{{ cell.bg }}; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; color:#0a1733; margin:0 auto; transition:all .15s;">{{ cell.check }}</div>
+                        <div onClick="{{ cell.toggle }}" class="cf-avail-cell" style="width:24px; height:24px; border-radius:6px; border:1px solid rgba(196,239,63,.35); background:{{ cell.bg }}; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; color:#0a1733; margin:0 auto; transition:all .15s;">{{ cell.check }}</div>
                       </td>
                     </sc-for>
                   </tr>
@@ -279,7 +279,7 @@
   <!-- CTA -->
   <div style="padding:11vh 5vw; background:#0f1f44; text-align:center;">
     <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.28em; color:#c4ef3f; margin-bottom:18px;">READY TO LEVEL UP?</div>
-    <h2 class="anton" style="margin:0 0 24px; font-size:clamp(40px,7vw,100px); line-height:.88; color:#fff;">Not sure yet?<br><span style="color:#c4ef3f;">Fill the form above.</span></h2>
+    <h2 class="anton tk-cta-title" style="margin:0 0 24px; font-size:clamp(40px,7vw,100px); line-height:.88; color:#fff;">Not sure yet?<br><span style="color:#c4ef3f;">Fill the form above.</span></h2>
     <a href="#coaching-form" style="display:inline-flex; align-items:center; gap:14px; padding:17px 16px 17px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:17px;" class="lift">Coaching inquiry <span style="display:grid; place-items:center; width:36px; height:36px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
   </div>
 
