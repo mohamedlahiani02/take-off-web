@@ -242,6 +242,10 @@
     </div>
 
     <!-- class list -->
+    <div sc-if="{{ scheduleEmpty }}" style="padding:40px; text-align:center; font-family:'Space Mono'; font-size:12px; letter-spacing:.08em; color:rgba(12,35,80,.5);">
+      No sessions scheduled this week.<br><br>
+      <a href="https://wa.me/21627314100" style="color:#0c2350; font-weight:700;">Contact us on WhatsApp →</a>
+    </div>
     <div style="display:flex; flex-direction:column; gap:12px;">
       <sc-for list="{{ sessions }}" as="ss" hint-placeholder-count="4">
         <div style="display:grid; grid-template-columns:96px 1fr auto; gap:24px; align-items:center; background:#fff; border:1px solid rgba(12,35,80,.06); border-radius:18px; padding:20px 24px;">
@@ -622,7 +626,7 @@ class Component extends DCLogic {
     }));
 
     const liveSched = this.state._liveSchedule;
-    const sched = (liveSched ? liveSched[di] : null) || this._scheduleData()[di] || [];
+    const sched = (liveSched ? liveSched[di] : null) || [];
     const sessions = sched.map((sess, i) => {
       const key = di + '|' + i;
       const alreadyBooked = sess.myStatus === 'BOOKED' || sess.myStatus === 'ATTENDED';
@@ -670,7 +674,7 @@ class Component extends DCLogic {
       bio: c.bio,
       specs: c.specs,
       teaches: [],
-    })) : this._instrData();
+    })) : [];
     const instructors = instrData.map((instr, idx) => Object.assign({}, instr, {
       open: () => this.setState({ openInstructor: idx }),
     }));
@@ -700,12 +704,7 @@ class Component extends DCLogic {
       : [{ big: '450+', label: 'SESSIONS / MONTH' }, { big: '70+', label: 'CLASSES WEEKLY' }, { big: '96%', label: 'FEEL STRONGER' }];
     const approachPoints = (cA.points && cA.points.length) ? cA.points
       : ['Adapted for every level and body', 'Small groups, real attention', 'Reformer, mat, duo & private'];
-    const classesDefault = [
-      { name: 'Reformer Flow', level: 'INTERMEDIATE', dur: '55 MIN', desc: 'Spring-loaded resistance for long, controlled, full-body strength.', photoUrl: '' },
-      { name: 'Mat Foundations', level: 'BEGINNER', dur: '50 MIN', desc: 'Core fundamentals and breath — the perfect place to begin.', photoUrl: '' },
-      { name: 'Sculpt & Tone', level: 'ADVANCED', dur: '55 MIN', desc: 'Higher tempo, deeper burn. Define and strengthen every muscle.', photoUrl: '' },
-    ];
-    const classesData = (cCl.items && cCl.items.length) ? cCl.items : classesDefault;
+    const classesData = (cCl.items && cCl.items.length) ? cCl.items : [];
     const classes = classesData.map((c, i) => Object.assign({}, c, {
       slot: 'pil-class-' + (i + 1),
       hasPhoto: c.photoUrl ? true : null, noPhoto: c.photoUrl ? null : true,
@@ -786,7 +785,7 @@ class Component extends DCLogic {
       ctaBtn: cCta.buttonLabel || 'Book your first class',
       ctaHasPhoto: cCta.photoUrl ? true : null, ctaNoPhoto: cCta.photoUrl ? null : true,
       ctaPhotoUrl: cCta.photoUrl || '',
-      days, sessions,
+      days, sessions, scheduleEmpty: sessions.length === 0 ? true : null,
       plans: [
         { kicker: 'TRY IT', name: 'Discovery', price: '35', per: 'DT / class', accent: NAVY, bg: '#fff', fg: NAVY, bd: 'rgba(12,35,80,.1)', feats: ['Single drop-in class', 'Any class, any level', 'Mat & props included', 'No commitment'], cta: 'Book a class', btnBg: NAVY, btnFg: CREAM, onClick: () => { const el = document.getElementById('schedule'); if (el) el.scrollIntoView({ behavior: 'smooth' }); } },
         { kicker: 'BEST VALUE', name: '10-Class Pack', price: '300', per: 'DT / 10 classes', accent: LIME, bg: NAVY, fg: CREAM, bd: 'transparent', feats: ['10 classes (save 14%)', 'Valid 3 months', 'Reformer + mat', 'Pause once'], cta: 'Get the pack', btnBg: LIME, btnFg: NAVY, onClick: () => { if (window.takeOffCart) { window.takeOffCart.add({ name: '10-Class Pack', sub: 'Pilates · valid 3 months', price: '300 DT', _raw: 300, kind: 'pack' }); window.takeOffCart.open(); } } },
