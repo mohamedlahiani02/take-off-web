@@ -50,11 +50,14 @@ export async function prototypeAsset(segments: string[]) {
 
   const body = await fs.readFile(filePath)
   const ext = path.extname(filePath).toLowerCase()
+  // JS files get a short TTL so updated scripts are picked up within a day;
+  // static assets (images, fonts) stay cached for a year.
+  const cacheControl = ext === '.js' ? 'public, max-age=86400' : 'public, max-age=31536000, immutable'
 
   return new Response(body, {
     headers: {
       'content-type': mimeTypes[ext] ?? 'application/octet-stream',
-      'cache-control': 'public, max-age=31536000, immutable',
+      'cache-control': cacheControl,
     },
   })
 }
@@ -68,12 +71,12 @@ function rewritePrototypeHtml(html: string) {
   }
 
   return out
-    .replaceAll('./support.js', '/prototype-assets/support.js')
-    .replaceAll('./image-slot.js', '/prototype-assets/image-slot.js')
-    .replaceAll('./api-client.js', '/prototype-assets/api-client.js')
-    .replaceAll('./auth.js', '/prototype-assets/auth.js')
-    .replaceAll('./menu.js', '/prototype-assets/menu.js')
-    .replaceAll('./cart.js', '/prototype-assets/cart.js')
+    .replaceAll('./support.js', '/prototype-assets/support.js?v=2')
+    .replaceAll('./image-slot.js', '/prototype-assets/image-slot.js?v=2')
+    .replaceAll('./api-client.js', '/prototype-assets/api-client.js?v=2')
+    .replaceAll('./auth.js', '/prototype-assets/auth.js?v=2')
+    .replaceAll('./menu.js', '/prototype-assets/menu.js?v=2')
+    .replaceAll('./cart.js', '/prototype-assets/cart.js?v=2')
     .replaceAll('./Logo/', '/prototype-assets/Logo/')
     .replaceAll('./logo/', '/prototype-assets/Logo/')
     .replaceAll('./photos/', '/prototype-assets/Photos/')
