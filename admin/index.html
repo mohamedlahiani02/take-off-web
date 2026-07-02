@@ -1982,7 +1982,7 @@ function tournamentForm(t) {
       toast('Saved.','success'); closeGenModal(); renderTournaments(); } catch(e){ toast(e.message||'Failed.','error'); }
   });
 }
-function deleteTournament(id,title){ confirmDialog('Delete tournament','Delete "'+title+'" and all its registrations?','Delete', async function(){ try{ await window.adminApi.tournaments.remove(id); toast('Deleted.','success'); closeConfirm(); renderTournaments(); }catch(e){ toast(e.message||'Failed.','error'); } }); }
+function deleteTournament(id,title){ confirmDialog('Delete tournament','Delete "'+title+'" and all its registrations?','Delete', async function(){ try{ await window.adminApi.tournaments.remove(id); toast('Deleted.','success'); closeConfirm(); renderTournaments(); }catch(e){ if(e.status===404){ toast('Tournament already removed.','success'); closeConfirm(); renderTournaments(); } else { toast(e.message||'Failed.','error'); } } }); }
 async function openTournament(id) {
   try {
     var d = await window.adminApi.tournaments.detail(id);
