@@ -212,3 +212,121 @@
     min-width: 100% !important;
   }
 }
+
+/* ================================================================
+   v2 — STRUCTURAL FIXES (fixed-nav overflow, booking slots,
+   gateway split-screen, menu overlay, clamped headlines).
+   These target elements that previously had NO class hook, so the
+   v1 layer literally could not reach them.
+   ================================================================ */
+
+/* ── 19. FIXED NAV — stop the brand cluster + controls overflowing ─ */
+/* The nav is position:fixed, so it escapes the wrapper overflow-x:hidden
+   and creates a real horizontal scrollbar. Shrink the logo, drop the
+   "TAKE OFF" wordmark, the page tag, and the MENU/MORE text label.     */
+@media (max-width: 768px) {
+  .tk-nav-menu { font-size: 0 !important; gap: 0 !important; }  /* hide label text, keep hamburger bars */
+}
+@media (max-width: 560px) {
+  .tk-nav-word, .tk-nav-tag { display: none !important; }
+  .tk-nav-logo { width: 54px !important; }
+  .tk-nav-links { gap: 12px !important; }
+}
+
+/* ── 20. GLOBAL — anchor jumps clear the fixed nav ────────────────── */
+html { scroll-padding-top: 84px; }
+
+/* ── 21. PADEL — booking slots: show ALL of them as a wrapped grid ── */
+/* Was a 10-wide overflow-x:auto strip with no scroll affordance.       */
+@media (max-width: 768px) {
+  .tk-slot-strip {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+    overflow: visible !important;
+  }
+  .tk-slot-strip > div { min-width: 0 !important; }
+}
+@media (max-width: 380px) {
+  .tk-slot-strip { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+/* ── 22. HORIZONTAL DATE / TAB STRIPS — snap + momentum ───────────── */
+@media (max-width: 768px) {
+  .tk-date-strip { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+  .tk-date-strip > div { scroll-snap-align: start; }
+}
+
+/* ── 23. PADEL — hero headline + phone number stay inside the card ── */
+@media (max-width: 480px) {
+  .tk-hero-h1  { font-size: clamp(44px, 13vw, 64px) !important; }
+  .tk-phone-num { font-size: clamp(26px, 8.2vw, 42px) !important; letter-spacing: 0 !important; }
+}
+
+/* ── 24. COACHES — CTA headline no longer clips at the edges ──────── */
+@media (max-width: 420px) {
+  .tk-cta-title { font-size: 32px !important; line-height: .95 !important; }
+}
+
+/* ── 25. COACHES — availability table fits without a nested scroll ── */
+@media (max-width: 480px) {
+  .cf-avail-table { min-width: 0 !important; width: 100% !important; }
+  .cf-avail-table th, .cf-avail-table td { padding: 4px 2px !important; }
+  .cf-avail-cell { width: 20px !important; height: 20px !important; }
+}
+
+/* ── 26. STORE — product modal: lighter padding + capped image ────── */
+@media (max-width: 640px) {
+  .tk-modal-panel { padding: 22px !important; }
+  .tk-modal-img { max-height: 300px !important; }
+}
+
+/* ── 27. PILATES — approach inner photo pair stacks on phones ─────── */
+@media (max-width: 480px) {
+  .tk-photo-2 { grid-template-columns: 1fr !important; }
+  .tk-photo-2 > *:last-child { margin-top: 0 !important; }
+}
+
+/* ── 28. CHECKOUT / AUTH — reclaim heavy inner padding on phones ──── */
+@media (max-width: 480px) {
+  .tk-co-inner { padding: 24px 18px !important; }
+  .tk-card { padding: 28px 22px !important; }
+}
+
+/* ── 29. AUTH — address city/ZIP row stacks with the name/job row ─── */
+@media (max-width: 480px) {
+  .tk-addr-grid-2 { grid-template-columns: 1fr !important; gap: 0 !important; }
+}
+
+/* ── 30. MENU OVERLAY — top bar + footer wrap instead of overflowing ─ */
+@media (max-width: 560px) {
+  .tk-menu-top  { flex-wrap: wrap !important; gap: 14px !important; padding: 20px 6vw 0 !important; }
+  .tk-menu-util { gap: 14px !important; }
+  .tk-menu-brand img { width: 64px !important; }
+  .tk-menu-foot { flex-direction: column !important; gap: 12px !important; text-align: center !important; align-items: center !important; padding: 24px 6vw !important; }
+}
+
+/* ── 31. GATEWAY — split-screen stacks, stays legible, and scrolls ── */
+/* The gateway has its own inline JS that stacks panels < 820px, but
+   body/container overflow:hidden clips the stacked content and the
+   dark nav text disappears on the navy panel. These rules fix both.   */
+@media (max-width: 819px) {
+  html, body { overflow: auto !important; height: auto !important; }
+  .tk-gw-container {
+    position: static !important;         /* was fixed — let the page scroll */
+    flex-direction: column !important;   /* CSS fallback even if JS fails */
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow: visible !important;
+  }
+  .tk-gw-panel { min-height: 100vh !important; flex: none !important; }
+  /* nav: recolor white and drop it below the brand lockup so it no
+     longer overlaps the logo or vanishes into the navy panel */
+  .tk-gw-nav {
+    color: #fff !important;
+    top: 104px !important;
+    left: 8vw !important;
+    right: auto !important;
+  }
+  .tk-gw-bar { background: #fff !important; }
+}
