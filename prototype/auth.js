@@ -315,6 +315,8 @@
     if (!auth.user) { showModal('login'); return; }
     drawerTab = (['bookings', 'packs', 'orders', 'profile'].indexOf(tab) >= 0) ? tab : 'bookings';
     _drData.orders = null;
+    _drData.courtBookings = null;
+    _drData.classBookings = null;
     if (!drawerRoot) { drawerRoot = document.createElement('div'); document.body.appendChild(drawerRoot); }
     renderDrawer();
     document.addEventListener('keydown', onEscDrawer);
@@ -459,6 +461,22 @@
         sortKey: b.date || '',
       });
     });
+
+    // If the API returned no class bookings, include locally-recorded ones
+    // (bookings made from the schedule before sessions are seeded in the DB)
+    if ((classes || []).length === 0) {
+      var localBookings = (auth.user && auth.user.bookings) || [];
+      localBookings.forEach(function (b) {
+        allBookings.push({
+          name: b.name || 'Class',
+          sub: b.sub || '',
+          status: 'PENDING',
+          price: b.price || '',
+          type: 'class',
+          sortKey: b.recordedAt || '',
+        });
+      });
+    }
 
     if (!allBookings.length) {
       return '<div class="tk-empty">No bookings yet.<br>Book a court or class to see them here.</div>';
