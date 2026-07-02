@@ -16,6 +16,7 @@
 <script src="./auth.js?v=4" defer></script>
 <script src="./menu.js" defer></script>
 <script src="./cart.js?v=4" defer></script>
+<link rel="stylesheet" href="./mobile.css">
 <style>
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -48,7 +49,7 @@
       <span style="width:9px; height:9px; border-radius:50%; background:#c4ef3f;"></span>
       <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:rgba(244,245,238,.55);">PADEL</span>
     </a>
-    <div style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
+    <div class="tk-nav-links" style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
       <div onClick="{{ openTakeOffMenu }}" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:rgba(244,245,238,.85);">
         <div style="display:flex; flex-direction:column; gap:4px;"><span style="width:20px; height:2px; background:#c4ef3f;"></span><span style="width:20px; height:2px; background:#c4ef3f;"></span></div>
         MORE
@@ -75,7 +76,7 @@
     <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,23,51,.7) 0%, rgba(10,23,51,.35) 38%, rgba(10,23,51,.92) 100%); pointer-events:none;"></div>
     <div style="position:absolute; inset:0; background:radial-gradient(120% 80% at 80% 0%, rgba(43,107,240,.4), transparent 55%); pointer-events:none;"></div>
 
-    <div style="position:relative; z-index:3; width:100%; padding:0 5vw 7vh; display:flex; align-items:flex-end; justify-content:space-between; gap:40px; flex-wrap:wrap;">
+    <div class="tk-hero-bottom" style="position:relative; z-index:3; width:100%; padding:0 5vw 7vh; display:flex; align-items:flex-end; justify-content:space-between; gap:40px; flex-wrap:wrap;">
       <div style="max-width:880px;">
         <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.32em; color:#c4ef3f; margin-bottom:22px; animation:upP .7s .2s both;">{{ heroKicker }}</div>
         <h1 class="anton" style="margin:0; font-size:clamp(64px,12vw,210px); line-height:.84; letter-spacing:.005em; color:#fff; text-shadow:0 14px 60px rgba(0,0,0,.45); white-space:pre-line; animation:upP .8s .3s both;">{{ heroHeadline }}</h1>
@@ -135,7 +136,7 @@
       </sc-for>
     </div>
 
-    <div style="display:grid; grid-template-columns:1fr 320px; gap:26px; align-items:start;">
+    <div class="tk-booking-grid" style="display:grid; grid-template-columns:1fr 320px; gap:26px; align-items:start;">
       <!-- courts -->
       <div style="display:flex; flex-direction:column; gap:22px;">
         <sc-if value="{{ noCourts }}" hint-placeholder-val="">
@@ -248,7 +249,7 @@
       <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#6a8a16; margin-bottom:14px;">{{ partnersKicker }}</div>
       <h2 class="anton" style="margin:0; font-size:clamp(36px,5.5vw,76px); line-height:.9;">{{ partnersHeading }}</h2>
     </div>
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
+    <div class="tk-partners-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
       <sc-for list="{{ partners }}" as="pt" hint-placeholder-count="8">
         <div class="lift" style="background:#dddbd0; border-radius:14px; height:120px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
           <sc-if value="{{ pt.hasLogo }}" hint-placeholder-val="">
@@ -340,7 +341,7 @@
     <div style="position:fixed; inset:0; z-index:301; display:flex; align-items:center; justify-content:center; padding:20px; pointer-events:none;">
       <div onClick="{{ stopCoachProp }}" style="pointer-events:all; background:#0a1733; border:1px solid rgba(196,239,63,.2); border-radius:24px; padding:36px; width:100%; max-width:880px; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 40px 100px rgba(0,0,0,.65);">
         <button onClick="{{ closeCoachModal }}" style="position:absolute; top:18px; right:22px; cursor:pointer; font-size:24px; color:rgba(244,245,238,.5); background:none; border:none; line-height:1;">×</button>
-        <div style="display:grid; grid-template-columns:2fr 3fr; gap:30px; align-items:start;">
+        <div class="tk-modal-grid" style="display:grid; grid-template-columns:2fr 3fr; gap:30px; align-items:start;">
           <div style="aspect-ratio:4/5; border-radius:16px; overflow:hidden; position:relative;">
             <image-slot id="{{ coachModal.slot }}" placeholder="Coach photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
           </div>
@@ -429,7 +430,7 @@
 
   <!-- ░ COACHING FORM ░ -->
   <div id="coaching-form" style="padding:9vh 5vw; background:#0c1c3f;">
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:start; max-width:1100px; margin:0 auto;">
+    <div class="tk-form-2col" style="display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:start; max-width:1100px; margin:0 auto;">
       <div>
         <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">{{ coachingFormKicker }}</div>
         <h2 class="anton" style="margin:0 0 18px; font-size:clamp(36px,5vw,72px); line-height:.9; color:#fff;">{{ coachingFormHeading }}</h2>
@@ -443,7 +444,7 @@
       <div style="background:#0a1733; border:1px solid rgba(196,239,63,.18); border-radius:22px; padding:34px;">
         <sc-if value="{{ coachFormNotSubmitted }}" hint-placeholder-val="">
           <div style="display:flex; flex-direction:column; gap:14px;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="tk-form-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
               <div>
                 <label style="display:block; font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.5); margin-bottom:6px;">LAST NAME</label>
                 <input id="cf-nom" type="text" placeholder="Lahiani" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(196,239,63,.2); background:rgba(255,255,255,.05); color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; box-sizing:border-box; outline:none;">

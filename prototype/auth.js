@@ -604,7 +604,7 @@
       '</div>' +
       '<div id="tk-addr-' + key + '-view">' + cardBody + '</div>' +
       '<div id="tk-addr-' + key + '-edit" style="display:none;border-top:1px solid rgba(244,245,238,.06);margin-top:12px;padding-top:12px;">' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
+        '<div class="tk-addr-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
           '<input class="tk-inp" id="tk-' + key + '-name" type="text" value="' + esc((a && a.name) || fallbackName || '') + '" placeholder="Full name">' +
           '<input class="tk-inp" id="tk-' + key + '-job" type="text" value="' + esc((a && a.job) || '') + '" placeholder="Job / role (optional)">' +
         '</div>' +

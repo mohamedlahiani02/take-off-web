@@ -16,6 +16,7 @@
 <script src="./auth.js?v=4" defer></script>
 <script src="./menu.js" defer></script>
 <script src="./cart.js?v=4" defer></script>
+<link rel="stylesheet" href="./mobile.css">
 <style>
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -46,7 +47,7 @@
       <span style="width:9px; height:9px; border-radius:50%; background:#c4ef3f;"></span>
       <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:rgba(244,245,238,.55);">COACHES</span>
     </a>
-    <div style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
+    <div class="tk-nav-links" style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
       <div onClick="{{ openTakeOffMenu }}" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:rgba(244,245,238,.85);">
         <div style="display:flex; flex-direction:column; gap:4px;"><span style="width:20px; height:2px; background:#c4ef3f;"></span><span style="width:20px; height:2px; background:#c4ef3f;"></span></div>
         MENU
@@ -109,7 +110,7 @@
     <div style="position:fixed; inset:0; z-index:301; display:flex; align-items:center; justify-content:center; padding:20px; pointer-events:none;">
       <div onClick="{{ stopProp }}" style="pointer-events:all; background:#0a1733; border:1px solid rgba(196,239,63,.2); border-radius:24px; padding:36px; width:100%; max-width:880px; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 40px 100px rgba(0,0,0,.65);">
         <button onClick="{{ closeModal }}" style="position:absolute; top:18px; right:22px; cursor:pointer; font-size:24px; color:rgba(244,245,238,.5); background:none; border:none; line-height:1;">×</button>
-        <div style="display:grid; grid-template-columns:2fr 3fr; gap:30px; align-items:start;">
+        <div class="tk-modal-grid" style="display:grid; grid-template-columns:2fr 3fr; gap:30px; align-items:start;">
           <div style="aspect-ratio:4/5; border-radius:16px; overflow:hidden; position:relative;">
             <image-slot id="{{ modal.slot }}" placeholder="Coach photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
           </div>
@@ -138,7 +139,7 @@
   <!-- ░ COACHING FORM ░ -->
   <div id="coaching-form" style="padding:9vh 5vw; background:#0a1733;">
     <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">02 — COACHING INQUIRY</div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:start; margin-bottom:48px;">
+    <div class="tk-form-2col" style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:start; margin-bottom:48px;">
       <div>
         <h2 class="anton" style="margin:0 0 18px; font-size:clamp(36px,5.5vw,78px); line-height:.9; color:#fff;">Want to improve<br>your game<span style="color:#c4ef3f;">?</span></h2>
         <p style="font-size:15px; line-height:1.65; color:rgba(244,245,238,.65); margin:0;">Our coaches offer individual and group lessons, by appointment. Weekdays slots run from 9am to 5:30pm. Weekends from 9am to noon and 2pm to 5:30pm. In summer, sessions move to early morning or evening after 6pm for your comfort. Fill the form — we'll get back to you within 24h by phone or WhatsApp.</p>
@@ -162,7 +163,7 @@
 
     <sc-if value="{{ coachFormNotSubmitted }}" hint-placeholder-val="">
       <div style="background:#0f1f44; border:1px solid rgba(196,239,63,.16); border-radius:22px; padding:32px;">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px;">
+        <div class="tk-form-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px;">
           <div>
             <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">LAST NAME</label>
             <input id="cf-nom" type="text" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box;" placeholder="Ben Ahmed">
@@ -232,7 +233,7 @@
           <textarea id="cf-dispos" rows="2" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:14px; font-family:'Space Grotesk',sans-serif; outline:none; resize:vertical; box-sizing:border-box;" placeholder="E.g. free weekday mornings except Wednesday..."></textarea>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px; margin-top:16px;">
+        <div class="tk-form-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px; margin-top:16px;">
           <div>
             <label style="display:block; font-family:'Space Mono'; font-size:11px; letter-spacing:.18em; color:rgba(196,239,63,.8); margin-bottom:7px;">PADEL LEVEL</label>
             <select id="cf-niveau" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid rgba(196,239,63,.25); background:#0a1733; color:#f4f5ee; font-size:15px; font-family:'Space Grotesk',sans-serif; outline:none; box-sizing:border-box; appearance:none;">

@@ -16,6 +16,7 @@
 <script src="./auth.js?v=4" defer></script>
 <script src="./menu.js" defer></script>
 <script src="./cart.js?v=4" defer></script>
+<link rel="stylesheet" href="./mobile.css">
 <style>
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -52,7 +53,7 @@
       <span style="width:9px; height:9px; border-radius:50%; background:#c4ef3f;"></span>
       <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:rgba(244,245,238,.55);">STORE</span>
     </a>
-    <div style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
+    <div class="tk-nav-links" style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.16em;">
       <div onClick="{{ openTakeOffMenu }}" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:rgba(244,245,238,.85);">
         <div style="display:flex; flex-direction:column; gap:4px;"><span style="width:20px; height:2px; background:#c4ef3f;"></span><span style="width:20px; height:2px; background:#c4ef3f;"></span></div>
         MENU
@@ -128,7 +129,7 @@
     <div style="position:fixed; inset:0; z-index:301; display:flex; align-items:center; justify-content:center; padding:20px; pointer-events:none;">
       <div onClick="{{ stopProp }}" style="pointer-events:all; background:#0a1733; border:1px solid rgba(196,239,63,.2); border-radius:24px; padding:36px; width:100%; max-width:900px; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 40px 100px rgba(0,0,0,.65);">
         <button onClick="{{ closeModal }}" style="position:absolute; top:18px; right:22px; cursor:pointer; font-size:24px; color:rgba(244,245,238,.5); background:none; border:none; line-height:1;">×</button>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:start;">
+        <div class="tk-modal-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:start;">
           <!-- Image area -->
           <div>
             <div style="aspect-ratio:1/1; border-radius:18px; overflow:hidden; position:relative; margin-bottom:12px; border:1px solid rgba(196,239,63,.12);">
