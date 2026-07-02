@@ -91,6 +91,12 @@
 
   <!-- PRODUCT GRID -->
   <div style="padding:5vh 5vw 9vh;">
+    <sc-if value="{{ isLoading }}" hint-placeholder-val="">
+      <div style="text-align:center; padding:80px 20px; color:rgba(244,245,238,.4); font-size:16px;">Loading products…</div>
+    </sc-if>
+    <sc-if value="{{ emptyStore }}" hint-placeholder-val="">
+      <div style="text-align:center; padding:80px 20px; color:rgba(244,245,238,.4); font-size:16px;">No products in the store yet.</div>
+    </sc-if>
     <sc-if value="{{ noProducts }}" hint-placeholder-val="">
       <div style="text-align:center; padding:80px 20px; color:rgba(244,245,238,.4); font-size:16px;">No products match your filter.</div>
     </sc-if>
@@ -98,7 +104,7 @@
       <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
         <div class="lift" style="background:#0f1f44; border:1px solid rgba(196,239,63,.12); border-radius:20px; overflow:hidden;">
           <div style="position:relative; aspect-ratio:1/1; cursor:pointer;" onClick="{{ p.openModal }}">
-            <image-slot id="{{ p.slot }}" placeholder="Product photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+            <image-slot id="{{ p.slot }}" src="{{ p.mainPhotoUrl }}" placeholder="Product photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
             <div style="position:absolute; top:12px; left:12px; font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; padding:5px 10px; border-radius:999px; background:rgba(10,23,51,.88); color:#c4ef3f;">{{ p.tag }}</div>
           </div>
           <div style="padding:16px 18px;">
@@ -126,12 +132,12 @@
           <!-- Image area -->
           <div>
             <div style="aspect-ratio:1/1; border-radius:18px; overflow:hidden; position:relative; margin-bottom:12px; border:1px solid rgba(196,239,63,.12);">
-              <image-slot id="{{ modalProduct.activeSlot }}" placeholder="Product image" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+              <image-slot id="{{ modalProduct.activeSlot }}" src="{{ modalProduct.activePhotoUrl }}" placeholder="Product image" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
             </div>
             <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
               <sc-for list="{{ modalProduct.thumbSlots }}" as="ts" hint-placeholder-count="3">
                 <div onClick="{{ ts.pick }}" style="aspect-ratio:1/1; border-radius:10px; overflow:hidden; position:relative; border:{{ ts.border }}; cursor:pointer; transition:border-color .15s;">
-                  <image-slot id="{{ ts.slot }}" placeholder="Thumb" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+                  <image-slot id="{{ ts.slot }}" src="{{ ts.photoUrl }}" placeholder="Thumb" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
                 </div>
               </sc-for>
             </div>
@@ -201,7 +207,7 @@ class Component extends DCLogic {
   state = {
     activeCat: 'all', searchQuery: '', openProductIdx: null,
     qty: 1, selectedSize: null, activeThumbIdx: 0,
-    _authTick: 0, _cartTick: 0,
+    _authTick: 0, _cartTick: 0, _apiProducts: null,
   };
 
   componentDidMount() {
@@ -214,25 +220,13 @@ class Component extends DCLogic {
       if (cat) this.setState({ activeCat: cat });
     } catch (e) {}
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.setState({ openProductIdx: null }); });
-  }
-
-  _allProducts() {
-    return [
-      { id: 1,  name: 'TakeOff Pro Racket',    cat: 'rackets',     catLabel: 'RACKETS',     price: 320, tag: 'BESTSELLER', desc: 'High-performance racket designed with the pros. Optimal balance, carbon frame, anatomical grip. Available in 3 weights.',                              sizes: true,  slot: 'st-prod-1',  slot2: 'st-prod-1b',  slot3: 'st-prod-1c'  },
-      { id: 2,  name: 'Overgrip Pack ×3',       cat: 'accessories', catLabel: 'ACCESSORIES', price: 24,  tag: 'GRIP',       desc: 'Three ultra-absorbent premium cotton overgrips. Compatible with all rackets. Pre-cut format.',                                                   sizes: false, slot: 'st-prod-2',  slot2: 'st-prod-2b',  slot3: 'st-prod-2c'  },
-      { id: 3,  name: 'Hand Protector',         cat: 'accessories', catLabel: 'ACCESSORIES', price: 18,  tag: 'ESSENTIAL',  desc: 'Our signature 4mm neoprene hand protector. Perfect hold, blister-free, machine washable at 30°.',                                              sizes: true,  slot: 'st-prod-3',  slot2: 'st-prod-3b',  slot3: 'st-prod-3c'  },
-      { id: 4,  name: 'Pro Balls — Tube',       cat: 'accessories', catLabel: 'ACCESSORIES', price: 15,  tag: 'NEW',        desc: 'Tube of 3 standard FIP pressure balls. Consistent bounce, maximum durability for intense sessions.',                                            sizes: false, slot: 'st-prod-4',  slot2: 'st-prod-4b',  slot3: 'st-prod-4c'  },
-      { id: 5,  name: 'Court Racket Bag',       cat: 'accessories', catLabel: 'ACCESSORIES', price: 145, tag: 'CARRY',      desc: '2-compartment racket bag. Insulated ball pocket + separate shoe space. Take Off colourway.',                                                    sizes: false, slot: 'st-prod-5',  slot2: 'st-prod-5b',  slot3: 'st-prod-5c'  },
-      { id: 6,  name: 'Club Cap',               cat: 'lifestyle',   catLabel: 'LIFESTYLE',   price: 35,  tag: 'LIFESTYLE',  desc: 'Take Off brushed organic cotton snapback. Embroidered front logo, terry sweatband.',                                                           sizes: false, slot: 'st-prod-6',  slot2: 'st-prod-6b',  slot3: 'st-prod-6c'  },
-      { id: 7,  name: 'Grip Socks Studio',      cat: 'pilates',     catLabel: 'PILATES',     price: 28,  tag: 'MUST-HAVE',  desc: 'Non-slip socks for reformer and mat work. Full-sole silicone grip, breathable mesh.',                                                           sizes: true,  slot: 'st-prod-7',  slot2: 'st-prod-7b',  slot3: 'st-prod-7c'  },
-      { id: 8,  name: 'Studio Towel',           cat: 'towels',      catLabel: 'TOWELS',      price: 34,  tag: 'SOFT',       desc: '85×45cm microfibre towel. Quick-dry, ultra-compact, exclusive Take Off colourway.',                                                            sizes: false, slot: 'st-prod-8',  slot2: 'st-prod-8b',  slot3: 'st-prod-8c'  },
-      { id: 9,  name: 'Performance Tee',        cat: 'padelwear',   catLabel: 'PADELWEAR',   price: 75,  tag: 'NEW',        desc: 'Recycled polyester 200g technical tee. Slim fit, moisture management, flat seams.',                                                            sizes: true,  slot: 'st-prod-9',  slot2: 'st-prod-9b',  slot3: 'st-prod-9c'  },
-      { id: 10, name: 'Resistance Band Set',    cat: 'pilates',     catLabel: 'PILATES',     price: 45,  tag: 'SET OF 3',   desc: 'Set of 3 resistance bands: light / medium / strong. Natural latex, fabric handles. Ideal for Pilates and physical prep.',                       sizes: false, slot: 'st-prod-10', slot2: 'st-prod-10b', slot3: 'st-prod-10c' },
-      { id: 11, name: 'Padel Shorts',           cat: 'padelwear',   catLabel: 'PADELWEAR',   price: 89,  tag: 'SAVE 15%',   desc: '4-way stretch technical shorts. Zipped pocket, wide elastic waistband, knee length.',                                                           sizes: true,  slot: 'st-prod-11', slot2: 'st-prod-11b', slot3: 'st-prod-11c' },
-      { id: 12, name: 'Seamless Leggings',      cat: 'pilates',     catLabel: 'PILATES',     price: 120, tag: 'BESTSELLER', desc: 'High-compression seamless leggings. Second-skin fit, machine-resistant, exclusive cream colour.',                                              sizes: true,  slot: 'st-prod-12', slot2: 'st-prod-12b', slot3: 'st-prod-12c' },
-      { id: 13, name: 'Take Off Water Bottle',  cat: 'lifestyle',   catLabel: 'LIFESTYLE',   price: 48,  tag: 'ECO',        desc: '750ml double-wall stainless steel. Cold 24h / hot 12h. Laser-engraved logo.',                                                                  sizes: false, slot: 'st-prod-13', slot2: 'st-prod-13b', slot3: 'st-prod-13c' },
-      { id: 14, name: 'Studio Tote Bag',        cat: 'lifestyle',   catLabel: 'LIFESTYLE',   price: 52,  tag: 'CARRY',      desc: '380g canvas tote bag. Reinforced handles, interior zip pocket, 40×38cm.',                                                                       sizes: false, slot: 'st-prod-14', slot2: 'st-prod-14b', slot3: 'st-prod-14c' },
-    ];
+    (async () => {
+      try {
+        const resp = await window.takeOffApi.products.list({ page: 0, size: 50 });
+        const items = resp && resp.content ? resp.content : (Array.isArray(resp) ? resp : []);
+        this.setState({ _apiProducts: items });
+      } catch (_) {}
+    })();
   }
 
   _cartItem(p, qty, size) {
@@ -260,7 +254,26 @@ class Component extends DCLogic {
     }));
 
     const q = (this.state.searchQuery || '').toLowerCase();
-    const allProds = this._allProducts();
+    const rawApiProducts = this.state._apiProducts;
+    const allProds = rawApiProducts
+      ? rawApiProducts.map(p => ({
+          id: p.id,
+          name: p.name,
+          cat: (p.category || '').toLowerCase(),
+          catLabel: (p.category || '').toUpperCase(),
+          price: p.priceDt,
+          tag: p.tag || '',
+          desc: p.description || '',
+          sizes: p.hasSizes || false,
+          slot: 'store-' + p.id,
+          slot2: 'store-' + p.id + '-b',
+          slot3: 'store-' + p.id + '-c',
+          mainPhotoUrl: (p.imageUrls && p.imageUrls.length > 0) ? p.imageUrls[0] : '',
+          imageUrls: p.imageUrls || [],
+        }))
+      : [];
+    const isLoading = rawApiProducts === null;
+    const emptyStore = !isLoading && allProds.length === 0;
     const filtered = allProds.filter(p => {
       const catMatch = this.state.activeCat === 'all' || p.cat === this.state.activeCat;
       const searchMatch = !q || p.name.toLowerCase().includes(q) || p.catLabel.toLowerCase().includes(q);
@@ -282,18 +295,21 @@ class Component extends DCLogic {
 
     // Thumbnail slots array with active state
     const allThumbSlots = rawModal ? [rawModal.slot, rawModal.slot2, rawModal.slot3] : ['st-prod-1','st-prod-1b','st-prod-1c'];
+    const allThumbPhotos = rawModal ? (rawModal.imageUrls || []) : [];
     const activeThumbIdx = this.state.activeThumbIdx || 0;
     const thumbSlots = allThumbSlots.map((sl, i) => ({
       slot: sl,
+      photoUrl: allThumbPhotos[i] || '',
       border: i === activeThumbIdx ? '2px solid #c4ef3f' : '1px solid rgba(196,239,63,.18)',
       pick: () => this.setState({ activeThumbIdx: i }),
     }));
 
     const modalProduct = rawModal ? Object.assign({}, rawModal, {
       activeSlot: allThumbSlots[activeThumbIdx] || rawModal.slot,
+      activePhotoUrl: allThumbPhotos[activeThumbIdx] || rawModal.mainPhotoUrl || '',
       thumbSlots,
       hasSizes: rawModal.sizes ? true : null,
-    }) : { name: '', catLabel: '', price: 0, desc: '', activeSlot: 'st-prod-1', thumbSlots: [], hasSizes: null };
+    }) : { name: '', catLabel: '', price: 0, desc: '', activeSlot: 'st-prod-1', activePhotoUrl: '', thumbSlots: [], hasSizes: null };
 
     const selectedSize = this.state.selectedSize;
     const needsSize = rawModal && rawModal.sizes && !selectedSize;
@@ -310,7 +326,9 @@ class Component extends DCLogic {
     return {
       loaderRef: this.loaderRef,
       cats, products,
-      noProducts: filtered.length === 0 ? true : null,
+      isLoading: isLoading ? true : null,
+      emptyStore: emptyStore ? true : null,
+      noProducts: (!isLoading && !emptyStore && filtered.length === 0) ? true : null,
       searchQuery: this.state.searchQuery,
       onSearch: (e) => { this.setState({ searchQuery: e && e.target ? e.target.value : '' }); },
       modalOpen, modalProduct, sizeOptions,
