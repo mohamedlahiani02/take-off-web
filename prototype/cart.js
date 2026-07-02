@@ -595,16 +595,22 @@
 
         var payMethodMap = { pay_at_club: 'COD', wallet: 'WALLET', card: 'CARD' };
         var client = window.takeOffApi;
-        if (client && client.isOnline() && !bookingOnly) {
+        // Pay-at-club (COD) needs no API call — staff collect payment on-site.
+        // Wallet and card always go through orders.place() so the backend can
+        // deduct the wallet or initiate a Konnect payment intent.
+        if (client && client.isOnline() && _d.pay !== 'pay_at_club') {
           try {
             var payload = {
-              deliveryMethod: _d.delivery === 'pickup' ? 'PICKUP' : 'DELIVER',
-              deliveryAddress: _d.delivery === 'deliver' ? { addr: _d.address, city: _d.city, notes: _d.notes || '' } : null,
+              // Booking-only carts are services — no delivery, always pickup.
+              deliveryMethod: bookingOnly ? 'PICKUP' : (_d.delivery === 'pickup' ? 'PICKUP' : 'DELIVER'),
+              deliveryAddress: (!bookingOnly && _d.delivery === 'deliver') ? { addr: _d.address, city: _d.city, notes: _d.notes || '' } : null,
               paymentMethod: payMethodMap[_d.pay] || 'COD',
               deliveryFeeDt: cart.getShipping(),
               discountCode: null,
-              contact: { name: _d.name, email: _d.email, phone: _d.phone },
-              items: its.filter(function(it){ return it.kind !== 'pack' && it.kind !== 'booking'; }).map(function(it){
+              contact: { name: _d.name, email: _d.email || '', phone: _d.phone },
+              // Booking-only: send all items (sessions + packs) as service line items.
+              // Mixed carts: send only physical product items.
+              items: (bookingOnly ? its : its.filter(function(it){ return it.kind !== 'pack' && it.kind !== 'booking'; })).map(function(it){
                 return {
                   productId: it.productId || null,
                   productName: it.name || it.n,
