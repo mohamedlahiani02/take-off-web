@@ -772,7 +772,7 @@ async function renderDashboard() {
     if (strip && inqData) strip.children[1].querySelector('.stat-num').textContent = inqData.totalElements || 0;
   } catch (_) {}
   try {
-    var ordData = await window.adminApi.orders.list(0);
+    var ordData = await window.adminApi.orders.list(null, 0);
     var strip = document.getElementById('stats-strip');
     if (strip && ordData) strip.children[2].querySelector('.stat-num').textContent = ordData.totalElements || 0;
   } catch (_) {}
@@ -1025,17 +1025,38 @@ async function renderOrders() {
     var payLabel = { COD:'COD', WALLET:'Wallet', CARD:'Card', D17:'D17' };
     var filterOptions = ['','PENDING','CONFIRMED','PREPARING','SHIPPED','PICKUP_READY','DELIVERED','PICKED_UP','CANCELLED']
       .map(function(s){ return '<option value="' + s + '"' + (s === _ordersStatusFilter ? ' selected' : '') + '>' + (s || 'All statuses') + '</option>'; }).join('');
+    var orderNextAction = {
+      PENDING:      { action:'confirm',      label:'Confirm' },
+      CONFIRMED:    { action:'prepare',      label:'Prepare' },
+      PREPARING:    { action:'__delivery__', label:'' },
+      SHIPPED:      { action:'deliver',      label:'Delivered' },
+      PICKUP_READY: { action:'picked_up',    label:'Picked Up' },
+    };
     var rows = items.map(function (o) {
       var sc = statusColors[o.status] || 'var(--muted)';
-      return `<tr>
-        <td style="font-family:'Space Mono';font-size:10px;color:var(--lime);">${esc(o.orderRef)}</td>
-        <td style="font-family:'Space Mono';font-size:10px;color:var(--muted);">${new Date(o.createdAt).toLocaleDateString()}</td>
-        <td><span class="badge" style="background:rgba(255,255,255,.07);color:${sc};">${esc(o.status)}</span></td>
-        <td style="font-size:12px;color:var(--muted);">${o.deliveryMethod === 'DELIVER' ? 'Delivery' : 'Pickup'}</td>
-        <td style="font-size:12px;color:var(--muted);">${esc(payLabel[o.paymentMethod] || o.paymentMethod || '')}</td>
-        <td style="font-weight:700;color:var(--lime);">${o.totalDt} DT</td>
-        <td><div class="row-actions"><button class="btn-icon" onclick="openOrderDetail('${esc(o.id || o.orderRef)}')">View</button></div></td>
-      </tr>`;
+      var customer = (o.contact && (o.contact.name || o.contact.phone))
+        ? esc(o.contact.name || o.contact.phone)
+        : '<span style="color:var(--muted)">Guest</span>';
+      var na = orderNextAction[o.status];
+      var actionChip = '';
+      if (na) {
+        var act = na.action, lbl = na.label;
+        if (act === '__delivery__') {
+          act = o.deliveryMethod === 'DELIVER' ? 'ship' : 'pickup_ready';
+          lbl = o.deliveryMethod === 'DELIVER' ? 'Ship' : 'Pickup Ready';
+        }
+        actionChip = '<button class="btn-icon" style="color:var(--lime);border-color:rgba(196,239,63,.3);" onclick="event.stopPropagation();doOrderAction(\'' + esc(o.id) + '\',\'' + act + '\')">' + lbl + '</button>';
+      }
+      return '<tr style="cursor:pointer;" onclick="openOrderDetail(\'' + esc(o.id) + '\')">' +
+        '<td style="font-family:\'Space Mono\';font-size:10px;color:var(--lime);">' + esc(o.orderRef) + '</td>' +
+        '<td style="font-size:13px;">' + customer + '</td>' +
+        '<td style="font-family:\'Space Mono\';font-size:10px;color:var(--muted);">' + new Date(o.createdAt).toLocaleDateString() + '</td>' +
+        '<td><span class="badge" style="background:rgba(255,255,255,.07);color:' + sc + ';">' + esc(o.status) + '</span></td>' +
+        '<td style="font-size:12px;color:var(--muted);">' + (o.deliveryMethod === 'DELIVER' ? 'Delivery' : 'Pickup') + '</td>' +
+        '<td style="font-size:12px;color:var(--muted);">' + esc(payLabel[o.paymentMethod] || o.paymentMethod || '') + '</td>' +
+        '<td style="font-weight:700;color:var(--lime);">' + o.totalDt + ' DT</td>' +
+        '<td><div class="row-actions">' + actionChip + '<button class="btn-icon" onclick="event.stopPropagation();openOrderDetail(\'' + esc(o.id) + '\')">Detail</button></div></td>' +
+      '</tr>';
     }).join('');
     var emptyMsg = _ordersStatusFilter ? 'No ' + _ordersStatusFilter.toLowerCase() + ' orders.' : 'No orders yet.';
     content.innerHTML = `<div class="card">
@@ -1044,7 +1065,7 @@ async function renderOrders() {
         <select onchange="_ordersStatusFilter=this.value;renderOrders();" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);font-size:13px;">${filterOptions}</select>
       </div>
       ${items.length ? `<table>
-        <thead><tr><th>REF</th><th>DATE</th><th>STATUS</th><th>DELIVERY</th><th>PAYMENT</th><th>TOTAL</th><th></th></tr></thead>
+        <thead><tr><th>REF</th><th>CUSTOMER</th><th>DATE</th><th>STATUS</th><th>DELIVERY</th><th>PAYMENT</th><th>TOTAL</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>` : '<div class="empty-state" style="padding:40px 0;"><p>' + emptyMsg + '</p></div>'}
     </div>`;
@@ -1715,7 +1736,8 @@ async function renderProducts() {
         '<td>' + prodTotalStock(d) + '</td>' +
         '<td>' + (p.isActive ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-inactive">HIDDEN</span>') + '</td>' +
         '<td><div class="row-actions">' +
-          "<button class='btn-icon' onclick='editProduct(" + JSON.stringify(d) + ")'>Edit</button>" +
+          "<button class='btn-icon' style='color:var(--lime);border-color:rgba(196,239,63,.3);' onclick='adjustStockModal(" + JSON.stringify(d).replace(/'/g, '&#39;') + ")'>Stock</button>" +
+          "<button class='btn-icon' onclick='editProduct(" + JSON.stringify(d).replace(/'/g, '&#39;') + ")'>Edit</button>" +
           "<button class='btn-icon danger' onclick=\"deleteProduct('" + p.id + "','" + esc(p.name) + "')\">Delete</button>" +
         '</div></td></tr>';
     }).join('');
@@ -1747,6 +1769,88 @@ function productForm(d) {
   }, 600);
   imgRenderThumbs('prod-imgs'); variantRender();
 }
+// ── Stock management ──────────────────────────────────────────────────────────
+function adjustStockModal(d) {
+  var p = d.product;
+  var hasVariants = d.variants && d.variants.length > 0;
+
+  function varRow(vid, label, currentStock) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(196,239,63,.06);">' +
+      '<div>' +
+        '<span style="font-size:13px;color:var(--cream);font-weight:600;">' + esc(label) + '</span>' +
+        '&nbsp;<span style="font-size:12px;color:var(--muted);" id="sv-lbl-' + vid + '">' + currentStock + ' in stock</span>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<button class="btn-icon" style="width:30px;height:30px;padding:0;text-align:center;font-size:18px;line-height:1;" ' +
+          'onclick="stockDelta(\'' + p.id + '\',\'' + vid + '\',-1)">−</button>' +
+        '<span id="sv-' + vid + '" style="font-family:\'Space Mono\';font-size:13px;min-width:32px;text-align:center;color:var(--lime);">' + currentStock + '</span>' +
+        '<button class="btn-icon" style="width:30px;height:30px;padding:0;text-align:center;font-size:18px;line-height:1;" ' +
+          'onclick="stockDelta(\'' + p.id + '\',\'' + vid + '\',1)">+</button>' +
+        '<span style="color:var(--muted);font-size:11px;margin-left:4px;">or set:</span>' +
+        '<input id="si-' + vid + '" type="number" min="0" placeholder="qty" style="width:64px;padding:6px 8px;border-radius:8px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);font-size:13px;text-align:center;">' +
+        '<button class="btn-sm btn-lime" style="padding:6px 10px;font-size:12px;" onclick="setStock(\'' + p.id + '\',\'' + vid + '\')">Set</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  var rows = hasVariants
+    ? d.variants.map(function(v){ return varRow(v.id, v.size, v.stock); }).join('')
+    : varRow('_global_', 'Total stock', p.stock);
+
+  var body =
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:14px;">' + esc(p.name) + ' &middot; ' + esc(p.category) + '</div>' +
+    '<div style="background:var(--navy);border-radius:10px;padding:12px 16px;">' + rows + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-top:10px;">−/+ adjusts by 1. "Set" sets the absolute value. Saves immediately.</div>';
+
+  openGenModal('Manage Stock — ' + esc(p.name), body, null, null, 580);
+}
+
+async function stockDelta(productId, variantId, delta) {
+  var displayId = 'sv-' + variantId;
+  var lblId = 'sv-lbl-' + variantId;
+  var vid = variantId === '_global_' ? undefined : variantId;
+  try {
+    var result = await window.adminApi.products.adjustStock(productId, delta, vid);
+    var newStock = _stockFromResult(result, vid);
+    var el = document.getElementById(displayId);
+    var lbl = document.getElementById(lblId);
+    if (el) el.textContent = newStock;
+    if (lbl) lbl.textContent = newStock + ' in stock';
+    renderProducts();
+  } catch(e) { toast(e.message || 'Failed.', 'error'); }
+}
+
+async function setStock(productId, variantId) {
+  var inputEl = document.getElementById('si-' + variantId);
+  if (!inputEl || inputEl.value === '') return;
+  var target = parseInt(inputEl.value, 10);
+  if (isNaN(target) || target < 0) { toast('Enter a valid number ≥ 0.', 'error'); return; }
+  var displayEl = document.getElementById('sv-' + variantId);
+  var current = displayEl ? parseInt(displayEl.textContent, 10) || 0 : 0;
+  var delta = target - current;
+  if (delta === 0) { inputEl.value = ''; return; }
+  var vid = variantId === '_global_' ? undefined : variantId;
+  try {
+    var result = await window.adminApi.products.adjustStock(productId, delta, vid);
+    var newStock = _stockFromResult(result, vid);
+    if (displayEl) displayEl.textContent = newStock;
+    var lbl = document.getElementById('sv-lbl-' + variantId);
+    if (lbl) lbl.textContent = newStock + ' in stock';
+    inputEl.value = '';
+    toast('Stock set to ' + newStock + '.', 'success');
+    renderProducts();
+  } catch(e) { toast(e.message || 'Failed.', 'error'); }
+}
+
+function _stockFromResult(result, variantId) {
+  if (variantId && result.variants) {
+    var v = result.variants.find(function(v){ return v.id === variantId; });
+    return v ? v.stock : 0;
+  }
+  return result.product ? result.product.stock : 0;
+}
+// ── End stock management ──────────────────────────────────────────────────────
+
 function deleteProduct(id, name) {
   confirmDialog('Delete product', 'Delete "'+name+'"?', 'Delete', async function () {
     try { await window.adminApi.products.remove(id); toast('Deleted.','success'); closeConfirm(); renderProducts(); }
