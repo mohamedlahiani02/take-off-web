@@ -591,14 +591,23 @@
         if (btn) { btn.disabled = true; btn.textContent = '...'; }
         var its = cart.getItems();
 
-        its.forEach(function(it){ if(it.kind==='pack'&&it._packMeta&&window.takeOffAuth&&window.takeOffAuth.purchasePack) window.takeOffAuth.purchasePack(it._packMeta); });
+        for (var _packIt of its) {
+          if (_packIt.kind === 'pack') {
+            var _packClient = window.takeOffApi;
+            if (_packIt.packTypeId && _packClient && _packClient.isOnline() && _packClient.classes && _packClient.classes.purchasePack) {
+              try { await _packClient.classes.purchasePack(_packIt.packTypeId); } catch(e) { /* ignore — fall through */ }
+            } else if (_packIt._packMeta && window.takeOffAuth && window.takeOffAuth.purchasePack) {
+              window.takeOffAuth.purchasePack(_packIt._packMeta);
+            }
+          }
+        }
 
         var payMethodMap = { pay_at_club: 'COD', wallet: 'WALLET', card: 'CARD' };
         var client = window.takeOffApi;
-        // Pay-at-club (COD) needs no API call — staff collect payment on-site.
-        // Wallet and card always go through orders.place() so the backend can
-        // deduct the wallet or initiate a Konnect payment intent.
-        if (client && client.isOnline() && _d.pay !== 'pay_at_club') {
+        // Physical product orders always go through orders.place() so staff have a record to ship.
+        // Booking-only + COD (pay_at_club) skips the API — user pays at the studio.
+        // Booking-only + wallet/card always calls orders.place() for payment processing.
+        if (client && client.isOnline() && (!bookingOnly || _d.pay !== 'pay_at_club')) {
           try {
             var payload = {
               // Booking-only carts are services — no delivery, always pickup.
