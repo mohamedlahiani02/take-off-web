@@ -16,6 +16,7 @@
 <script src="./auth.js?v=4" defer></script>
 <script src="./menu.js" defer></script>
 <script src="./cart.js?v=4" defer></script>
+<link rel="stylesheet" href="./mobile.css">
 <style>
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -47,7 +48,7 @@
       <span style="width:9px; height:9px; border-radius:50%; background:#c4ef3f; box-shadow:0 0 0 2px rgba(12,35,80,.12);"></span>
       <span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.22em; color:rgba(12,35,80,.5);">PILATES</span>
     </a>
-    <div style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.14em; color:rgba(12,35,80,.7);">
+    <div class="tk-nav-links" style="display:flex; align-items:center; gap:24px; font-family:'Space Mono'; font-size:12px; letter-spacing:.14em; color:rgba(12,35,80,.7);">
       <div onClick="{{ openTakeOffMenu }}" style="display:flex; align-items:center; gap:9px; cursor:pointer; color:#0c2350;">
         <div style="display:flex; flex-direction:column; gap:4px;"><span style="width:20px; height:2px; background:#0c2350;"></span><span style="width:20px; height:2px; background:#0c2350;"></span></div>
         MENU
@@ -71,7 +72,7 @@
 
   <!-- ░ HERO ░ -->
   <div style="padding:18vh 5vw 9vh; position:relative;">
-    <div style="display:grid; grid-template-columns:1.1fr .9fr; gap:5vw; align-items:center;">
+    <div class="tk-hero-grid" style="display:grid; grid-template-columns:1.1fr .9fr; gap:5vw; align-items:center;">
       <div>
         <div class="eyebrow" style="color:rgba(12,35,80,.55); animation:upP .7s .15s both;"><span style="color:#c4ef3f; font-size:16px;">✦</span> {{ heroKicker }}</div>
         <h1 style="margin:24px 0 0; font-weight:700; font-size:clamp(44px,5.6vw,92px); line-height:.98; letter-spacing:-.02em; white-space:pre-line; animation:upP .8s .25s both;">{{ heroHeadline }}</h1>
@@ -104,7 +105,7 @@
 
   <!-- ░ INCLUSIVE ░ -->
   <div style="padding:8vh 5vw; background:#eceadf;">
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:center;">
+    <div class="tk-section-2col" style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:center;">
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
         <sc-if value="{{ approachHasPhoto1 }}" hint-placeholder-val="">
           <image-slot src="{{ approachPhoto1 }}" placeholder="" style="width:100%; aspect-ratio:3/4; border-radius:18px; display:block;"></image-slot>
@@ -199,7 +200,7 @@
 
   <!-- ░ STORIES ░ -->
   <div style="padding:9vh 5vw; background:#f4f5ee;">
-    <div style="display:grid; grid-template-columns:.85fr 1.15fr; gap:4vw; align-items:center;">
+    <div class="tk-stories-grid" style="display:grid; grid-template-columns:.85fr 1.15fr; gap:4vw; align-items:center;">
       <div>
         <div class="eyebrow" style="color:rgba(12,35,80,.5);"><span style="color:#c4ef3f;">✦</span> {{ storiesKicker }}</div>
         <h2 style="margin:18px 0 0; font-weight:700; font-size:clamp(32px,3.6vw,56px); line-height:1.02; letter-spacing:-.02em;">{{ storiesHeading }}</h2>
@@ -248,7 +249,7 @@
     </div>
     <div style="display:flex; flex-direction:column; gap:12px;">
       <sc-for list="{{ sessions }}" as="ss" hint-placeholder-count="4">
-        <div style="display:grid; grid-template-columns:96px 1fr auto; gap:24px; align-items:center; background:#fff; border:1px solid rgba(12,35,80,.06); border-radius:18px; padding:20px 24px;">
+        <div class="tk-schedule-row" style="display:grid; grid-template-columns:96px 1fr auto; gap:24px; align-items:center; background:#fff; border:1px solid rgba(12,35,80,.06); border-radius:18px; padding:20px 24px;">
           <div>
             <div style="font-weight:700; font-size:22px; letter-spacing:-.01em;">{{ ss.time }}</div>
             <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(12,28,58,.5); margin-top:3px;">{{ ss.dur }}</div>
@@ -325,7 +326,7 @@
 
   <!-- ░ FAQ ░ -->
   <div style="padding:9vh 5vw; background:#f4f5ee;">
-    <div style="display:grid; grid-template-columns:.8fr 1.2fr; gap:5vw; align-items:start;">
+    <div class="tk-faq-grid" style="display:grid; grid-template-columns:.8fr 1.2fr; gap:5vw; align-items:start;">
       <div style="position:sticky; top:100px;">
         <div class="eyebrow" style="color:rgba(12,35,80,.5);"><span style="color:#c4ef3f;">✦</span> {{ faqKicker }}</div>
         <h2 style="margin:18px 0 0; font-weight:700; font-size:clamp(32px,3.8vw,58px); line-height:1.02; letter-spacing:-.02em;">{{ faqHeading }}</h2>
@@ -349,7 +350,7 @@
 
   <!-- ░ PRIVATE SESSION FORM ░ -->
   <div id="private-session" style="padding:9vh 5vw; background:#0c2350; color:#f4f5ee;">
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:start; max-width:1100px; margin:0 auto;">
+    <div class="tk-form-2col" style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:start; max-width:1100px; margin:0 auto;">
       <div>
         <div class="eyebrow" style="color:rgba(244,245,238,.5);"><span style="color:#c4ef3f;">✦</span> {{ psKicker }}</div>
         <h2 style="margin:20px 0 0; font-weight:700; font-size:clamp(32px,4vw,62px); line-height:1; letter-spacing:-.02em;">{{ psHeadline }}</h2>
@@ -369,11 +370,11 @@
       </sc-if>
       <sc-if value="{{ pilatesFormNotDone }}" hint-placeholder-val="">
         <div style="background:rgba(244,245,238,.05); border:1px solid rgba(244,245,238,.12); border-radius:24px; padding:36px;">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+          <div class="tk-form-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
             <div><label style="font-family:'Space Mono';font-size:10px;letter-spacing:.16em;color:rgba(244,245,238,.5);display:block;margin-bottom:7px;">FIRST NAME</label><input id="pf-prenom" type="text" placeholder="Yasmine" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(244,245,238,.18);background:rgba(244,245,238,.07);color:#f4f5ee;font-size:14px;box-sizing:border-box;"></div>
             <div><label style="font-family:'Space Mono';font-size:10px;letter-spacing:.16em;color:rgba(244,245,238,.5);display:block;margin-bottom:7px;">LAST NAME</label><input id="pf-nom" type="text" placeholder="Ben Ali" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(244,245,238,.18);background:rgba(244,245,238,.07);color:#f4f5ee;font-size:14px;box-sizing:border-box;"></div>
           </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+          <div class="tk-form-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
             <div><label style="font-family:'Space Mono';font-size:10px;letter-spacing:.16em;color:rgba(244,245,238,.5);display:block;margin-bottom:7px;">PHONE</label><input id="pf-tel" type="tel" placeholder="+216 __ __ __ __" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(244,245,238,.18);background:rgba(244,245,238,.07);color:#f4f5ee;font-size:14px;box-sizing:border-box;"></div>
             <div><label style="font-family:'Space Mono';font-size:10px;letter-spacing:.16em;color:rgba(244,245,238,.5);display:block;margin-bottom:7px;">EMAIL</label><input id="pf-email" type="email" placeholder="you@email.com" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(244,245,238,.18);background:rgba(244,245,238,.07);color:#f4f5ee;font-size:14px;box-sizing:border-box;"></div>
           </div>
@@ -394,7 +395,7 @@
 
   <!-- ░ CTA ░ -->
   <div style="position:relative; padding:0; background:#0c2350; overflow:hidden;">
-    <div style="display:grid; grid-template-columns:1.1fr .9fr; min-height:62vh; align-items:center;">
+    <div class="tk-cta-grid" style="display:grid; grid-template-columns:1.1fr .9fr; min-height:62vh; align-items:center;">
       <div style="padding:10vh 5vw; position:relative; z-index:2;">
         <div class="eyebrow" style="color:rgba(244,245,238,.5);"><span style="color:#c4ef3f;">✦</span> {{ ctaKicker }}</div>
         <h2 style="margin:20px 0 0; font-weight:700; font-size:clamp(40px,5.2vw,84px); line-height:.98; letter-spacing:-.02em; color:#f4f5ee;">{{ ctaHeadline }}</h2>
@@ -433,7 +434,7 @@
 <!-- ░ INSTRUCTOR MODAL ░ -->
 <sc-if value="{{ instrModalOpen }}" hint-placeholder-val="">
   <div onClick="{{ closeInstrModal }}" style="position:fixed; inset:0; z-index:160; background:rgba(7,15,36,.55); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:20px;">
-    <div onClick="{{ stopProp }}" style="position:relative; background:#fff; border-radius:24px; width:100%; max-width:720px; display:grid; grid-template-columns:220px 1fr; overflow:hidden; box-shadow:0 32px 80px rgba(12,35,80,.25); max-height:90vh;">
+    <div onClick="{{ stopProp }}" class="tk-modal-grid-instr" style="position:relative; background:#fff; border-radius:24px; width:100%; max-width:720px; display:grid; grid-template-columns:220px 1fr; overflow:hidden; box-shadow:0 32px 80px rgba(12,35,80,.25); max-height:90vh;">
       <div style="background:#eceadf; position:relative;">
         <image-slot id="{{ instrModal.slot }}" placeholder="Drop instructor photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
       </div>

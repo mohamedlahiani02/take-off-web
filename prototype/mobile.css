@@ -1,0 +1,214 @@
+/* ================================================================
+   TAKE OFF — MOBILE RESPONSIVENESS LAYER  v1
+   Breakpoints:
+     ≤1024px = tablet
+     ≤768px  = mobile / large phone
+     ≤580px  = small/mid phone
+     ≤480px  = compact phone
+   All layout overrides use !important to beat inline styles.
+   Design is 100% faithful: same colors, fonts, radius, spacing.
+   ================================================================ */
+
+/* ── 1. NAVIGATION — collapse anchor links, keep controls ──────── */
+/* Keeps: hamburger/MENU div, CART pill div, auth avatar/SIGN IN    */
+/* Hides: <a> page links (BOOK, CLASSES, SHOP, PLANS, etc.)         */
+@media (max-width: 768px) {
+  .tk-nav-links > a {
+    display: none !important;
+  }
+  .tk-nav-links {
+    gap: 10px !important;
+  }
+}
+@media (max-width: 480px) {
+  .tk-nav-links {
+    gap: 8px !important;
+  }
+}
+
+/* ── 2. PADEL HERO BOTTOM — phone card stacks below text ────────── */
+@media (max-width: 640px) {
+  .tk-hero-bottom {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 28px !important;
+  }
+  .tk-hero-bottom > div:last-child {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+/* ── 3. PADEL BOOKING GRID — courts + summary sidebar → 1 col ───── */
+@media (max-width: 1024px) {
+  .tk-booking-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .tk-booking-grid > div:last-child {
+    position: static !important;
+    top: auto !important;
+  }
+}
+
+/* ── 4. PADEL PARTNERS — 4-col → 2-col ──────────────────────────── */
+@media (max-width: 768px) {
+  .tk-partners-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── 5. PILATES HERO — side-by-side text|video → stacked ─────────── */
+@media (max-width: 768px) {
+  .tk-hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+}
+
+/* ── 6. PILATES APPROACH / INCLUSIVE SECTION — 2-col → 1-col ────── */
+@media (max-width: 768px) {
+  .tk-section-2col {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+}
+
+/* ── 7. PILATES STORIES — heading | testimonial → stacked ─────────── */
+@media (max-width: 768px) {
+  .tk-stories-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+}
+
+/* ── 8. PILATES SCHEDULE ROW — time | details | button → compact ─── */
+@media (max-width: 640px) {
+  .tk-schedule-row {
+    grid-template-columns: 72px 1fr !important;
+    gap: 8px 12px !important;
+    padding: 16px 18px !important;
+  }
+  /* Reserve button spans full row below time + name */
+  .tk-schedule-row > div:last-child {
+    grid-column: 1 / -1 !important;
+    text-align: center !important;
+    white-space: normal !important;
+  }
+}
+
+/* ── 9. PILATES FAQ — sticky heading | accordion → stacked ────────── */
+@media (max-width: 768px) {
+  .tk-faq-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .tk-faq-grid > div:first-child {
+    position: static !important;
+    top: auto !important;
+  }
+}
+
+/* ── 10. PILATES FINAL CTA — text | photo → stacked ─────────────── */
+@media (max-width: 768px) {
+  .tk-cta-grid {
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
+  }
+  .tk-cta-grid > div:last-child {
+    min-height: 220px !important;
+  }
+}
+
+/* ── 11. GENERIC 2-COL SECTION — left text | right form/card ────── */
+/* Used in: Padel coaching, Coaches form, Pilates private session    */
+@media (max-width: 768px) {
+  .tk-form-2col {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+}
+
+/* ── 12. INNER 2-COL FORM GRIDS — first/last name, phone/email ──── */
+@media (max-width: 580px) {
+  .tk-form-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+}
+
+/* ── 13. COACH MODALS & STORE PRODUCT MODAL — photo | text ──────── */
+@media (max-width: 640px) {
+  .tk-modal-grid {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+  }
+  .tk-modal-grid > div:first-child[style*="aspect-ratio"] {
+    max-height: 220px !important;
+    aspect-ratio: 4/3 !important;
+  }
+}
+
+/* ── 14. PILATES INSTRUCTOR MODAL — 220px photo | content ────────── */
+@media (max-width: 640px) {
+  .tk-modal-grid-instr {
+    grid-template-columns: 1fr !important;
+  }
+  .tk-modal-grid-instr > div:first-child {
+    height: 200px !important;
+  }
+}
+
+/* ── 15. STORE FILTER BAR — horizontal scroll ───────────────────── */
+@media (max-width: 768px) {
+  .st-filter-bar {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .st-filter-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .st-search {
+    flex-shrink: 0 !important;
+    min-width: 110px !important;
+    max-width: 150px !important;
+    margin-left: 0 !important;
+  }
+}
+
+/* ── 16. AUTH DRAWER — address form 2-col → 1-col ──────────────── */
+@media (max-width: 480px) {
+  .tk-addr-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+  /* Stat grid — compact on small drawer width */
+  .tk-stat-grid {
+    gap: 6px !important;
+  }
+  .tk-stat {
+    padding: 10px 6px !important;
+  }
+  .tk-stat-val {
+    font-size: 22px !important;
+  }
+  .tk-stat-lbl {
+    font-size: 8px !important;
+  }
+}
+
+/* ── 17. CART CHECKOUT — inner 2-col form → 1-col ──────────────── */
+@media (max-width: 480px) {
+  .tk-g2 {
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+}
+
+/* ── 18. SAVED ADDRESS CARDS IN CHECKOUT — full width on mobile ─── */
+@media (max-width: 580px) {
+  .tk-saved-addr-card {
+    min-width: 100% !important;
+  }
+}
