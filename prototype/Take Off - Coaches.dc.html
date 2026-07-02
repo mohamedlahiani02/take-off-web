@@ -437,7 +437,7 @@ class Component extends DCLogic {
       };
       const client = window.takeOffApi;
       if (client && client.isOnline()) {
-        try { await client.coaching.submit(payload); } catch (e) {}
+        try { await client.coaching.inquiry(payload); } catch (e) {}
       }
       this.setState({ _formSent: true, _submitting: false });
     };
