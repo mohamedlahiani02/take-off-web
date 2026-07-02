@@ -1011,6 +1011,7 @@ async function iqSaveNote(id){ try{ await window.adminApi.inquiryPipeline.note(i
 async function iqClose(id,outcome){ try{ await window.adminApi.inquiryPipeline.close(id,outcome); toast('Closed.','success'); closeGenModal(); renderInquiries(); }catch(e){ toast(e.message||'Failed.','error'); } }
 
 // ── Orders ─────────────────────────────────────────────────────────────────
+var _ordersStatusFilter = '';
 async function renderOrders() {
   var content = document.getElementById('page-content');
   if (!window.adminApi || !window.adminApi.isOnline()) {
@@ -1018,29 +1019,34 @@ async function renderOrders() {
     return;
   }
   try {
-    var data = await window.adminApi.orders.list(0);
+    var data = await window.adminApi.orders.list(_ordersStatusFilter || null, 0);
     var items = (data && data.content) || [];
-    if (!items.length) {
-      content.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">↗</div><p>No orders yet.</p></div></div>';
-      return;
-    }
+    var statusColors = { PENDING:'#f5c518', CONFIRMED:'#4fa3f7', PREPARING:'#f4a060', SHIPPED:'#4dc2b7', PICKUP_READY:'#c4ef3f', DELIVERED:'#4dce7a', PICKED_UP:'#4dce7a', CANCELLED:'#f4a0a0' };
+    var payLabel = { COD:'COD', WALLET:'Wallet', CARD:'Card', D17:'D17' };
+    var filterOptions = ['','PENDING','CONFIRMED','PREPARING','SHIPPED','PICKUP_READY','DELIVERED','PICKED_UP','CANCELLED']
+      .map(function(s){ return '<option value="' + s + '"' + (s === _ordersStatusFilter ? ' selected' : '') + '>' + (s || 'All statuses') + '</option>'; }).join('');
     var rows = items.map(function (o) {
+      var sc = statusColors[o.status] || 'var(--muted)';
       return `<tr>
         <td style="font-family:'Space Mono';font-size:10px;color:var(--lime);">${esc(o.orderRef)}</td>
         <td style="font-family:'Space Mono';font-size:10px;color:var(--muted);">${new Date(o.createdAt).toLocaleDateString()}</td>
-        <td><span class="badge" style="background:rgba(255,255,255,.07);color:var(--cream);">${esc(o.status)}</span></td>
-        <td>${esc(o.deliveryMethod)}</td>
-        <td>${esc(o.paymentMethod)}</td>
+        <td><span class="badge" style="background:rgba(255,255,255,.07);color:${sc};">${esc(o.status)}</span></td>
+        <td style="font-size:12px;color:var(--muted);">${o.deliveryMethod === 'DELIVER' ? 'Delivery' : 'Pickup'}</td>
+        <td style="font-size:12px;color:var(--muted);">${esc(payLabel[o.paymentMethod] || o.paymentMethod || '')}</td>
         <td style="font-weight:700;color:var(--lime);">${o.totalDt} DT</td>
         <td><div class="row-actions"><button class="btn-icon" onclick="openOrderDetail('${esc(o.id || o.orderRef)}')">View</button></div></td>
       </tr>`;
     }).join('');
+    var emptyMsg = _ordersStatusFilter ? 'No ' + _ordersStatusFilter.toLowerCase() + ' orders.' : 'No orders yet.';
     content.innerHTML = `<div class="card">
-      <div class="card-header"><div><div class="kicker">ORDERS</div><h3>${data.totalElements || items.length} total</h3></div></div>
-      <table>
+      <div class="card-header">
+        <div><div class="kicker">ORDERS</div><h3>${data.totalElements || items.length} total</h3></div>
+        <select onchange="_ordersStatusFilter=this.value;renderOrders();" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);font-size:13px;">${filterOptions}</select>
+      </div>
+      ${items.length ? `<table>
         <thead><tr><th>REF</th><th>DATE</th><th>STATUS</th><th>DELIVERY</th><th>PAYMENT</th><th>TOTAL</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>
+      </table>` : '<div class="empty-state" style="padding:40px 0;"><p>' + emptyMsg + '</p></div>'}
     </div>`;
   } catch (e) {
     content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + (e.message || 'Failed to load.') + '</p></div>';
@@ -1059,12 +1065,16 @@ async function openOrderDetail(orderId) {
       '</div>';
     }).join('');
 
+    var isDelivery = o.deliveryMethod === 'DELIVER';
+    var payLabel = { COD:'Cash on Delivery', WALLET:'Wallet', CARD:'Card', D17:'D17' };
     var canTransition = o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && o.status !== 'PICKED_UP';
+    // Delivery-aware action map: PREPARING branches into ship (delivery) or pickup_ready (pickup)
+    var preparingNext = isDelivery ? [['ship','Mark Shipped']] : [['pickup_ready','Ready for Pickup']];
     var actionMap = {
-      PENDING:      [['confirm','Confirm'],['cancel','Cancel']],
-      CONFIRMED:    [['prepare','Preparing'],['cancel','Cancel']],
-      PREPARING:    [['ship','Ship'],['pickup_ready','Pickup Ready'],['cancel','Cancel']],
-      SHIPPED:      [['deliver','Deliver'],['cancel','Cancel']],
+      PENDING:      [['confirm','Confirm Payment'],['cancel','Cancel']],
+      CONFIRMED:    [['prepare','Start Preparing'],['cancel','Cancel']],
+      PREPARING:    preparingNext.concat([['cancel','Cancel']]),
+      SHIPPED:      [['deliver','Mark Delivered'],['cancel','Cancel']],
       PICKUP_READY: [['picked_up','Picked Up'],['cancel','Cancel']],
     };
     var actions = (canTransition && actionMap[o.status]) || [];
@@ -1073,12 +1083,23 @@ async function openOrderDetail(orderId) {
       return '<button class="btn-sm ' + (isDanger ? 'btn-danger' : 'btn-ghost') + '" style="margin-right:6px;" onclick="doOrderAction(\'' + esc(orderId) + '\',\'' + a[0] + '\')">' + a[1] + '</button>';
     }).join('');
 
+    var deliveryAddr = o.deliveryAddress;
+    var addrLine = deliveryAddr ? (deliveryAddr.addr || '') + (deliveryAddr.city ? ', ' + deliveryAddr.city : '') : '';
+
     var body =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
         '<div style="font-family:\'Space Mono\';font-size:10px;letter-spacing:.14em;color:var(--muted);">STATUS</div>' +
         '<span class="badge" style="background:rgba(255,255,255,.07);color:' + statusColor + ';">' + esc(o.status) + '</span>' +
       '</div>' +
-      (o.contact ? '<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">' + esc(o.contact.name || '') + ' · ' + esc(o.contact.phone || '') + '</div>' : '') +
+      '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
+        '<span style="font-size:11px;background:rgba(255,255,255,.06);color:var(--muted);border-radius:6px;padding:3px 8px;">' +
+          (isDelivery ? ('Delivery' + (addrLine ? ': ' + esc(addrLine) : '')) : 'Pickup') +
+        '</span>' +
+        '<span style="font-size:11px;background:rgba(255,255,255,.06);color:var(--muted);border-radius:6px;padding:3px 8px;">' +
+          esc(payLabel[o.paymentMethod] || o.paymentMethod || '') +
+        '</span>' +
+      '</div>' +
+      (o.contact ? '<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">' + esc(o.contact.name || '') + ' · ' + esc(o.contact.phone || '') + (o.contact.email ? ' · ' + esc(o.contact.email) : '') + '</div>' : '') +
       '<div style="background:var(--navy);border-radius:10px;padding:12px;margin-bottom:14px;">' + (itemRows || '<div style="color:var(--muted);font-size:13px;">No items</div>') + '</div>' +
       '<div style="text-align:right;font-family:Anton,sans-serif;font-size:20px;color:var(--lime);margin-bottom:16px;">' + (o.totalDt || 0) + ' DT</div>' +
       (actionBtns ? '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">' + actionBtns + '</div>' : '');
