@@ -579,16 +579,46 @@
 
   // ── Tab: Profile ─────────────────────────────────────────────────────────
 
-  function profileField(label, id, value, type, placeholder, inputExtra) {
-    return '<div style="margin-bottom:16px;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">' + label + '</div>' +
-        '<button id="tk-edit-' + id + '" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">EDIT</button>' +
+  function profileSectionHeader(title) {
+    return '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.45);padding-bottom:8px;border-bottom:1px solid rgba(196,239,63,.1);margin-bottom:14px;">' + title + '</div>';
+  }
+
+  function addrCardHTML(key, a, fallbackName, fallbackPhone) {
+    var hasAddr = !!(a && a.line1);
+    var cardBody = hasAddr
+      ? '<div style="font-size:13px;color:#f4f5ee;font-weight:600;margin-bottom:1px;">' + esc(a.name || fallbackName || '') + '</div>' +
+        (a.job ? '<div style="font-size:12px;color:rgba(244,245,238,.45);margin-bottom:5px;">' + esc(a.job) + '</div>' : '') +
+        '<div style="font-size:13px;color:rgba(244,245,238,.75);line-height:1.7;">' +
+          esc(a.line1) + '<br>' +
+          (a.line2 ? esc(a.line2) + '<br>' : '') +
+          esc(a.city || '') + (a.postal ? ', ' + esc(a.postal) : '') + '<br>' +
+          'Tunisia' +
+        '</div>' +
+        (a.phone ? '<div style="font-size:12px;color:rgba(244,245,238,.45);margin-top:5px;">T: ' + esc(a.phone) + '</div>' : '')
+      : '<div style="font-size:13px;color:rgba(244,245,238,.3);font-style:italic;line-height:1.6;">No address saved yet.<br>Click Edit to add one.</div>';
+
+    return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(196,239,63,.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+        '<div style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.12em;color:rgba(196,239,63,.55);">' + (key === 'billing' ? 'BILLING ADDRESS' : 'DELIVERY ADDRESS') + '</div>' +
+        '<button id="tk-addr-' + key + '-btn" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;padding:0;">EDIT</button>' +
       '</div>' +
-      '<div id="tk-' + id + '-view" style="font-size:14px;color:#f4f5ee;">' + esc(value || '—') + '</div>' +
-      '<div id="tk-' + id + '-edit" style="display:none;margin-top:6px;">' +
-        '<input class="tk-inp" id="tk-' + id + '-inp" type="' + type + '" value="' + esc(value || '') + '" placeholder="' + placeholder + '" ' + (inputExtra || '') + ' style="margin-bottom:8px;">' +
-        '<button id="tk-' + id + '-save" class="tk-btn" style="padding:10px;">Save</button>' +
+      '<div id="tk-addr-' + key + '-view">' + cardBody + '</div>' +
+      '<div id="tk-addr-' + key + '-edit" style="display:none;border-top:1px solid rgba(244,245,238,.06);margin-top:12px;padding-top:12px;">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
+          '<input class="tk-inp" id="tk-' + key + '-name" type="text" value="' + esc((a && a.name) || fallbackName || '') + '" placeholder="Full name">' +
+          '<input class="tk-inp" id="tk-' + key + '-job" type="text" value="' + esc((a && a.job) || '') + '" placeholder="Job / role (optional)">' +
+        '</div>' +
+        '<input class="tk-inp" id="tk-' + key + '-line1" type="text" value="' + esc((a && a.line1) || '') + '" placeholder="Street address" style="margin-bottom:8px;">' +
+        '<input class="tk-inp" id="tk-' + key + '-line2" type="text" value="' + esc((a && a.line2) || '') + '" placeholder="Landmark / floor / building" style="margin-bottom:8px;">' +
+        '<div style="display:grid;grid-template-columns:1fr 90px;gap:8px;margin-bottom:8px;">' +
+          '<input class="tk-inp" id="tk-' + key + '-city" type="text" value="' + esc((a && a.city) || '') + '" placeholder="City">' +
+          '<input class="tk-inp" id="tk-' + key + '-postal" type="text" value="' + esc((a && a.postal) || '') + '" placeholder="ZIP">' +
+        '</div>' +
+        '<input class="tk-inp" id="tk-' + key + '-phone" type="tel" value="' + esc((a && a.phone) || fallbackPhone || '') + '" placeholder="Phone" style="margin-bottom:10px;">' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button id="tk-addr-' + key + '-save" class="tk-btn" style="padding:10px;flex:1;">Save</button>' +
+          '<button id="tk-addr-' + key + '-cancel" style="flex:0 0 auto;padding:10px 14px;background:transparent;border:1px solid rgba(244,245,238,.15);color:rgba(244,245,238,.55);border-radius:8px;cursor:pointer;font-size:13px;">Cancel</button>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }
@@ -598,71 +628,64 @@
     var memberSince = u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
     var allTracks = ['padel', 'pilates'];
     var activeTracks = u.tracks || [];
-    var addr = storageGet('takeoff_address') || {};
+    var addresses = storageGet('takeoff_addresses') || {};
+    var billing = addresses.billing || null;
+    var delivery = addresses.delivery || null;
 
-    // Quick activity strip from already-fetched tab data
-    var courtCount = (_drData.courtBookings || []).length;
-    var classCount = (_drData.classBookings || []).length;
-    var orderCount = (_drData.orders || []).length;
-    var hasActivity = courtCount || classCount || orderCount;
+    var tracksRow = allTracks.map(function (t) {
+      var on = activeTracks.indexOf(t) >= 0;
+      return '<button id="tk-track-' + t + '" data-track="' + t + '" style="padding:7px 16px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.1em;cursor:pointer;border:1px solid ' + (on ? '#c4ef3f' : 'rgba(244,245,238,.2)') + ';background:' + (on ? 'rgba(196,239,63,.18)' : 'transparent') + ';color:' + (on ? '#c4ef3f' : 'rgba(244,245,238,.4)') + ';">' + t.toUpperCase() + '</button>';
+    }).join('');
 
-    var activityBar = hasActivity
-      ? '<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">' +
-          (courtCount ? '<span style="padding:5px 11px;border-radius:999px;background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.6);">' + courtCount + ' court booking' + (courtCount !== 1 ? 's' : '') + '</span>' : '') +
-          (classCount ? '<span style="padding:5px 11px;border-radius:999px;background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.6);">' + classCount + ' class booking' + (classCount !== 1 ? 's' : '') + '</span>' : '') +
-          (orderCount ? '<span style="padding:5px 11px;border-radius:999px;background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.6);">' + orderCount + ' order' + (orderCount !== 1 ? 's' : '') + '</span>' : '') +
-        '</div>'
-      : '';
+    return (
+      // ── Account Information ───────────────────────────────────────────────
+      '<div style="margin-bottom:24px;">' +
+        profileSectionHeader('ACCOUNT INFORMATION') +
+        '<div style="margin-bottom:10px;">' +
+          '<div style="font-size:15px;font-weight:600;color:#f4f5ee;">' + esc(u.name || '') + '</div>' +
+          '<div style="font-size:13px;color:rgba(244,245,238,.5);margin-top:2px;">' + esc(u.email || '') + '</div>' +
+          (u.phone ? '<div style="font-size:13px;color:rgba(244,245,238,.45);margin-top:2px;">' + esc(u.phone) + '</div>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">' +
+          '<button id="tk-edit-name" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;padding:7px 14px;border-radius:8px;border:1px solid rgba(196,239,63,.3);background:transparent;color:#c4ef3f;cursor:pointer;">EDIT</button>' +
+          '<button id="tk-edit-pw" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;padding:7px 14px;border-radius:8px;border:1px solid rgba(244,245,238,.15);background:transparent;color:rgba(244,245,238,.55);cursor:pointer;">CHANGE PASSWORD</button>' +
+        '</div>' +
+        // contact edit form
+        '<div id="tk-name-edit" style="display:none;border-top:1px solid rgba(244,245,238,.06);padding-top:12px;margin-bottom:4px;">' +
+          '<input class="tk-inp" id="tk-name-inp" type="text" value="' + esc(u.name || '') + '" placeholder="Full name" style="margin-bottom:8px;">' +
+          '<input class="tk-inp" id="tk-phone-inp" type="tel" value="' + esc(u.phone || '') + '" placeholder="+216 XX XXX XXX" style="margin-bottom:10px;">' +
+          '<div style="display:flex;gap:8px;">' +
+            '<button id="tk-name-save" class="tk-btn" style="padding:10px;flex:1;">Save</button>' +
+            '<button id="tk-name-cancel" style="flex:0 0 auto;padding:10px 14px;background:transparent;border:1px solid rgba(244,245,238,.15);color:rgba(244,245,238,.55);border-radius:8px;cursor:pointer;font-size:13px;">Cancel</button>' +
+          '</div>' +
+        '</div>' +
+        // password change form
+        '<div id="tk-pw-edit" style="display:none;border-top:1px solid rgba(244,245,238,.06);padding-top:12px;">' +
+          '<input class="tk-inp" id="tk-pw-cur" type="password" placeholder="Current password" style="margin-bottom:8px;">' +
+          '<input class="tk-inp" id="tk-pw-new" type="password" placeholder="New password (min 8 chars)" style="margin-bottom:8px;">' +
+          '<input class="tk-inp" id="tk-pw-confirm" type="password" placeholder="Confirm new password" style="margin-bottom:10px;">' +
+          '<div style="display:flex;gap:8px;">' +
+            '<button id="tk-pw-save" class="tk-btn" style="padding:10px;flex:1;">Update password</button>' +
+            '<button id="tk-pw-cancel" style="flex:0 0 auto;padding:10px 14px;background:transparent;border:1px solid rgba(244,245,238,.15);color:rgba(244,245,238,.55);border-radius:8px;cursor:pointer;font-size:13px;">Cancel</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
 
-    var tracksHTML = '<div style="margin-bottom:16px;">' +
-      '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:8px;">INTERESTS</div>' +
-      '<div style="display:flex;gap:8px;">' +
-        allTracks.map(function (t) {
-          var on = activeTracks.indexOf(t) >= 0;
-          return '<button id="tk-track-' + t + '" data-track="' + t + '" style="padding:7px 16px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.1em;cursor:pointer;border:1px solid ' + (on ? '#c4ef3f' : 'rgba(244,245,238,.2)') + ';background:' + (on ? 'rgba(196,239,63,.18)' : 'transparent') + ';color:' + (on ? '#c4ef3f' : 'rgba(244,245,238,.4)') + ';">' + t.toUpperCase() + '</button>';
-        }).join('') +
+      // ── Address Book ──────────────────────────────────────────────────────
+      '<div style="margin-bottom:24px;">' +
+        profileSectionHeader('ADDRESS BOOK') +
+        addrCardHTML('billing', billing, u.name, u.phone) +
+        addrCardHTML('delivery', delivery, u.name, u.phone) +
       '</div>' +
-    '</div>';
 
-    var addrVal = addr.line1 ? addr.line1 + (addr.city ? ', ' + addr.city : '') : '';
-    var addrHTML = '<div style="margin-bottom:16px;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">DEFAULT DELIVERY ADDRESS</div>' +
-        '<button id="tk-edit-addr" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">EDIT</button>' +
+      // ── Interests ─────────────────────────────────────────────────────────
+      '<div style="margin-bottom:24px;">' +
+        profileSectionHeader('INTERESTS') +
+        '<div style="display:flex;gap:8px;">' + tracksRow + '</div>' +
       '</div>' +
-      '<div id="tk-addr-view" style="font-size:13px;color:' + (addrVal ? '#f4f5ee' : 'rgba(244,245,238,.35)') + ';">' + (addrVal ? esc(addrVal) : 'Not set — auto-fills checkout') + '</div>' +
-      '<div id="tk-addr-edit" style="display:none;margin-top:8px;">' +
-        '<input class="tk-inp" id="tk-addr-line1" type="text" value="' + esc(addr.line1 || '') + '" placeholder="Street address" style="margin-bottom:8px;">' +
-        '<input class="tk-inp" id="tk-addr-city" type="text" value="' + esc(addr.city || '') + '" placeholder="City (e.g. Tunis)" style="margin-bottom:8px;">' +
-        '<input class="tk-inp" id="tk-addr-notes" type="text" value="' + esc(addr.notes || '') + '" placeholder="Notes (floor, building, etc.)" style="margin-bottom:8px;">' +
-        '<button id="tk-addr-save" class="tk-btn" style="padding:10px;">Save address</button>' +
-      '</div>' +
-    '</div>';
 
-    var pwHTML = '<div style="margin-bottom:16px;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">CHANGE PASSWORD</div>' +
-        '<button id="tk-edit-pw" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">CHANGE</button>' +
-      '</div>' +
-      '<div id="tk-pw-edit" style="display:none;margin-top:6px;">' +
-        '<input class="tk-inp" id="tk-pw-cur" type="password" placeholder="Current password" style="margin-bottom:8px;">' +
-        '<input class="tk-inp" id="tk-pw-new" type="password" placeholder="New password (min 8 chars)" style="margin-bottom:8px;">' +
-        '<input class="tk-inp" id="tk-pw-confirm" type="password" placeholder="Confirm new password" style="margin-bottom:8px;">' +
-        '<button id="tk-pw-save" class="tk-btn" style="padding:10px;">Update password</button>' +
-      '</div>' +
-    '</div>';
-
-    return activityBar +
-      '<div style="margin-bottom:16px;">' +
-        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:4px;">EMAIL</div>' +
-        '<div style="font-size:13px;color:rgba(244,245,238,.65);">' + esc(u.email || '') + '</div>' +
-      '</div>' +
-      profileField('NAME', 'name', u.name, 'text', 'Full name', '') +
-      profileField('PHONE', 'phone', u.phone, 'tel', '+216 XX XXX XXX', 'inputmode="numeric"') +
-      tracksHTML +
-      addrHTML +
-      pwHTML +
-      (memberSince ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.3);margin-top:8px;">Member since ' + memberSince + '</div>' : '');
+      (memberSince ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.25);">Member since ' + memberSince + '</div>' : '')
+    );
   }
 
   // ── Wire body event listeners ─────────────────────────────────────────────
@@ -674,44 +697,103 @@
     if (editEl) editEl.style.display = 'block';
   }
 
+  function showProfileForm(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'block';
+  }
+  function hideProfileForm(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  }
+
   function wireBodyEvents() {
-    // Profile: edit name
+    // ── Contact info edit ──────────────────────────────────────────────────
     var editNameBtn = document.getElementById('tk-edit-name');
-    if (editNameBtn) editNameBtn.onclick = function () { inlineEdit('name'); };
+    if (editNameBtn) editNameBtn.onclick = function () {
+      hideProfileForm('tk-pw-edit');
+      var f = document.getElementById('tk-name-edit');
+      if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    };
+    var cancelNameBtn = document.getElementById('tk-name-cancel');
+    if (cancelNameBtn) cancelNameBtn.onclick = function () { hideProfileForm('tk-name-edit'); };
+
     var saveNameBtn = document.getElementById('tk-name-save');
     if (saveNameBtn) saveNameBtn.onclick = async function () {
       var newName = (document.getElementById('tk-name-inp').value || '').trim();
-      if (!newName) return;
+      var rawPhone = (document.getElementById('tk-phone-inp').value || '').trim();
+      var newPhone = rawPhone ? normalizePhone(rawPhone) : null;
+      if (!newName) { toast('Name cannot be empty.', 2000); return; }
+      if (newPhone && !/^\+216[0-9]{8}$/.test(newPhone)) { toast('Enter a valid Tunisian phone (+216 followed by 8 digits).', 2500); return; }
+      var payload = { name: newName };
+      if (newPhone) payload.phone = newPhone;
       var client = api();
       if (client && client.isOnline()) {
-        try { await client.auth.updateMe({ name: newName }); } catch (e) { toast(e.message || 'Update failed.', 2500); return; }
+        try { await client.auth.updateMe(payload); } catch (e) { toast(e.message || 'Update failed.', 2500); return; }
       }
       auth.user.name = newName;
+      if (newPhone) auth.user.phone = newPhone;
       storageSet('takeoff_user', auth.user);
-      document.getElementById('tk-uname-disp').textContent = newName;
-      document.getElementById('tk-name-view').textContent = newName;
-      document.getElementById('tk-name-view').style.display = 'block';
-      document.getElementById('tk-name-edit').style.display = 'none';
+      var dispEl = document.getElementById('tk-uname-disp');
+      if (dispEl) dispEl.textContent = newName;
+      hideProfileForm('tk-name-edit');
+      renderBody();
+      toast('Profile updated.', 2000);
     };
 
-    // Profile: edit phone
-    var editPhoneBtn = document.getElementById('tk-edit-phone');
-    if (editPhoneBtn) editPhoneBtn.onclick = function () { inlineEdit('phone'); };
-    var savePhoneBtn = document.getElementById('tk-phone-save');
-    if (savePhoneBtn) savePhoneBtn.onclick = async function () {
-      var raw = (document.getElementById('tk-phone-inp').value || '').trim();
-      var newPhone = normalizePhone(raw);
-      if (!/^\+216[0-9]{8}$/.test(newPhone)) { toast('Enter a valid Tunisian phone (+216 followed by 8 digits).', 2500); return; }
+    // ── Password change ────────────────────────────────────────────────────
+    var editPwBtn = document.getElementById('tk-edit-pw');
+    if (editPwBtn) editPwBtn.onclick = function () {
+      hideProfileForm('tk-name-edit');
+      var f = document.getElementById('tk-pw-edit');
+      if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    };
+    var cancelPwBtn = document.getElementById('tk-pw-cancel');
+    if (cancelPwBtn) cancelPwBtn.onclick = function () { hideProfileForm('tk-pw-edit'); };
+
+    var savePwBtn = document.getElementById('tk-pw-save');
+    if (savePwBtn) savePwBtn.onclick = async function () {
+      var cur = document.getElementById('tk-pw-cur').value || '';
+      var nw = document.getElementById('tk-pw-new').value || '';
+      var conf = document.getElementById('tk-pw-confirm').value || '';
+      if (!cur || !nw) { toast('Fill in all password fields.', 2500); return; }
+      if (nw.length < 8) { toast('New password must be at least 8 characters.', 2500); return; }
+      if (nw !== conf) { toast('Passwords do not match.', 2500); return; }
       var client = api();
-      if (client && client.isOnline()) { try { await client.auth.updateMe({ phone: newPhone }); } catch (e) { toast(e.message || 'Update failed.', 2500); return; } }
-      auth.user.phone = newPhone;
-      storageSet('takeoff_user', auth.user);
-      document.getElementById('tk-phone-view').textContent = newPhone;
-      document.getElementById('tk-phone-view').style.display = 'block';
-      document.getElementById('tk-phone-edit').style.display = 'none';
+      if (!client || !client.isOnline()) { toast('No connection — try when online.', 2500); return; }
+      try {
+        await client.auth.updateMe({ currentPassword: cur, newPassword: nw });
+        ['tk-pw-cur','tk-pw-new','tk-pw-confirm'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+        hideProfileForm('tk-pw-edit');
+        toast('Password updated.', 2500);
+      } catch (e) { toast(e.message || 'Update failed.', 2500); }
     };
 
-    // Profile: track toggles
+    // ── Address cards ──────────────────────────────────────────────────────
+    ['billing', 'delivery'].forEach(function (key) {
+      var editBtn = document.getElementById('tk-addr-' + key + '-btn');
+      if (editBtn) editBtn.onclick = function () {
+        var f = document.getElementById('tk-addr-' + key + '-edit');
+        if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+      };
+      var cancelBtn = document.getElementById('tk-addr-' + key + '-cancel');
+      if (cancelBtn) cancelBtn.onclick = function () { hideProfileForm('tk-addr-' + key + '-edit'); };
+
+      var saveBtn = document.getElementById('tk-addr-' + key + '-save');
+      if (saveBtn) saveBtn.onclick = function () {
+        var g = function(s) { var el=document.getElementById('tk-'+key+'-'+s); return (el?el.value:'').trim(); };
+        var addrObj = { name: g('name'), job: g('job'), line1: g('line1'), line2: g('line2'), city: g('city'), postal: g('postal'), phone: g('phone') };
+        if (!addrObj.line1) { toast('Please enter a street address.', 2500); return; }
+        if (!addrObj.city) { toast('Please enter a city.', 2500); return; }
+        var addresses = storageGet('takeoff_addresses') || {};
+        addresses[key] = addrObj;
+        storageSet('takeoff_addresses', addresses);
+        hideProfileForm('tk-addr-' + key + '-edit');
+        renderBody();
+        toast((key === 'billing' ? 'Billing' : 'Delivery') + ' address saved.', 2000);
+      };
+    });
+
+    // ── Track toggles ──────────────────────────────────────────────────────
     ['padel', 'pilates'].forEach(function (t) {
       var btn = document.getElementById('tk-track-' + t);
       if (!btn) return;
@@ -731,48 +813,6 @@
         btn.style.color = on ? '#c4ef3f' : 'rgba(244,245,238,.4)';
       };
     });
-
-    // Profile: delivery address
-    var editAddrBtn = document.getElementById('tk-edit-addr');
-    if (editAddrBtn) editAddrBtn.onclick = function () { inlineEdit('addr'); };
-    var saveAddrBtn = document.getElementById('tk-addr-save');
-    if (saveAddrBtn) saveAddrBtn.onclick = function () {
-      var line1 = (document.getElementById('tk-addr-line1').value || '').trim();
-      var city = (document.getElementById('tk-addr-city').value || '').trim();
-      var notes = (document.getElementById('tk-addr-notes').value || '').trim();
-      storageSet('takeoff_address', { line1: line1, city: city, notes: notes });
-      var display = line1 ? (line1 + (city ? ', ' + city : '')) : 'Not set — auto-fills checkout';
-      var viewEl = document.getElementById('tk-addr-view');
-      if (viewEl) { viewEl.textContent = display; viewEl.style.color = line1 ? '#f4f5ee' : 'rgba(244,245,238,.35)'; viewEl.style.display = 'block'; }
-      document.getElementById('tk-addr-edit').style.display = 'none';
-      toast('Address saved.', 2000);
-    };
-
-    // Profile: change password
-    var editPwBtn = document.getElementById('tk-edit-pw');
-    if (editPwBtn) editPwBtn.onclick = function () {
-      var el = document.getElementById('tk-pw-edit');
-      if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-    };
-    var savePwBtn = document.getElementById('tk-pw-save');
-    if (savePwBtn) savePwBtn.onclick = async function () {
-      var cur = (document.getElementById('tk-pw-cur').value || '');
-      var nw = (document.getElementById('tk-pw-new').value || '');
-      var conf = (document.getElementById('tk-pw-confirm').value || '');
-      if (!cur || !nw) { toast('Fill in both passwords.', 2500); return; }
-      if (nw.length < 8) { toast('New password must be at least 8 characters.', 2500); return; }
-      if (nw !== conf) { toast('Passwords do not match.', 2500); return; }
-      var client = api();
-      if (!client || !client.isOnline()) { toast('No connection — try when online.', 2500); return; }
-      try {
-        await client.auth.updateMe({ currentPassword: cur, newPassword: nw });
-        document.getElementById('tk-pw-cur').value = '';
-        document.getElementById('tk-pw-new').value = '';
-        document.getElementById('tk-pw-confirm').value = '';
-        document.getElementById('tk-pw-edit').style.display = 'none';
-        toast('Password updated.', 2500);
-      } catch (e) { toast(e.message || 'Update failed.', 2500); }
-    };
   }
 
   // ── Close drawer ──────────────────────────────────────────────────────────
