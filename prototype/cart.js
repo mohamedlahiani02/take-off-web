@@ -454,7 +454,30 @@
             '<div class="tk-rs">Tunis: 9 DT · Other regions: 15 DT · 2–4 business days</div></div>'+
           '</label>'+
         '</div>'+
-        '<div id="tk-afields" style="display:'+(_d.delivery==='deliver'?'block':'none')+';">'+
+        '<div id="tk-afields" style="display:'+(_d.delivery==='deliver'?'block':'none')+';margin-top:14px;">'+
+          (function(){
+            var addrs = storageGet('takeoff_addresses') || {};
+            var cards = [];
+            if (addrs.delivery && addrs.delivery.line1) cards.push({ key:'delivery', label:'Delivery address', a: addrs.delivery });
+            if (addrs.billing && addrs.billing.line1) cards.push({ key:'billing', label:'Billing address', a: addrs.billing });
+            if (!cards.length) return '';
+            return '<div style="margin-bottom:12px;">' +
+              '<div style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.14em;color:rgba(244,245,238,.4);margin-bottom:8px;">SAVED ADDRESSES</div>' +
+              cards.map(function(c){
+                var a = c.a;
+                var preview = esc(a.name||'') + (a.name?'<br>':'') + esc(a.line1) + (a.line2?'<br>'+esc(a.line2):'') + '<br>' + esc(a.city||'') + (a.postal?', '+esc(a.postal):'');
+                var isSelected = _d.address === (a.line1+(a.line2?', '+a.line2:'')) && _d.city === (a.city||'Tunis');
+                return '<div class="tk-saved-addr-card" data-akey="'+c.key+'" style="display:flex;justify-content:space-between;align-items:flex-start;padding:11px 13px;border-radius:10px;border:1px solid '+(isSelected?'#c4ef3f':'rgba(196,239,63,.15)')+';background:'+(isSelected?'rgba(196,239,63,.06)':'rgba(255,255,255,.02)')+';margin-bottom:8px;cursor:pointer;">'+
+                  '<div style="font-size:12px;color:rgba(244,245,238,.75);line-height:1.65;">'+
+                    '<div style="font-family:\'Space Mono\',monospace;font-size:9px;color:rgba(196,239,63,.55);letter-spacing:.1em;margin-bottom:4px;">'+c.label.toUpperCase()+'</div>'+
+                    preview+
+                  '</div>'+
+                  '<div style="font-family:\'Space Mono\',monospace;font-size:9px;color:'+(isSelected?'#c4ef3f':'rgba(244,245,238,.35)')+';white-space:nowrap;padding-left:10px;padding-top:2px;">'+(isSelected?'✓ SELECTED':'USE')+'</div>'+
+                '</div>';
+              }).join('') +
+            '</div>';
+          })()+
+          '<div style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.14em;color:rgba(244,245,238,.4);margin-bottom:8px;" id="tk-manual-label">OR ENTER MANUALLY</div>'+
           '<label class="tk-lbl">STREET ADDRESS</label>'+
           '<input class="tk-inp" id="tk-addr" placeholder="12 Rue de Marseille, Apt 3" value="'+esc(_d.address)+'">'+
           '<div class="tk-g2" style="margin-top:0;">'+
@@ -561,6 +584,38 @@
       document.querySelectorAll('.tk-radio[data-del]').forEach(function(r){
         r.addEventListener('click', function(){ setDel(r.getAttribute('data-del')); });
       });
+
+      // Saved address card selection
+      document.querySelectorAll('.tk-saved-addr-card').forEach(function(card){
+        card.addEventListener('click', function(){
+          var key = card.getAttribute('data-akey');
+          var addrs = storageGet('takeoff_addresses') || {};
+          var a = addrs[key];
+          if (!a) return;
+          var addrLine = a.line1 + (a.line2 ? ', ' + a.line2 : '');
+          var addrEl = document.getElementById('tk-addr');
+          var cityEl = document.getElementById('tk-city');
+          var notesEl = document.getElementById('tk-notes');
+          if (addrEl) addrEl.value = addrLine;
+          if (cityEl) cityEl.value = a.city || 'Tunis';
+          if (notesEl) notesEl.value = '';
+          _d.address = addrLine;
+          _d.city = a.city || 'Tunis';
+          _d.notes = '';
+          // Update card highlight without full re-render
+          document.querySelectorAll('.tk-saved-addr-card').forEach(function(c){
+            var sel = c === card;
+            c.style.border = '1px solid ' + (sel ? '#c4ef3f' : 'rgba(196,239,63,.15)');
+            c.style.background = sel ? 'rgba(196,239,63,.06)' : 'rgba(255,255,255,.02)';
+            var tag = c.querySelector('div:last-child');
+            if (tag) { tag.textContent = sel ? '✓ SELECTED' : 'USE'; tag.style.color = sel ? '#c4ef3f' : 'rgba(244,245,238,.35)'; }
+          });
+          // Scroll manual fields into view
+          var ml = document.getElementById('tk-manual-label');
+          if (ml) ml.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      });
+
       document.getElementById('tk-back').addEventListener('click', function(){ _step=1; saveCheckoutState(); renderCheckout(); });
       document.getElementById('tk-next').addEventListener('click', function(){
         if (_d.delivery==='deliver') {
