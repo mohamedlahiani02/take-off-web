@@ -579,95 +579,129 @@
 
   // ── Tab: Profile ─────────────────────────────────────────────────────────
 
+  function profileField(label, id, value, type, placeholder, inputExtra) {
+    return '<div style="margin-bottom:16px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">' + label + '</div>' +
+        '<button id="tk-edit-' + id + '" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">EDIT</button>' +
+      '</div>' +
+      '<div id="tk-' + id + '-view" style="font-size:14px;color:#f4f5ee;">' + esc(value || '—') + '</div>' +
+      '<div id="tk-' + id + '-edit" style="display:none;margin-top:6px;">' +
+        '<input class="tk-inp" id="tk-' + id + '-inp" type="' + type + '" value="' + esc(value || '') + '" placeholder="' + placeholder + '" ' + (inputExtra || '') + ' style="margin-bottom:8px;">' +
+        '<button id="tk-' + id + '-save" class="tk-btn" style="padding:10px;">Save</button>' +
+      '</div>' +
+    '</div>';
+  }
+
   function profileHTML() {
     var u = auth.user || {};
-    var points = u.points || 0;
     var memberSince = u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
+    var allTracks = ['padel', 'pilates'];
+    var activeTracks = u.tracks || [];
+    var addr = storageGet('takeoff_address') || {};
 
-    return '<div class="tk-stat-grid" style="grid-template-columns:1fr 1fr;">' +
-        '<div class="tk-stat"><div class="tk-stat-lbl">POINTS</div><div class="tk-stat-val">' + points + '</div></div>' +
-        '<div class="tk-stat"><div class="tk-stat-lbl">= DT</div><div class="tk-stat-val">' + points + '</div></div>' +
+    // Quick activity strip from already-fetched tab data
+    var courtCount = (_drData.courtBookings || []).length;
+    var classCount = (_drData.classBookings || []).length;
+    var orderCount = (_drData.orders || []).length;
+    var hasActivity = courtCount || classCount || orderCount;
+
+    var activityBar = hasActivity
+      ? '<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">' +
+          (courtCount ? '<span style="padding:5px 11px;border-radius:999px;background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.6);">' + courtCount + ' court booking' + (courtCount !== 1 ? 's' : '') + '</span>' : '') +
+          (classCount ? '<span style="padding:5px 11px;border-radius:999px;background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.6);">' + classCount + ' class booking' + (classCount !== 1 ? 's' : '') + '</span>' : '') +
+          (orderCount ? '<span style="padding:5px 11px;border-radius:999px;background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.6);">' + orderCount + ' order' + (orderCount !== 1 ? 's' : '') + '</span>' : '') +
+        '</div>'
+      : '';
+
+    var tracksHTML = '<div style="margin-bottom:16px;">' +
+      '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:8px;">INTERESTS</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        allTracks.map(function (t) {
+          var on = activeTracks.indexOf(t) >= 0;
+          return '<button id="tk-track-' + t + '" data-track="' + t + '" style="padding:7px 16px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.1em;cursor:pointer;border:1px solid ' + (on ? '#c4ef3f' : 'rgba(244,245,238,.2)') + ';background:' + (on ? 'rgba(196,239,63,.18)' : 'transparent') + ';color:' + (on ? '#c4ef3f' : 'rgba(244,245,238,.4)') + ';">' + t.toUpperCase() + '</button>';
+        }).join('') +
       '</div>' +
+    '</div>';
+
+    var addrVal = addr.line1 ? addr.line1 + (addr.city ? ', ' + addr.city : '') : '';
+    var addrHTML = '<div style="margin-bottom:16px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">DEFAULT DELIVERY ADDRESS</div>' +
+        '<button id="tk-edit-addr" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">EDIT</button>' +
+      '</div>' +
+      '<div id="tk-addr-view" style="font-size:13px;color:' + (addrVal ? '#f4f5ee' : 'rgba(244,245,238,.35)') + ';">' + (addrVal ? esc(addrVal) : 'Not set — auto-fills checkout') + '</div>' +
+      '<div id="tk-addr-edit" style="display:none;margin-top:8px;">' +
+        '<input class="tk-inp" id="tk-addr-line1" type="text" value="' + esc(addr.line1 || '') + '" placeholder="Street address" style="margin-bottom:8px;">' +
+        '<input class="tk-inp" id="tk-addr-city" type="text" value="' + esc(addr.city || '') + '" placeholder="City (e.g. Tunis)" style="margin-bottom:8px;">' +
+        '<input class="tk-inp" id="tk-addr-notes" type="text" value="' + esc(addr.notes || '') + '" placeholder="Notes (floor, building, etc.)" style="margin-bottom:8px;">' +
+        '<button id="tk-addr-save" class="tk-btn" style="padding:10px;">Save address</button>' +
+      '</div>' +
+    '</div>';
+
+    var pwHTML = '<div style="margin-bottom:16px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">CHANGE PASSWORD</div>' +
+        '<button id="tk-edit-pw" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">CHANGE</button>' +
+      '</div>' +
+      '<div id="tk-pw-edit" style="display:none;margin-top:6px;">' +
+        '<input class="tk-inp" id="tk-pw-cur" type="password" placeholder="Current password" style="margin-bottom:8px;">' +
+        '<input class="tk-inp" id="tk-pw-new" type="password" placeholder="New password (min 8 chars)" style="margin-bottom:8px;">' +
+        '<input class="tk-inp" id="tk-pw-confirm" type="password" placeholder="Confirm new password" style="margin-bottom:8px;">' +
+        '<button id="tk-pw-save" class="tk-btn" style="padding:10px;">Update password</button>' +
+      '</div>' +
+    '</div>';
+
+    return activityBar +
       '<div style="margin-bottom:16px;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">NAME</div>' +
-          '<button id="tk-edit-name" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">EDIT</button>' +
-        '</div>' +
-        '<div id="tk-name-view" style="font-size:15px;color:#f4f5ee;">' + esc(u.name || '') + '</div>' +
-        '<div id="tk-name-edit" style="display:none;">' +
-          '<input class="tk-inp" id="tk-name-inp" type="text" value="' + esc(u.name || '') + '" style="margin-bottom:8px;">' +
-          '<button id="tk-name-save" class="tk-btn" style="padding:10px;">Save name</button>' +
-        '</div>' +
+        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:4px;">EMAIL</div>' +
+        '<div style="font-size:13px;color:rgba(244,245,238,.65);">' + esc(u.email || '') + '</div>' +
       '</div>' +
-      '<div style="margin-bottom:16px;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);">PHONE</div>' +
-          '<button id="tk-edit-phone" style="font-family:\'Space Mono\',monospace;font-size:9px;letter-spacing:.1em;color:#c4ef3f;background:none;border:none;cursor:pointer;">EDIT</button>' +
-        '</div>' +
-        '<div id="tk-phone-view" style="font-family:\'Space Mono\',monospace;font-size:13px;color:#f4f5ee;">' + esc(u.phone || '—') + '</div>' +
-        '<div id="tk-phone-edit" style="display:none;">' +
-          '<input class="tk-inp" id="tk-phone-inp" type="tel" value="' + esc(u.phone || '') + '" placeholder="+216 XX XXX XXX" style="margin-bottom:8px;">' +
-          '<button id="tk-phone-save" class="tk-btn" style="padding:10px;">Save phone</button>' +
-        '</div>' +
-      '</div>' +
-      '<div style="margin-bottom:16px;">' +
-        '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.18em;color:rgba(244,245,238,.5);margin-bottom:6px;">TRACKS</div>' +
-        '<div>' + (u.tracks || []).map(function (t) {
-          return '<span style="padding:5px 12px;border-radius:999px;background:rgba(196,239,63,.15);color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;margin-right:6px;">' + esc(t).toUpperCase() + '</span>';
-        }).join('') + '</div>' +
-      '</div>' +
-      (memberSince ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.35);margin-bottom:20px;">Member since ' + memberSince + '</div>' : '');
+      profileField('NAME', 'name', u.name, 'text', 'Full name', '') +
+      profileField('PHONE', 'phone', u.phone, 'tel', '+216 XX XXX XXX', 'inputmode="numeric"') +
+      tracksHTML +
+      addrHTML +
+      pwHTML +
+      (memberSince ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.3);margin-top:8px;">Member since ' + memberSince + '</div>' : '');
   }
 
   // ── Wire body event listeners ─────────────────────────────────────────────
 
+  function inlineEdit(id) {
+    var viewEl = document.getElementById('tk-' + id + '-view');
+    var editEl = document.getElementById('tk-' + id + '-edit');
+    if (viewEl) viewEl.style.display = 'none';
+    if (editEl) editEl.style.display = 'block';
+  }
+
   function wireBodyEvents() {
     // Profile: edit name
     var editNameBtn = document.getElementById('tk-edit-name');
-    if (editNameBtn) {
-      editNameBtn.onclick = function () {
-        document.getElementById('tk-name-view').style.display = 'none';
-        document.getElementById('tk-name-edit').style.display = 'block';
-      };
-    }
+    if (editNameBtn) editNameBtn.onclick = function () { inlineEdit('name'); };
     var saveNameBtn = document.getElementById('tk-name-save');
     if (saveNameBtn) saveNameBtn.onclick = async function () {
       var newName = (document.getElementById('tk-name-inp').value || '').trim();
       if (!newName) return;
       var client = api();
       if (client && client.isOnline()) {
-        try {
-          await client.auth.updateMe({ name: newName });
-          auth.user.name = newName;
-          storageSet('takeoff_user', auth.user);
-        } catch (e) {
-          toast(e.message || 'Update failed.', 2500);
-          return;
-        }
-      } else {
-        auth.user.name = newName;
-        storageSet('takeoff_user', auth.user);
+        try { await client.auth.updateMe({ name: newName }); } catch (e) { toast(e.message || 'Update failed.', 2500); return; }
       }
+      auth.user.name = newName;
+      storageSet('takeoff_user', auth.user);
       document.getElementById('tk-uname-disp').textContent = newName;
       document.getElementById('tk-name-view').textContent = newName;
       document.getElementById('tk-name-view').style.display = 'block';
       document.getElementById('tk-name-edit').style.display = 'none';
     };
+
+    // Profile: edit phone
     var editPhoneBtn = document.getElementById('tk-edit-phone');
-    if (editPhoneBtn) {
-      editPhoneBtn.onclick = function () {
-        document.getElementById('tk-phone-view').style.display = 'none';
-        document.getElementById('tk-phone-edit').style.display = 'block';
-      };
-    }
+    if (editPhoneBtn) editPhoneBtn.onclick = function () { inlineEdit('phone'); };
     var savePhoneBtn = document.getElementById('tk-phone-save');
     if (savePhoneBtn) savePhoneBtn.onclick = async function () {
       var raw = (document.getElementById('tk-phone-inp').value || '').trim();
       var newPhone = normalizePhone(raw);
-      if (!/^\+216[0-9]{8}$/.test(newPhone)) {
-        toast('Enter a valid Tunisian phone (+216 followed by 8 digits).', 2500);
-        return;
-      }
+      if (!/^\+216[0-9]{8}$/.test(newPhone)) { toast('Enter a valid Tunisian phone (+216 followed by 8 digits).', 2500); return; }
       var client = api();
       if (client && client.isOnline()) { try { await client.auth.updateMe({ phone: newPhone }); } catch (e) { toast(e.message || 'Update failed.', 2500); return; } }
       auth.user.phone = newPhone;
@@ -675,6 +709,69 @@
       document.getElementById('tk-phone-view').textContent = newPhone;
       document.getElementById('tk-phone-view').style.display = 'block';
       document.getElementById('tk-phone-edit').style.display = 'none';
+    };
+
+    // Profile: track toggles
+    ['padel', 'pilates'].forEach(function (t) {
+      var btn = document.getElementById('tk-track-' + t);
+      if (!btn) return;
+      btn.onclick = async function () {
+        var tracks = (auth.user && auth.user.tracks) ? auth.user.tracks.slice() : [];
+        var idx = tracks.indexOf(t);
+        if (idx >= 0) tracks.splice(idx, 1); else tracks.push(t);
+        var client = api();
+        if (client && client.isOnline()) {
+          try { await client.auth.updateMe({ tracks: tracks }); } catch (e) { toast(e.message || 'Update failed.', 2500); return; }
+        }
+        auth.user.tracks = tracks;
+        storageSet('takeoff_user', auth.user);
+        var on = tracks.indexOf(t) >= 0;
+        btn.style.border = '1px solid ' + (on ? '#c4ef3f' : 'rgba(244,245,238,.2)');
+        btn.style.background = on ? 'rgba(196,239,63,.18)' : 'transparent';
+        btn.style.color = on ? '#c4ef3f' : 'rgba(244,245,238,.4)';
+      };
+    });
+
+    // Profile: delivery address
+    var editAddrBtn = document.getElementById('tk-edit-addr');
+    if (editAddrBtn) editAddrBtn.onclick = function () { inlineEdit('addr'); };
+    var saveAddrBtn = document.getElementById('tk-addr-save');
+    if (saveAddrBtn) saveAddrBtn.onclick = function () {
+      var line1 = (document.getElementById('tk-addr-line1').value || '').trim();
+      var city = (document.getElementById('tk-addr-city').value || '').trim();
+      var notes = (document.getElementById('tk-addr-notes').value || '').trim();
+      storageSet('takeoff_address', { line1: line1, city: city, notes: notes });
+      var display = line1 ? (line1 + (city ? ', ' + city : '')) : 'Not set — auto-fills checkout';
+      var viewEl = document.getElementById('tk-addr-view');
+      if (viewEl) { viewEl.textContent = display; viewEl.style.color = line1 ? '#f4f5ee' : 'rgba(244,245,238,.35)'; viewEl.style.display = 'block'; }
+      document.getElementById('tk-addr-edit').style.display = 'none';
+      toast('Address saved.', 2000);
+    };
+
+    // Profile: change password
+    var editPwBtn = document.getElementById('tk-edit-pw');
+    if (editPwBtn) editPwBtn.onclick = function () {
+      var el = document.getElementById('tk-pw-edit');
+      if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    };
+    var savePwBtn = document.getElementById('tk-pw-save');
+    if (savePwBtn) savePwBtn.onclick = async function () {
+      var cur = (document.getElementById('tk-pw-cur').value || '');
+      var nw = (document.getElementById('tk-pw-new').value || '');
+      var conf = (document.getElementById('tk-pw-confirm').value || '');
+      if (!cur || !nw) { toast('Fill in both passwords.', 2500); return; }
+      if (nw.length < 8) { toast('New password must be at least 8 characters.', 2500); return; }
+      if (nw !== conf) { toast('Passwords do not match.', 2500); return; }
+      var client = api();
+      if (!client || !client.isOnline()) { toast('No connection — try when online.', 2500); return; }
+      try {
+        await client.auth.updateMe({ currentPassword: cur, newPassword: nw });
+        document.getElementById('tk-pw-cur').value = '';
+        document.getElementById('tk-pw-new').value = '';
+        document.getElementById('tk-pw-confirm').value = '';
+        document.getElementById('tk-pw-edit').style.display = 'none';
+        toast('Password updated.', 2500);
+      } catch (e) { toast(e.message || 'Update failed.', 2500); }
     };
   }
 

@@ -65,7 +65,17 @@
         if (saved && saved.step && saved.step !== 'success') {
           _step = saved.step;
           _d = Object.assign(_d, saved.d || {});
-        } else { _step = 1; }
+        } else {
+          _step = 1;
+          try {
+            var savedAddr = JSON.parse(localStorage.getItem('takeoff_address') || 'null');
+            if (savedAddr) {
+              if (savedAddr.line1) { _d.address = savedAddr.line1; _d.delivery = 'deliver'; }
+              if (savedAddr.city) _d.city = savedAddr.city;
+              if (savedAddr.notes) _d.notes = savedAddr.notes;
+            }
+          } catch(e2) {}
+        }
       } catch(e) { _step = 1; }
       renderCheckout(); _showEl('tk-co-ov');
     },
