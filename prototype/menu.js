@@ -78,7 +78,6 @@
         { n: '03', title: 'Lifestyle', links: [
           { label: 'Apparel',           href: 'Take Off - Store.dc.html?cat=padelwear' },
           { label: 'Caps & bottles',    href: 'Take Off - Store.dc.html?cat=lifestyle' },
-          { label: 'Gift cards',        desc: 'Coming soon',                        href: '#' },
         ]},
       ],
       thumbs: [
@@ -93,10 +92,8 @@
           { label: 'Padel Pass',       desc: '8 shares / month · priority booking', href: 'Take Off - Padel.dc.html#plans' },
           { label: 'Pilates Monthly',  desc: 'Unlimited reformer + mat',            href: 'Take Off - Pilates.dc.html#plans' },
           { label: 'All-Access',       desc: 'Both sports, no caps',                href: 'Take Off - Padel.dc.html#plans' },
-          { label: 'Corporate',        desc: 'Team plans on request',               href: '#' },
         ]},
         { n: '02', title: 'Credits & packs', links: [
-          { label: 'Wallet top-up',    desc: 'Pay once, spend anywhere',            href: '#wallet' },
           { label: '10-class pack',    desc: 'Pilates · valid 3 months',            href: 'Take Off - Pilates.dc.html#plans' },
           { label: 'Court credits',    desc: 'Bulk shares at a discount',           href: 'Take Off - Padel.dc.html#plans' },
         ]},
@@ -109,19 +106,12 @@
       label: 'The Club',
       sections: [
         { n: '01', title: 'Discover', links: [
-          { label: 'Our story',        desc: 'The signature behind Take Off',       href: '#' },
-          { label: 'The space',        desc: 'Inside the club',                     href: '#' },
-          { label: 'Coaches & instructors', href: 'Take Off - Coaches.dc.html' },
-        ]},
-        { n: '02', title: 'Visit', links: [
-          { label: 'Hours & location', desc: 'Open 7/7 · near the airport',         href: '#' },
-          { label: 'Contact',          href: '#' },
-          { label: 'FAQ',              href: 'Take Off - Pilates.dc.html#faq' },
-          { label: 'Careers',          desc: 'Come work with us',                   href: '#' },
+          { label: 'Coaches & instructors', desc: 'Meet the team behind Take Off', href: 'Take Off - Coaches.dc.html' },
+          { label: 'FAQ',                   desc: 'Answers to common questions',   href: 'Take Off - Pilates.dc.html#faq' },
         ]},
       ],
       thumbs: [
-        { label: 'The space', href: '#', img: './photos/padelgirl.jpg' },
+        { label: 'Meet the coaches', href: 'Take Off - Coaches.dc.html', img: './photos/padelgirl.jpg' },
       ],
     },
   };
