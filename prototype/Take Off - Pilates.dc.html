@@ -12,11 +12,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="./image-slot.js"></script>
-<script src="./api-client.js?v=5" defer></script>
-<script src="./auth.js?v=5" defer></script>
-<script src="./menu.js?v=5" defer></script>
-<script src="./cart.js?v=5" defer></script>
-<link rel="stylesheet" href="./mobile.css?v=5">
+<script src="./api-client.js?v=6" defer></script>
+<script src="./auth.js?v=6" defer></script>
+<script src="./menu.js?v=6" defer></script>
+<script src="./cart.js?v=6" defer></script>
+<link rel="stylesheet" href="./mobile.css?v=6">
 <style>
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -95,16 +95,60 @@
       <div style="position:relative; animation:upP .9s .35s both;">
         <div style="position:absolute; inset:-8% -6% auto auto; width:62%; height:62%; border-radius:50%; background:radial-gradient(circle, rgba(196,239,63,.5), transparent 70%); animation:breathe 7s ease-in-out infinite; z-index:0;"></div>
         <video autoplay muted loop playsinline preload="auto" poster="./photos/Reformer_pilates_pose.jpg" style="position:relative; z-index:1; width:100%; aspect-ratio:4/5; object-fit:cover; border-radius:26px; display:block;"><source src="./videos/pilates-hero.mp4" type="video/mp4"></video>
-        <div style="position:absolute; z-index:2; left:-22px; bottom:30px; background:#0c2350; color:#f4f5ee; padding:16px 20px; border-radius:16px; box-shadow:0 18px 40px rgba(12,35,80,.25);">
-          <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:#c4ef3f;">NEXT CLASS</div>
-          <div style="font-weight:600; font-size:15px; margin-top:5px;">Reformer Flow · 18:00</div>
-        </div>
+        <sc-if value="{{ hasNextSession }}" hint-placeholder-val="">
+          <div style="position:absolute; z-index:2; left:-22px; bottom:30px; background:#0c2350; color:#f4f5ee; padding:16px 20px; border-radius:16px; box-shadow:0 18px 40px rgba(12,35,80,.25);">
+            <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.18em; color:#c4ef3f;">{{ nextSessionKicker }}</div>
+            <div style="font-weight:600; font-size:15px; margin-top:5px;">{{ nextSessionLabel }}</div>
+          </div>
+        </sc-if>
       </div>
     </div>
   </div>
 
+  <!-- ░ SCHEDULE (dynamic) ░ -->
+  <div id="schedule" style="padding:9vh 5vw; background:#eceadf;">
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:34px;">
+      <div>
+        <div class="eyebrow" style="color:rgba(12,35,80,.5);"><span style="color:#c4ef3f;">✦</span> {{ scheduleKicker }}</div>
+        <h2 style="margin:18px 0 0; font-weight:700; font-size:clamp(34px,4.6vw,68px); line-height:1; letter-spacing:-.02em;">{{ scheduleHeading }}</h2>
+      </div>
+      <p style="font-family:'Space Mono'; font-size:12px; letter-spacing:.04em; color:rgba(12,28,58,.55); max-width:280px; line-height:1.7;">{{ scheduleDesc }}</p>
+    </div>
+
+    <!-- day tabs -->
+    <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:26px;">
+      <sc-for list="{{ days }}" as="d" hint-placeholder-count="7">
+        <div onClick="{{ d.pick }}" style="flex:0 0 auto; padding:12px 22px; border-radius:999px; cursor:pointer; font-weight:600; font-size:14px; background:{{ d.bg }}; color:{{ d.fg }}; border:1px solid {{ d.bd }}; transition:all .2s ease; white-space:nowrap;">{{ d.label }}</div>
+      </sc-for>
+    </div>
+
+    <!-- class list -->
+    <div sc-if="{{ scheduleEmpty }}" style="padding:40px; text-align:center; font-family:'Space Mono'; font-size:12px; letter-spacing:.08em; color:rgba(12,35,80,.5);">
+      No sessions scheduled this week.<br><br>
+      <a href="https://wa.me/21627314100" style="color:#0c2350; font-weight:700;">Contact us on WhatsApp →</a>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <sc-for list="{{ sessions }}" as="ss" hint-placeholder-count="4">
+        <div class="tk-schedule-row" style="display:grid; grid-template-columns:96px 1fr auto; gap:24px; align-items:center; background:#fff; border:1px solid rgba(12,35,80,.06); border-radius:18px; padding:20px 24px;">
+          <div>
+            <div style="font-weight:700; font-size:22px; letter-spacing:-.01em;">{{ ss.time }}</div>
+            <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(12,28,58,.5); margin-top:3px;">{{ ss.dur }}</div>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <h3 style="margin:0; font-weight:700; font-size:19px;">{{ ss.name }}</h3>
+              <span style="font-family:'Space Mono'; font-size:9px; letter-spacing:.12em; padding:4px 9px; border-radius:999px; background:rgba(196,239,63,.4); color:#3f5310;">{{ ss.level }}</span>
+            </div>
+            <div style="font-size:13px; color:rgba(12,28,58,.55); margin-top:6px;">with {{ ss.coach }} · <span style="color:{{ ss.spotColor }}; font-weight:600;">{{ ss.spotsLabel }}</span></div>
+          </div>
+          <div onClick="{{ ss.reserve }}" style="padding:12px 24px; border-radius:999px; font-weight:600; font-size:14px; cursor:{{ ss.cursor }}; background:{{ ss.btnBg }}; color:{{ ss.btnFg }}; border:1px solid {{ ss.btnBd }}; white-space:nowrap; transition:all .2s ease;">{{ ss.btnLabel }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
   <!-- ░ INCLUSIVE ░ -->
-  <div style="padding:8vh 5vw; background:#eceadf;">
+  <div style="padding:8vh 5vw; background:#f4f5ee;">
     <div class="tk-section-2col" style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:center;">
       <div class="tk-photo-2" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
         <sc-if value="{{ approachHasPhoto1 }}" hint-placeholder-val="">
@@ -134,7 +178,7 @@
   </div>
 
   <!-- ░ CLASSES ░ -->
-  <div id="classes" style="padding:9vh 5vw; background:#f4f5ee;">
+  <div id="classes" style="padding:9vh 5vw; background:#eceadf;">
     <div style="text-align:center; margin-bottom:48px;">
       <div class="eyebrow" style="color:rgba(12,35,80,.5); justify-content:center;"><span style="color:#c4ef3f;">✦</span> {{ classesKicker }}</div>
       <h2 style="margin:18px auto 0; font-weight:700; font-size:clamp(34px,4.6vw,70px); line-height:1; letter-spacing:-.02em; max-width:640px;">{{ classesHeading }}</h2>
@@ -225,50 +269,8 @@
     </div>
   </div>
 
-  <!-- ░ SCHEDULE (dynamic) ░ -->
-  <div id="schedule" style="padding:9vh 5vw; background:#eceadf;">
-    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:34px;">
-      <div>
-        <div class="eyebrow" style="color:rgba(12,35,80,.5);"><span style="color:#c4ef3f;">✦</span> {{ scheduleKicker }}</div>
-        <h2 style="margin:18px 0 0; font-weight:700; font-size:clamp(34px,4.6vw,68px); line-height:1; letter-spacing:-.02em;">{{ scheduleHeading }}</h2>
-      </div>
-      <p style="font-family:'Space Mono'; font-size:12px; letter-spacing:.04em; color:rgba(12,28,58,.55); max-width:280px; line-height:1.7;">{{ scheduleDesc }}</p>
-    </div>
-
-    <!-- day tabs -->
-    <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:26px;">
-      <sc-for list="{{ days }}" as="d" hint-placeholder-count="7">
-        <div onClick="{{ d.pick }}" style="flex:0 0 auto; padding:12px 22px; border-radius:999px; cursor:pointer; font-weight:600; font-size:14px; background:{{ d.bg }}; color:{{ d.fg }}; border:1px solid {{ d.bd }}; transition:all .2s ease; white-space:nowrap;">{{ d.label }}</div>
-      </sc-for>
-    </div>
-
-    <!-- class list -->
-    <div sc-if="{{ scheduleEmpty }}" style="padding:40px; text-align:center; font-family:'Space Mono'; font-size:12px; letter-spacing:.08em; color:rgba(12,35,80,.5);">
-      No sessions scheduled this week.<br><br>
-      <a href="https://wa.me/21627314100" style="color:#0c2350; font-weight:700;">Contact us on WhatsApp →</a>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:12px;">
-      <sc-for list="{{ sessions }}" as="ss" hint-placeholder-count="4">
-        <div class="tk-schedule-row" style="display:grid; grid-template-columns:96px 1fr auto; gap:24px; align-items:center; background:#fff; border:1px solid rgba(12,35,80,.06); border-radius:18px; padding:20px 24px;">
-          <div>
-            <div style="font-weight:700; font-size:22px; letter-spacing:-.01em;">{{ ss.time }}</div>
-            <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(12,28,58,.5); margin-top:3px;">{{ ss.dur }}</div>
-          </div>
-          <div>
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <h3 style="margin:0; font-weight:700; font-size:19px;">{{ ss.name }}</h3>
-              <span style="font-family:'Space Mono'; font-size:9px; letter-spacing:.12em; padding:4px 9px; border-radius:999px; background:rgba(196,239,63,.4); color:#3f5310;">{{ ss.level }}</span>
-            </div>
-            <div style="font-size:13px; color:rgba(12,28,58,.55); margin-top:6px;">with {{ ss.coach }} · <span style="color:{{ ss.spotColor }}; font-weight:600;">{{ ss.spotsLabel }}</span></div>
-          </div>
-          <div onClick="{{ ss.reserve }}" style="padding:12px 24px; border-radius:999px; font-weight:600; font-size:14px; cursor:{{ ss.cursor }}; background:{{ ss.btnBg }}; color:{{ ss.btnFg }}; border:1px solid {{ ss.btnBd }}; white-space:nowrap; transition:all .2s ease;">{{ ss.btnLabel }}</div>
-        </div>
-      </sc-for>
-    </div>
-  </div>
-
   <!-- ░ PLANS ░ -->
-  <div id="plans" style="padding:9vh 5vw; background:#f4f5ee;">
+  <div id="plans" style="padding:9vh 5vw; background:#eceadf;">
     <div style="text-align:center; margin-bottom:46px;">
       <div class="eyebrow" style="color:rgba(12,35,80,.5); justify-content:center;"><span style="color:#c4ef3f;">✦</span> {{ plansKicker }}</div>
       <h2 style="margin:18px auto 0; font-weight:700; font-size:clamp(34px,4.6vw,68px); line-height:1; letter-spacing:-.02em; max-width:620px;">{{ plansHeading }}</h2>
@@ -296,7 +298,7 @@
   </div>
 
   <!-- ░ SHOP ░ -->
-  <div id="shop" style="padding:9vh 5vw; background:#eceadf;">
+  <div id="shop" style="padding:9vh 5vw; background:#f4f5ee;">
     <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:40px;">
       <div>
         <div class="eyebrow" style="color:rgba(12,35,80,.5);"><span style="color:#c4ef3f;">✦</span> {{ shopKicker }}</div>
@@ -325,7 +327,7 @@
   </div>
 
   <!-- ░ FAQ ░ -->
-  <div id="faq" style="padding:9vh 5vw; background:#f4f5ee;">
+  <div id="faq" style="padding:9vh 5vw; background:#eceadf;">
     <div class="tk-faq-grid" style="display:grid; grid-template-columns:.8fr 1.2fr; gap:5vw; align-items:start;">
       <div style="position:sticky; top:100px;">
         <div class="eyebrow" style="color:rgba(12,35,80,.5);"><span style="color:#c4ef3f;">✦</span> {{ faqKicker }}</div>
@@ -418,7 +420,11 @@
     <div style="display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap; padding-bottom:40px; border-bottom:1px solid rgba(244,245,238,.1);">
       <div style="max-width:300px;">
         <img src="./Logo/LOGO.svg" alt="Take Off" style="width:120px; height:auto; display:block; margin-bottom:16px;">
-        <p style="font-size:13px; line-height:1.6; margin:0;">Take Off Club — Pilates &amp; Padel under one roof. Tunis. Open 7/7.</p>
+        <p style="font-size:13px; line-height:1.6; margin:0;">Take Off Club — Pilates &amp; Padel under one roof. Sfax · Route de l'aéroport KM4. Open 7/7.</p>
+        <div style="margin-top:16px; position:relative; border-radius:14px; overflow:hidden; border:1px solid rgba(244,245,238,.14); aspect-ratio:16/10;">
+          <iframe src="https://www.google.com/maps?q=34.733944,10.722250&amp;z=16&amp;output=embed" title="Take Off Club — Sfax, Route de l'aéroport KM4" loading="lazy" referrerpolicy="no-referrer-when-downgrade" style="position:absolute; inset:0; width:100%; height:100%; border:0;"></iframe>
+        </div>
+        <a href="https://www.google.com/maps/dir/?api=1&amp;destination=34.733944,10.722250" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:7px; margin-top:12px; font-family:'Space Mono'; font-size:11px; letter-spacing:.08em; color:#0c2350; background:#c4ef3f; padding:9px 16px; border-radius:999px; font-weight:700; text-decoration:none;">📍 ITINÉRAIRE →</a>
       </div>
       <div style="display:flex; gap:60px; flex-wrap:wrap; font-size:13px;">
         <div style="display:flex; flex-direction:column; gap:11px;"><span style="font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:#c4ef3f;">PILATES</span><a href="#schedule">Schedule</a><a href="#classes">Classes</a><a href="#plans">Packs</a><a href="#shop">Shop</a></div>
@@ -426,7 +432,7 @@
       </div>
     </div>
     <div style="display:flex; justify-content:space-between; padding-top:24px; font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:rgba(244,245,238,.4); flex-wrap:wrap; gap:10px;">
-      <span>© 2026 TAKE OFF CLUB</span><span>PILATES · PADEL · TUNIS</span>
+      <span>© 2026 TAKE OFF CLUB</span><span>PILATES · PADEL · SFAX</span>
     </div>
   </div>
 </div>
@@ -647,6 +653,26 @@ class Component extends DCLogic {
       };
     });
 
+    // ── next upcoming session (dynamic hero badge) ──
+    let nextSession = null;
+    if (liveSched) {
+      const nowD = new Date();
+      const todayIdx = (nowD.getDay() + 6) % 7; // JS 0=Sun → our 0=Mon
+      const nowMins = nowD.getHours() * 60 + nowD.getMinutes();
+      const toMins = (t) => { const m = /(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1] * 60 + +m[2]) : -1; };
+      for (let off = 0; off < 7 && !nextSession; off++) {
+        const idx = (todayIdx + off) % 7;
+        const list = (liveSched[idx] || []).slice().sort((a, b) => toMins(a.time) - toMins(b.time));
+        for (const s of list) {
+          const mins = toMins(s.time);
+          if (mins < 0) continue;
+          if (off === 0 && mins <= nowMins) continue; // already started/passed today
+          nextSession = { name: s.name, time: s.time, when: off === 0 ? 'TODAY' : off === 1 ? 'TOMORROW' : dayNames[idx] };
+          break;
+        }
+      }
+    }
+
     const liveProds = this.state._liveProducts;
     const products = (liveProds ? liveProds.slice(0, 6).map((p, i) => ({
       name: p.name,
@@ -742,6 +768,9 @@ class Component extends DCLogic {
       heroHeadline: cH.headline || 'Redefine your strength,\none session at a time.',
       heroSubtitle: cH.subtitle || 'Reformer and mat flows in a calm, light-filled studio. Build a stronger, more balanced you — booked around your week.',
       heroStats,
+      hasNextSession: nextSession ? true : null,
+      nextSessionKicker: nextSession ? ('NEXT · ' + nextSession.when) : '',
+      nextSessionLabel: nextSession ? (nextSession.name + ' · ' + nextSession.time) : '',
       approachKicker: cA.kicker || 'Our Approach',
       approachHeading: cA.heading || 'Inclusive pilates for every body',
       approachBody: cA.body || 'No two bodies move the same. Our instructors adapt every flow to your level — first session or hundredth — so you always move with control, confidence, and ease.',
