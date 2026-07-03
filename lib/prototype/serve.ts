@@ -77,6 +77,7 @@ function rewritePrototypeHtml(html: string) {
     .replaceAll('./auth.js', '/prototype-assets/auth.js?v=2')
     .replaceAll('./menu.js', '/prototype-assets/menu.js?v=2')
     .replaceAll('./cart.js', '/prototype-assets/cart.js?v=2')
+    .replaceAll('./mobile.css', '/prototype-assets/mobile.css?v=2')
     .replaceAll('./Logo/', '/prototype-assets/Logo/')
     .replaceAll('./logo/', '/prototype-assets/Logo/')
     .replaceAll('./photos/', '/prototype-assets/Photos/')

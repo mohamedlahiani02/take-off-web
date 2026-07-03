@@ -220,7 +220,7 @@
           </div>
         </div>
         <div class="tk-menu-foot">
-          <span>TUNIS · NEAR THE AIRPORT</span>
+          <span>SFAX · ROUTE DE L'AÉROPORT KM4</span>
           <img src="./Logo/LOGO.svg" alt="Take Off">
           <span>OPEN 7/7 · 7AM — 11PM</span>
         </div>

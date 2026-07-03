@@ -17,7 +17,7 @@
   // Checkout persistent state
   var _step = 1;
   var _orderId = null;
-  var _d = { name:'', email:'', phone:'', delivery:'pickup', address:'', city:'Tunis', notes:'', pay:'pay_at_club' };
+  var _d = { name:'', email:'', phone:'', delivery:'pickup', address:'', city:'Sfax', notes:'', pay:'pay_at_club' };
 
   // Snapshots captured before cart.clear() so the success screen can show the real totals
   var _confirmedTotal = 0;
@@ -72,7 +72,7 @@
             var sa = savedAddrs && (savedAddrs.delivery || savedAddrs.billing);
             if (sa && sa.line1) {
               _d.address = sa.line1 + (sa.line2 ? ', ' + sa.line2 : '');
-              _d.city = sa.city || 'Tunis';
+              _d.city = sa.city || 'Sfax';
               _d.notes = sa.line2 || '';
               _d.delivery = 'deliver';
             }
@@ -86,7 +86,7 @@
     getShipping: function() {
       if (hasOnlyBookings() || _d.delivery==='pickup') return 0;
       var c=(_d.city||'').trim().toLowerCase();
-      return (c===''||c==='tunis') ? 9 : 15;
+      return (c===''||c==='sfax') ? 9 : 15;
     },
     getTimbre: function() {
       var sub = cart.getSubtotal();
@@ -446,12 +446,12 @@
           '<label class="tk-radio'+(_d.delivery==='pickup'?' sel':'')+'" data-del="pickup">'+
             '<input type="radio" name="tk-del" value="pickup" '+(_d.delivery==='pickup'?'checked':'')+'>'+
             '<div><div class="tk-rl">Pick up at the club <span style="color:#c4ef3f;font-weight:400;font-size:12px;">FREE</span></div>'+
-            '<div class="tk-rs">Take Off Club · Tunis<br>Ready to collect within 24–48h of order confirmation</div></div>'+
+            '<div class="tk-rs">Take Off Club · Sfax, Route de l\'aéroport KM4<br>Ready to collect within 24–48h of order confirmation</div></div>'+
           '</label>'+
           '<label class="tk-radio'+(_d.delivery==='deliver'?' sel':'')+'" data-del="deliver">'+
             '<input type="radio" name="tk-del" value="deliver" '+(_d.delivery==='deliver'?'checked':'')+'>'+
             '<div><div class="tk-rl">Deliver to my address <span style="color:rgba(244,245,238,.45);font-weight:400;font-size:12px;">from 9 DT</span></div>'+
-            '<div class="tk-rs">Tunis: 9 DT · Other regions: 15 DT · 2–4 business days</div></div>'+
+            '<div class="tk-rs">Sfax: 9 DT · Other regions: 15 DT · 2–4 business days</div></div>'+
           '</label>'+
         '</div>'+
         '<div id="tk-afields" style="display:'+(_d.delivery==='deliver'?'block':'none')+';margin-top:14px;">'+
@@ -466,7 +466,7 @@
               cards.map(function(c){
                 var a = c.a;
                 var preview = esc(a.name||'') + (a.name?'<br>':'') + esc(a.line1) + (a.line2?'<br>'+esc(a.line2):'') + '<br>' + esc(a.city||'') + (a.postal?', '+esc(a.postal):'');
-                var isSelected = _d.address === (a.line1+(a.line2?', '+a.line2:'')) && _d.city === (a.city||'Tunis');
+                var isSelected = _d.address === (a.line1+(a.line2?', '+a.line2:'')) && _d.city === (a.city||'Sfax');
                 return '<div class="tk-saved-addr-card" data-akey="'+c.key+'" style="display:flex;justify-content:space-between;align-items:flex-start;padding:11px 13px;border-radius:10px;border:1px solid '+(isSelected?'#c4ef3f':'rgba(196,239,63,.15)')+';background:'+(isSelected?'rgba(196,239,63,.06)':'rgba(255,255,255,.02)')+';margin-bottom:8px;cursor:pointer;">'+
                   '<div style="font-size:12px;color:rgba(244,245,238,.75);line-height:1.65;">'+
                     '<div style="font-family:\'Space Mono\',monospace;font-size:9px;color:rgba(196,239,63,.55);letter-spacing:.1em;margin-bottom:4px;">'+c.label.toUpperCase()+'</div>'+
@@ -481,7 +481,7 @@
           '<label class="tk-lbl">STREET ADDRESS</label>'+
           '<input class="tk-inp" id="tk-addr" placeholder="12 Rue de Marseille, Apt 3" value="'+esc(_d.address)+'">'+
           '<div class="tk-g2" style="margin-top:0;">'+
-            '<div><label class="tk-lbl">CITY / DELEGATION</label><input class="tk-inp" id="tk-city" placeholder="Tunis" value="'+esc(_d.city)+'"></div>'+
+            '<div><label class="tk-lbl">CITY / DELEGATION</label><input class="tk-inp" id="tk-city" placeholder="Sfax" value="'+esc(_d.city)+'"></div>'+
             '<div><label class="tk-lbl">LANDMARK / NOTES</label><input class="tk-inp" id="tk-notes" placeholder="Near Monoprix, blue gate..." value="'+esc(_d.notes)+'"></div>'+
           '</div>'+
         '</div>'+
@@ -597,10 +597,10 @@
           var cityEl = document.getElementById('tk-city');
           var notesEl = document.getElementById('tk-notes');
           if (addrEl) addrEl.value = addrLine;
-          if (cityEl) cityEl.value = a.city || 'Tunis';
+          if (cityEl) cityEl.value = a.city || 'Sfax';
           if (notesEl) notesEl.value = '';
           _d.address = addrLine;
-          _d.city = a.city || 'Tunis';
+          _d.city = a.city || 'Sfax';
           _d.notes = '';
           // Update card highlight without full re-render
           document.querySelectorAll('.tk-saved-addr-card').forEach(function(c){
@@ -620,7 +620,7 @@
       document.getElementById('tk-next').addEventListener('click', function(){
         if (_d.delivery==='deliver') {
           _d.address = val('tk-addr');
-          _d.city = val('tk-city') || 'Tunis';
+          _d.city = val('tk-city') || 'Sfax';
           _d.notes = val('tk-notes');
           if (!_d.address.trim()) { flash('tk-addr','Please enter your address'); return; }
         }
