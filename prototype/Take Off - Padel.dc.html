@@ -155,7 +155,7 @@
             </div>
             <div class="tk-slot-strip" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
               <sc-for list="{{ court.slots }}" as="s" hint-placeholder-count="14">
-                <div style="flex:0 0 auto; min-width:{{ s.minW }}; border-radius:11px; overflow:hidden; transition:all .15s ease;">
+                <div style="flex:0 0 auto; min-width:{{ s.minW }}; grid-column:{{ s.span }}; border-radius:11px; overflow:hidden; transition:all .15s ease;">
                   <sc-if value="{{ s.isChoosing }}" hint-placeholder-val="">
                     <div style="background:#0a1733; border:1px solid #c4ef3f; border-radius:11px; padding:10px 8px;">
                       <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.06em; color:rgba(244,245,238,.6); text-align:center; margin-bottom:8px;">{{ s.time }}</div>
@@ -790,12 +790,12 @@ class Component extends DCLogic {
           booked = this._booked(di, ci, ti);
         }
 
-        let bg, fg, bd, cursor = 'pointer', deco = 'none', hasBadge = null, badge = '', badgeFg = LIME, span = '1';
+        let bg, fg, bd, cursor = 'pointer', deco = 'none', hasBadge = null, badge = '', badgeFg = LIME, span = 'auto';
         if (booked || blocked) {
           bg = 'rgba(244,245,238,.05)'; fg = 'rgba(244,245,238,.3)'; bd = 'transparent'; cursor = 'not-allowed'; deco = 'line-through';
           if (blocked) { badge = 'BLOCKED'; hasBadge = true; badgeFg = 'rgba(244,100,100,.8)'; deco = 'none'; }
         } else if (isChoosing) {
-          span = 'span 2'; bg = NAVY; fg = '#f4f5ee'; bd = LIME;
+          span = '1 / -1'; bg = NAVY; fg = '#f4f5ee'; bd = LIME;
         } else if (mode === 'share') {
           bg = LIME; fg = NAVY; bd = LIME; hasBadge = true; badge = '20 DT'; badgeFg = NAVY;
         } else if (mode === 'full') {
