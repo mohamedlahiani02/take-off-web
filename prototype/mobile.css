@@ -336,7 +336,7 @@ html { scroll-padding-top: 84px; }
      longer overlaps the logo or vanishes into the navy panel */
   .tk-gw-nav {
     color: #fff !important;
-    top: 104px !important;
+    top: 132px !important;      /* clear the full-height brand lockup (logo + wordmark ≈ 120px) */
     left: 8vw !important;
     right: auto !important;
   }
