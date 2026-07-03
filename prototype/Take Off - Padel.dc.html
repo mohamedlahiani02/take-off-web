@@ -323,7 +323,7 @@
       </sc-if>
       <sc-for list="{{ coaches }}" as="c" hint-placeholder-count="4">
         <div onClick="{{ c.open }}" class="lift" style="position:relative; aspect-ratio:3/4; border-radius:16px; overflow:hidden; cursor:pointer;">
-          <image-slot id="{{ c.slot }}" placeholder="Drop coach photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+          <image-slot id="{{ c.slot }}" src="{{ c.photo }}" placeholder="Drop coach photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
           <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(10,23,51,.92));"></div>
           <div style="position:absolute; left:0; right:0; bottom:0; padding:18px;">
             <div style="font-weight:700; font-size:17px; line-height:1.1;"><span style="color:#c4ef3f;">{{ c.first }}</span> <span style="color:#fff;">{{ c.last }}</span></div>
@@ -343,7 +343,7 @@
         <button onClick="{{ closeCoachModal }}" style="position:absolute; top:18px; right:22px; cursor:pointer; font-size:24px; color:rgba(244,245,238,.5); background:none; border:none; line-height:1;">×</button>
         <div class="tk-modal-grid" style="display:grid; grid-template-columns:2fr 3fr; gap:30px; align-items:start;">
           <div style="aspect-ratio:4/5; border-radius:16px; overflow:hidden; position:relative;">
-            <image-slot id="{{ coachModal.slot }}" placeholder="Coach photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+            <image-slot id="{{ coachModal.slot }}" src="{{ coachModal.photo }}" placeholder="Coach photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
           </div>
           <div>
             <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.22em; color:#c4ef3f; margin-bottom:10px;">{{ coachModal.role }}</div>
@@ -861,14 +861,15 @@ class Component extends DCLogic {
       bio: c.bio,
       specs: c.specs,
       achievements: c.achievements,
+      photo: c.photoUrl || '',
     })) : [];
-    const coaches = coachesData.map((c, idx) => Object.assign({}, c, { open: () => this.setState({ openCoachIdx: idx }) }));
+    const coaches = coachesData.map((c, idx) => Object.assign({ photo: '' }, c, { open: () => this.setState({ openCoachIdx: idx }) }));
     const noCoaches = coaches.length === 0 ? true : null;
 
     const openCoachIdx = this.state.openCoachIdx;
     const coachModalOpen = openCoachIdx !== null && openCoachIdx >= 0 ? true : null;
-    const rawModal = (openCoachIdx !== null && openCoachIdx >= 0) ? coachesData[openCoachIdx] : { name: '', role: '', bio: '', specs: [], achievements: [], slot: 'pad-coach-1' };
-    const coachModal = Object.assign({}, rawModal);
+    const rawModal = (openCoachIdx !== null && openCoachIdx >= 0) ? coachesData[openCoachIdx] : { name: '', role: '', bio: '', specs: [], achievements: [], slot: 'pad-coach-1', photo: '' };
+    const coachModal = Object.assign({ photo: '' }, rawModal);
 
     // Packs plans
     const cmsPlansEarly = (this.state._cms || {}).plans || {};
