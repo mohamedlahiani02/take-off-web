@@ -306,6 +306,18 @@ html { scroll-padding-top: 84px; }
   .tk-menu-foot { flex-direction: column !important; gap: 12px !important; text-align: center !important; align-items: center !important; padding: 24px 6vw !important; }
 }
 
+/* ── 32. MENU OVERLAY — let the panel scroll when it's taller than the
+   phone. The panel is position:absolute; inset:0 with a flex column whose
+   body was flex:1, so tall link lists overflowed and collided with the
+   footer (options below the fold were unreachable). Give the panel its own
+   vertical scroll and let each region take its natural height.            */
+@media (max-width: 900px) {
+  .tk-menu-panel { overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+  .tk-menu-top   { flex: 0 0 auto !important; }
+  .tk-menu-body  { flex: 0 0 auto !important; min-height: 0 !important; }
+  .tk-menu-foot  { flex: 0 0 auto !important; }
+}
+
 /* ── 31. GATEWAY — split-screen stacks, stays legible, and scrolls ── */
 /* The gateway has its own inline JS that stacks panels < 820px, but
    body/container overflow:hidden clips the stacked content and the
