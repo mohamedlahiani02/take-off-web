@@ -475,7 +475,7 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   loaderRef = React.createRef();
-  state = { dayIdx: 0, reserved: {}, quoteIdx: 0, openFaq: 0, openInstructor: null, _authTick: 0, _cartTick: 0, _instructors: null, _cms: null, _sessionTypes: {}, _pilatesFormDone: false, _liveSchedule: null, _liveProducts: null };
+  state = { dayIdx: 0, reserved: {}, quoteIdx: 0, openFaq: 0, openInstructor: null, _authTick: 0, _cartTick: 0, _instructors: null, _cms: null, _sessionTypes: {}, _pilatesFormDone: false, _liveSchedule: null, _liveProducts: null, _packTypes: null };
 
   componentDidMount() {
     setTimeout(() => { const l = this.loaderRef.current; if (l) { l.style.opacity = '0'; l.style.visibility = 'hidden'; } }, 1500);
@@ -503,6 +503,10 @@ class Component extends DCLogic {
           const prodData = await window.takeOffApi.products.list({ page: 0, size: 6 });
           const items = (prodData && (prodData.content || prodData)) || [];
           if (items.length) this.setState({ _liveProducts: items });
+        } catch (_) {}
+        try {
+          const packData = await window.takeOffApi.classes.packTypes();
+          if (packData) this.setState({ _packTypes: packData });
         } catch (_) {}
         try {
           // Fetch the current week (Mon–Sun) of live sessions
@@ -817,11 +821,39 @@ class Component extends DCLogic {
       ctaHasPhoto: cCta.photoUrl ? true : null, ctaNoPhoto: cCta.photoUrl ? null : true,
       ctaPhotoUrl: cCta.photoUrl || '',
       days, sessions, scheduleEmpty: sessions.length === 0 ? true : null,
-      plans: [
-        { kicker: 'TRY IT', name: 'Discovery', price: '35', per: 'DT / class', accent: NAVY, bg: '#fff', fg: NAVY, bd: 'rgba(12,35,80,.1)', feats: ['Single drop-in class', 'Any class, any level', 'Mat & props included', 'No commitment'], cta: 'Book a class', btnBg: NAVY, btnFg: CREAM, onClick: () => { const el = document.getElementById('schedule'); if (el) el.scrollIntoView({ behavior: 'smooth' }); } },
-        { kicker: 'BEST VALUE', name: '10-Class Pack', price: '300', per: 'DT / 10 classes', accent: LIME, bg: NAVY, fg: CREAM, bd: 'transparent', feats: ['10 classes (save 14%)', 'Valid 3 months', 'Reformer + mat', 'Pause once'], cta: 'Get the pack', btnBg: LIME, btnFg: NAVY, onClick: () => { if (window.takeOffCart) { window.takeOffCart.add({ name: '10-Class Pack', sub: 'Pilates · valid 3 months', price: '300 DT', _raw: 300, kind: 'pack' }); window.takeOffCart.open(); } } },
-        { kicker: 'UNLIMITED', name: 'Monthly Flow', price: '420', per: 'DT / month', accent: NAVY, bg: '#fff', fg: NAVY, bd: 'rgba(12,35,80,.1)', feats: ['Unlimited classes', 'Padel + Pilates access', '1 guest pass / month', '15% off the shop'], cta: 'Go unlimited', btnBg: NAVY, btnFg: CREAM, onClick: () => { if (window.takeOffCart) { window.takeOffCart.add({ name: 'Monthly Flow', sub: 'Pilates · unlimited classes', price: '420 DT', _raw: 420, kind: 'pack' }); window.takeOffCart.open(); } } },
-      ],
+      plans: (() => {
+        const HARDCODED = [
+          { kicker: 'TRY IT', name: 'Discovery', price: '35', per: 'DT / class', accent: NAVY, bg: '#fff', fg: NAVY, bd: 'rgba(12,35,80,.1)', feats: ['Single drop-in class', 'Any class, any level', 'Mat & props included', 'No commitment'], cta: 'Book a class', btnBg: NAVY, btnFg: CREAM, onClick: () => { const el = document.getElementById('schedule'); if (el) el.scrollIntoView({ behavior: 'smooth' }); } },
+          { kicker: 'BEST VALUE', name: '10-Class Pack', price: '300', per: 'DT / 10 classes', accent: LIME, bg: NAVY, fg: CREAM, bd: 'transparent', feats: ['10 classes (save 14%)', 'Valid 3 months', 'Reformer + mat', 'Pause once'], cta: 'Get the pack', btnBg: LIME, btnFg: NAVY, onClick: () => { if (window.takeOffCart) { window.takeOffCart.add({ name: '10-Class Pack', sub: 'Pilates · valid 3 months', price: '300 DT', _raw: 300, kind: 'pack' }); window.takeOffCart.open(); } } },
+          { kicker: 'UNLIMITED', name: 'Monthly Flow', price: '420', per: 'DT / month', accent: NAVY, bg: '#fff', fg: NAVY, bd: 'rgba(12,35,80,.1)', feats: ['Unlimited classes', 'Padel + Pilates access', '1 guest pass / month', '15% off the shop'], cta: 'Go unlimited', btnBg: NAVY, btnFg: CREAM, onClick: () => { if (window.takeOffCart) { window.takeOffCart.add({ name: 'Monthly Flow', sub: 'Pilates · unlimited classes', price: '420 DT', _raw: 420, kind: 'pack' }); window.takeOffCart.open(); } } },
+        ];
+        const rawPacks = (this.state._packTypes || []).filter(p => p.activity === 'PILATES' && p.active !== false).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        if (!rawPacks.length) return HARDCODED;
+        const midIdx = Math.floor(rawPacks.length / 2);
+        return rawPacks.map((p, i) => {
+          const isHighlight = p.unlimited === true || i === midIdx;
+          const kicker = i === 0 ? 'POPULAR' : i === rawPacks.length - 1 ? 'UNLIMITED' : 'BEST VALUE';
+          const style = isHighlight
+            ? { bg: '#0c2350', fg: '#f4f5ee', bd: 'transparent', btnBg: '#c4ef3f', btnFg: '#0c2350', accent: '#c4ef3f' }
+            : { bg: '#fff', fg: '#0c2350', bd: 'rgba(12,35,80,.1)', btnBg: '#0c2350', btnFg: '#f4f5ee', accent: '#0c2350' };
+          const feats = [p.unlimited ? 'Accès illimité' : (p.creditCount + ' classes'), 'Valable ' + p.validityMonths + ' mois', 'Reformer + tapis', 'Tous niveaux'];
+          return {
+            kicker,
+            name: p.name,
+            price: String(Math.round(p.priceDt)),
+            per: p.unlimited ? 'DT / mois' : ('DT / ' + p.creditCount + ' classes'),
+            feats,
+            cta: p.unlimited ? 'Go unlimited' : 'Get the pack',
+            ...style,
+            onClick: () => {
+              if (window.takeOffCart) {
+                window.takeOffCart.add({ name: p.name, sub: 'Pilates · ' + (p.unlimited ? 'illimité' : p.creditCount + ' classes'), price: Math.round(p.priceDt) + ' DT', _raw: Number(p.priceDt), kind: 'pack', packTypeId: p.id });
+                window.takeOffCart.open();
+              }
+            },
+          };
+        });
+      })(),
       faqs, products,
       cartCount,
       openCart: () => window.takeOffCart && window.takeOffCart.open(),
