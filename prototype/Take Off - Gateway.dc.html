@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="./image-slot.js"></script>
+<script src="./api-client.js?v=6" defer></script>
 <script src="./menu.js?v=6" defer></script>
 <link rel="stylesheet" href="./mobile.css?v=6">
 <style>
@@ -54,11 +55,11 @@
     <div style="position:absolute; right:6%; bottom:-7%; font-weight:700; font-size:30vh; line-height:.8; color:rgba(255,255,255,.05); pointer-events:none; animation:floatGhost 9s ease-in-out infinite;">01</div>
 
     <div style="position:relative; z-index:3; padding:6vw 0 0 8vw; max-width:560px; opacity:1; animation:riseUp .9s cubic-bezier(.2,.7,.2,1) both;">
-      <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.34em; color:#c4ef3f; text-transform:uppercase;">01 — The Court</div>
+      <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.34em; color:#c4ef3f; text-transform:uppercase;">{{ padelKicker }}</div>
       <h1 style="margin:16px 0 0; font-weight:700; font-size:clamp(54px,8.2vw,148px); line-height:.9; letter-spacing:-.02em; color:#fff; text-shadow:0 8px 40px rgba(0,0,0,.4);">PADEL</h1>
-      <p style="margin:22px 0 0; font-size:clamp(15px,1.25vw,19px); line-height:1.55; color:rgba(255,255,255,.82); max-width:380px;">Floodlights, fast rallies and the crew. Reserve one of our two courts in seconds and bring the noise.</p>
-      <div onClick="{{ enterPadel }}" style="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#c4ef3f; color:#0c2350; font-weight:600; font-size:16px; cursor:pointer; transition:transform .25s ease, box-shadow .25s ease;" style-hover="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#d4ff52; color:#0c2350; font-weight:600; font-size:16px; cursor:pointer; transform:translateY(-3px); box-shadow:0 16px 34px rgba(196,239,63,.3);">Enter the courts <span style="font-size:18px;">→</span></div>
-      <div style="margin-top:30px; font-family:'Space Mono'; font-size:11px; letter-spacing:.26em; color:rgba(255,255,255,.45);">BOOK · LEAGUES · COACHING · SHOP</div>
+      <p style="margin:22px 0 0; font-size:clamp(15px,1.25vw,19px); line-height:1.55; color:rgba(255,255,255,.82); max-width:380px;">{{ padelSubtitle }}</p>
+      <div onClick="{{ enterPadel }}" style="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#c4ef3f; color:#0c2350; font-weight:600; font-size:16px; cursor:pointer; transition:transform .25s ease, box-shadow .25s ease;" style-hover="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#d4ff52; color:#0c2350; font-weight:600; font-size:16px; cursor:pointer; transform:translateY(-3px); box-shadow:0 16px 34px rgba(196,239,63,.3);">{{ padelCta }} <span style="font-size:18px;">→</span></div>
+      <div style="margin-top:30px; font-family:'Space Mono'; font-size:11px; letter-spacing:.26em; color:rgba(255,255,255,.45);">{{ padelTags }}</div>
     </div>
   </div>
 
@@ -75,11 +76,11 @@
     <div style="position:absolute; left:6%; bottom:-7%; font-weight:700; font-size:30vh; line-height:.8; color:rgba(12,35,80,.055); pointer-events:none; animation:floatGhost 9s ease-in-out infinite; animation-delay:-3s;">02</div>
 
     <div style="position:relative; z-index:3; padding:6vw 8vw 0 0; max-width:560px; text-align:right; opacity:1; animation:riseUp .9s cubic-bezier(.2,.7,.2,1) .12s both;">
-      <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.34em; color:#5f7d12; text-transform:uppercase;">02 — The Studio</div>
+      <div style="font-family:'Space Mono'; font-size:13px; letter-spacing:.34em; color:#5f7d12; text-transform:uppercase;">{{ pilatesKicker }}</div>
       <h1 style="margin:16px 0 0; font-weight:700; font-size:clamp(54px,8.2vw,148px); line-height:.9; letter-spacing:-.02em; color:#0c2350;">PILATES</h1>
-      <p style="margin:22px 0 0; margin-left:auto; font-size:clamp(15px,1.25vw,19px); line-height:1.55; color:rgba(12,28,58,.7); max-width:380px;">Breathe, align, reset. Reformer and mat flows that build a stronger, calmer you — booked around your week.</p>
-      <div onClick="{{ enterPilates }}" style="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#0c2350; color:#f4f5ee; font-weight:600; font-size:16px; cursor:pointer; transition:transform .25s ease, box-shadow .25s ease;" style-hover="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#16387a; color:#f4f5ee; font-weight:600; font-size:16px; cursor:pointer; transform:translateY(-3px); box-shadow:0 16px 34px rgba(12,35,80,.28);">Enter the studio <span style="font-size:18px;">→</span></div>
-      <div style="margin-top:30px; font-family:'Space Mono'; font-size:11px; letter-spacing:.26em; color:rgba(12,28,58,.42);">CLASSES · PACKS · PRIVATE · SHOP</div>
+      <p style="margin:22px 0 0; margin-left:auto; font-size:clamp(15px,1.25vw,19px); line-height:1.55; color:rgba(12,28,58,.7); max-width:380px;">{{ pilatesSubtitle }}</p>
+      <div onClick="{{ enterPilates }}" style="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#0c2350; color:#f4f5ee; font-weight:600; font-size:16px; cursor:pointer; transition:transform .25s ease, box-shadow .25s ease;" style-hover="margin-top:34px; display:inline-flex; align-items:center; gap:12px; padding:15px 28px; border-radius:999px; background:#16387a; color:#f4f5ee; font-weight:600; font-size:16px; cursor:pointer; transform:translateY(-3px); box-shadow:0 16px 34px rgba(12,35,80,.28);">{{ pilatesCta }} <span style="font-size:18px;">→</span></div>
+      <div style="margin-top:30px; font-family:'Space Mono'; font-size:11px; letter-spacing:.26em; color:rgba(12,28,58,.42);">{{ pilatesTags }}</div>
     </div>
   </div>
 
@@ -126,7 +127,7 @@ class Component extends DCLogic {
   padelRef = React.createRef();
   pilatesRef = React.createRef();
   containerRef = React.createRef();
-  state = { activeCat: 'padel', menuOpen: false, entering: null, sepW: 110, sepH: 900 };
+  state = { activeCat: 'padel', menuOpen: false, entering: null, sepW: 110, sepH: 900, _cms: null };
   _t = null;
 
   componentDidMount() {
@@ -161,6 +162,12 @@ class Component extends DCLogic {
     };
     const c = this.containerRef.current;
     if (c) { c.addEventListener('mousemove', this._onMove); c.addEventListener('mouseleave', this._onLeave); }
+    (async () => {
+      try {
+        const sections = await window.takeOffApi.content.page('gateway');
+        if (sections) this.setState({ _cms: sections });
+      } catch(e) {}
+    })();
   }
   componentWillUnmount() {
     window.removeEventListener('resize', this._measure);
@@ -205,6 +212,18 @@ class Component extends DCLogic {
   }
 
   renderVals() {
+    const cms = this.state._cms || {};
+    const cmsPadel = cms.padel || {};
+    const padelKicker = cmsPadel.kicker || '01 — The Court';
+    const padelSubtitle = cmsPadel.subtitle || 'Floodlights, fast rallies and the crew. Reserve one of our two courts in seconds and bring the noise.';
+    const padelCta = cmsPadel.cta || 'Enter the courts';
+    const padelTags = cmsPadel.tags || 'BOOK · LEAGUES · COACHING · SHOP';
+    const cmsPilates = cms.pilates || {};
+    const pilatesKicker = cmsPilates.kicker || '02 — The Studio';
+    const pilatesSubtitle = cmsPilates.subtitle || 'Breathe, align, reset. Reformer and mat flows that build a stronger, calmer you — booked around your week.';
+    const pilatesCta = cmsPilates.cta || 'Enter the studio';
+    const pilatesTags = cmsPilates.tags || 'CLASSES · PACKS · PRIVATE · SHOP';
+
     const M = {
       padel: { sections: [
         { n: '01', title: 'Play', links: ['Book a court', 'Open matches', 'Leagues & cups', 'Coaching', 'Court rental'] },
@@ -241,6 +260,8 @@ class Component extends DCLogic {
     const s = this.state.entering;
     return {
       loaderRef: this.loaderRef, sepRef: this.sepRef, hairlineRef: this.hairlineRef, dotRef: this.dotRef, padelRef: this.padelRef, pilatesRef: this.pilatesRef, containerRef: this.containerRef,
+      padelKicker, padelSubtitle, padelCta, padelTags,
+      pilatesKicker, pilatesSubtitle, pilatesCta, pilatesTags,
       onEnterPadel: () => this._grow('padel'), onEnterPilates: () => this._grow('pilates'), onLeave: () => this._grow(null),
       enterPadel: () => this._enter('padel'), enterPilates: () => this._enter('pilates'),
       openMenu: () => window.takeOffMenu && window.takeOffMenu.open(),

@@ -76,9 +76,9 @@
   <div style="padding:18vh 5vw 7vh; background:#0a1733; position:relative; overflow:hidden;">
     <div style="position:absolute; inset:0; background:radial-gradient(60% 60% at 90% 10%, rgba(196,239,63,.12), transparent 60%); pointer-events:none;"></div>
     <div style="position:relative; z-index:1;">
-      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:18px; animation:upP .7s .2s both;">THE TAKE OFF STORE</div>
-      <h1 class="anton" style="margin:0 0 18px; font-size:clamp(52px,9vw,130px); line-height:.86; color:#fff; animation:upP .8s .3s both;">Gear up<span style="color:#c4ef3f;">.</span></h1>
-      <p style="max-width:480px; font-size:clamp(15px,1.3vw,19px); line-height:1.55; color:rgba(244,245,238,.65); animation:upP .8s .45s both;">Padel, Pilates & lifestyle. Shipped from Sfax.</p>
+      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:18px; animation:upP .7s .2s both;">{{ heroKicker }}</div>
+      <h1 class="anton" style="margin:0 0 18px; font-size:clamp(52px,9vw,130px); line-height:.86; color:#fff; animation:upP .8s .3s both;">{{ heroHeadline }}<span style="color:#c4ef3f;">.</span></h1>
+      <p style="max-width:480px; font-size:clamp(15px,1.3vw,19px); line-height:1.55; color:rgba(244,245,238,.65); animation:upP .8s .45s both;">{{ heroSubtitle }}</p>
     </div>
   </div>
 
@@ -212,7 +212,7 @@ class Component extends DCLogic {
   state = {
     activeCat: 'all', searchQuery: '', openProductIdx: null,
     qty: 1, selectedSize: null, activeThumbIdx: 0,
-    _authTick: 0, _cartTick: 0, _apiProducts: null,
+    _authTick: 0, _cartTick: 0, _apiProducts: null, _cms: null,
   };
 
   componentDidMount() {
@@ -231,6 +231,10 @@ class Component extends DCLogic {
         const items = resp && resp.content ? resp.content : (Array.isArray(resp) ? resp : []);
         this.setState({ _apiProducts: items });
       } catch (_) {}
+      try {
+        const sections = await window.takeOffApi.content.page('store');
+        if (sections) this.setState({ _cms: sections });
+      } catch(e) {}
     })();
   }
 
@@ -242,6 +246,12 @@ class Component extends DCLogic {
     const authUser = window.takeOffAuth && window.takeOffAuth.user;
     const cartCount = window.takeOffCart ? window.takeOffCart.getCount() : 0;
     const LIME = '#c4ef3f', NAVY = '#0a1733';
+
+    const cms = this.state._cms || {};
+    const cmsHero = cms.hero || {};
+    const heroKicker = cmsHero.kicker || 'THE TAKE OFF STORE';
+    const heroHeadline = cmsHero.headline || 'Gear up';
+    const heroSubtitle = cmsHero.subtitle || 'Padel, Pilates & lifestyle. Shipped from Sfax.';
 
     const catDefs = [
       { key: 'all',        label: 'All' },
@@ -330,6 +340,7 @@ class Component extends DCLogic {
 
     return {
       loaderRef: this.loaderRef,
+      heroKicker, heroHeadline, heroSubtitle,
       cats, products,
       isLoading: isLoading ? true : null,
       emptyStore: emptyStore ? true : null,
