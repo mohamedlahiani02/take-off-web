@@ -1,4 +1,4 @@
-// Take Off Club — API Client
+﻿// Take Off Club — API Client
 // Browser IIFE. Exposes window.takeOffApi.
 // If window.TAKEOFF_API_URL is empty, all calls are no-ops (offline mode).
 (function () {
@@ -224,6 +224,10 @@
       myPacks: function () {
         return request('GET', '/api/v1/classes/packs/mine');
       },
+    },
+
+    tournaments: {
+      list: function() { return request('GET', '/api/v1/tournaments', undefined, true); },
     },
   };
 
