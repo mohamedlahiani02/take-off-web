@@ -71,9 +71,9 @@
   <div style="padding:18vh 5vw 9vh; background:#0a1733; position:relative; overflow:hidden;">
     <div style="position:absolute; inset:0; background:radial-gradient(80% 60% at 80% 20%, rgba(43,107,240,.25), transparent 60%); pointer-events:none;"></div>
     <div style="position:relative; z-index:1;">
-      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:22px; animation:upP .7s .2s both;">TAKE OFF CLUB — THE COACHING TEAM</div>
-      <h1 class="anton" style="margin:0 0 24px; font-size:clamp(56px,10vw,140px); line-height:.86; color:#fff; animation:upP .8s .3s both;">Behind every<br>great match<span style="color:#c4ef3f;">.</span></h1>
-      <p style="max-width:560px; font-size:clamp(16px,1.4vw,20px); line-height:1.55; color:rgba(244,245,238,.72); animation:upP .8s .45s both;">Eight certified coaches, methods forged on the world circuit, and one mission: help you win every inch of the court. Pick your coach, book a session, take the game into your own hands.</p>
+      <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:22px; animation:upP .7s .2s both;">{{ heroKicker }}</div>
+      <h1 class="anton" style="margin:0 0 24px; font-size:clamp(56px,10vw,140px); line-height:.86; color:#fff; animation:upP .8s .3s both;">{{ heroHeadline }}<span style="color:#c4ef3f;">.</span></h1>
+      <p style="max-width:560px; font-size:clamp(16px,1.4vw,20px); line-height:1.55; color:rgba(244,245,238,.72); animation:upP .8s .45s both;">{{ heroSubtitle }}</p>
       <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:34px; animation:upP .8s .6s both;">
         <a href="#coaching-form" style="display:inline-flex; align-items:center; gap:12px; padding:16px 28px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:16px;" class="lift">Book a session ↗</a>
         <a href="#coaches-grid" style="display:inline-flex; align-items:center; padding:16px 28px; border-radius:999px; border:1px solid rgba(244,245,238,.3); color:#fff; font-weight:600; font-size:16px;" class="lift">Meet the coaches</a>
@@ -83,8 +83,8 @@
 
   <!-- COACHES GRID -->
   <div id="coaches-grid" style="padding:9vh 5vw; background:#0a1733;">
-    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">01 — L'ÉQUIPE</div>
-    <h2 class="anton" style="margin:0 0 42px; font-size:clamp(36px,5vw,72px); line-height:.9; color:#fff;">Nos coachs</h2>
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">{{ gridKicker }}</div>
+    <h2 class="anton" style="margin:0 0 42px; font-size:clamp(36px,5vw,72px); line-height:.9; color:#fff;">{{ gridHeading }}</h2>
     <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px;">
       <sc-for list="{{ coaches }}" as="c" hint-placeholder-count="8">
         <div onClick="{{ c.open }}" class="lift" style="position:relative; aspect-ratio:3/4; border-radius:16px; overflow:hidden; cursor:pointer;">
@@ -138,11 +138,11 @@
 
   <!-- ░ COACHING FORM ░ -->
   <div id="coaching-form" style="padding:9vh 5vw; background:#0a1733;">
-    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">02 — COACHING INQUIRY</div>
+    <div style="font-family:'Space Mono'; font-size:12px; letter-spacing:.3em; color:#c4ef3f; margin-bottom:14px;">{{ formKicker }}</div>
     <div class="tk-form-2col" style="display:grid; grid-template-columns:1fr 1fr; gap:5vw; align-items:start; margin-bottom:48px;">
       <div>
-        <h2 class="anton" style="margin:0 0 18px; font-size:clamp(36px,5.5vw,78px); line-height:.9; color:#fff;">Want to improve<br>your game<span style="color:#c4ef3f;">?</span></h2>
-        <p style="font-size:15px; line-height:1.65; color:rgba(244,245,238,.65); margin:0;">Our coaches offer individual and group lessons, by appointment. Weekdays slots run from 9am to 5:30pm. Weekends from 9am to noon and 2pm to 5:30pm. In summer, sessions move to early morning or evening after 6pm for your comfort. Fill the form — we'll get back to you within 24h by phone or WhatsApp.</p>
+        <h2 class="anton" style="margin:0 0 18px; font-size:clamp(36px,5.5vw,78px); line-height:.9; color:#fff;">{{ formHeadline }}<span style="color:#c4ef3f;">?</span></h2>
+        <p style="font-size:15px; line-height:1.65; color:rgba(244,245,238,.65); margin:0;">{{ formSubtitle }}</p>
       </div>
       <div>
         <div style="background:rgba(255,255,255,.04); border:1px solid rgba(196,239,63,.15); border-radius:16px; padding:20px;">
@@ -278,7 +278,7 @@
 
   <!-- CTA -->
   <div style="padding:11vh 5vw; background:#0f1f44; text-align:center;">
-    <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.28em; color:#c4ef3f; margin-bottom:18px;">READY TO LEVEL UP?</div>
+    <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.28em; color:#c4ef3f; margin-bottom:18px;">{{ ctaKicker }}</div>
     <h2 class="anton tk-cta-title" style="margin:0 0 24px; font-size:clamp(40px,7vw,100px); line-height:.88; color:#fff;">Not sure yet?<br><span style="color:#c4ef3f;">Fill the form above.</span></h2>
     <a href="#coaching-form" style="display:inline-flex; align-items:center; gap:14px; padding:17px 16px 17px 30px; border-radius:999px; background:#c4ef3f; color:#0a1733; font-weight:700; font-size:17px;" class="lift">Coaching inquiry <span style="display:grid; place-items:center; width:36px; height:36px; border-radius:50%; background:#0a1733; color:#c4ef3f;">↗</span></a>
   </div>
@@ -317,6 +317,7 @@ class Component extends DCLogic {
     _lessonTypes: { individual: false, group: false },
     _availGrid: {},   // key: "Mon|Morning" → true
     _coaches: null,
+    _cms: null,
   };
 
   componentDidMount() {
@@ -330,6 +331,10 @@ class Component extends DCLogic {
           const data = await window.takeOffApi.coaches.list('PADEL', false);
           if (data && data.length) this.setState({ _coaches: data });
         } catch (_) {}
+        try {
+          const sections = await window.takeOffApi.content.page('coaches');
+          if (sections) this.setState({ _cms: sections });
+        } catch(e) {}
       }
     })();
   }
@@ -366,6 +371,22 @@ class Component extends DCLogic {
   renderVals() {
     const authUser = window.takeOffAuth && window.takeOffAuth.user;
     const cartCount = window.takeOffCart ? window.takeOffCart.getCount() : 0;
+
+    const cms = this.state._cms || {};
+    const cmsHero = cms.hero || {};
+    const heroKicker = cmsHero.kicker || 'TAKE OFF CLUB — THE COACHING TEAM';
+    const heroHeadline = cmsHero.headline || 'Behind every great match';
+    const heroSubtitle = cmsHero.subtitle || 'Eight certified coaches, methods forged on the world circuit, and one mission: help you win every inch of the court. Pick your coach, book a session, take the game into your own hands.';
+    const cmsGrid = cms.grid || {};
+    const gridKicker = cmsGrid.kicker || "01 — L'ÉQUIPE";
+    const gridHeading = cmsGrid.heading || 'Nos coachs';
+    const cmsForm = cms.form || {};
+    const formKicker = cmsForm.kicker || '02 — COACHING INQUIRY';
+    const formHeadline = cmsForm.headline || 'Want to improve your game';
+    const formSubtitle = cmsForm.subtitle || "Our coaches offer individual and group lessons, by appointment. Weekdays slots run from 9am to 5:30pm. Weekends from 9am to noon and 2pm to 5:30pm. In summer, sessions move to early morning or evening after 6pm for your comfort. Fill the form — we'll get back to you within 24h by phone or WhatsApp.";
+    const cmsCta = cms.cta || {};
+    const ctaKicker = cmsCta.kicker || 'READY TO LEVEL UP?';
+
     const openIdx = this.state.openCoachIdx;
     const apiCoaches = this.state._coaches;
     const raw = apiCoaches ? apiCoaches.map((c, i) => ({
@@ -450,6 +471,10 @@ class Component extends DCLogic {
 
     return {
       loaderRef: this.loaderRef,
+      heroKicker, heroHeadline, heroSubtitle,
+      gridKicker, gridHeading,
+      formKicker, formHeadline, formSubtitle,
+      ctaKicker,
       coaches,
       coachModalOpen, modal,
       closeModal: () => this.setState({ openCoachIdx: null }),
