@@ -42,3 +42,7 @@ Thumbs.db
 
 # Sentry
 .sentryclirc
+
+# Local Claude Code tooling (not part of the app)
+.claude/
+skills-lock.json
