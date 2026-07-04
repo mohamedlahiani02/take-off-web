@@ -233,7 +233,7 @@
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:18px;">
       <sc-for list="{{ instructors }}" as="in" hint-placeholder-count="3">
         <div onClick="{{ in.open }}" class="lift" style="cursor:pointer;">
-          <image-slot id="{{ in.slot }}" placeholder="Drop instructor photo" radius="18" style="width:100%; aspect-ratio:4/5;"></image-slot>
+          <image-slot id="{{ in.slot }}" src="{{ in.photo }}" placeholder="Drop instructor photo" radius="18" style="width:100%; aspect-ratio:4/5;"></image-slot>
           <h3 style="margin:18px 0 0; font-weight:700; font-size:20px;">{{ in.name }}</h3>
           <div style="font-family:'Space Mono'; font-size:11px; letter-spacing:.1em; color:rgba(12,28,58,.55); margin-top:6px;">{{ in.role }}</div>
           <div style="margin-top:10px; font-size:13px; color:rgba(12,35,80,.55);">View bio →</div>
@@ -442,7 +442,7 @@
   <div onClick="{{ closeInstrModal }}" style="position:fixed; inset:0; z-index:160; background:rgba(7,15,36,.55); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:20px;">
     <div onClick="{{ stopProp }}" class="tk-modal-grid-instr" style="position:relative; background:#fff; border-radius:24px; width:100%; max-width:720px; display:grid; grid-template-columns:220px 1fr; overflow:hidden; box-shadow:0 32px 80px rgba(12,35,80,.25); max-height:90vh;">
       <div style="background:#eceadf; position:relative;">
-        <image-slot id="{{ instrModal.slot }}" placeholder="Drop instructor photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+        <image-slot id="{{ instrModal.slot }}" src="{{ instrModal.photo }}" placeholder="Drop instructor photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
       </div>
       <div style="padding:36px; overflow-y:auto;">
         <div onClick="{{ closeInstrModal }}" style="position:absolute; top:16px; right:20px; cursor:pointer; font-size:24px; color:rgba(12,35,80,.4); line-height:1;">×</div>
@@ -698,9 +698,10 @@ class Component extends DCLogic {
       name: c.firstName + ' ' + c.lastName,
       role: c.roleTitle,
       slot: 'pil-inst-' + (i + 1),
+      photo: c.photoUrl || '',
       bio: c.bio,
-      specs: c.specs,
-      teaches: [],
+      specs: c.specs || [],
+      teaches: c.achievements || [],
     })) : [];
     const instructors = instrData.map((instr, idx) => Object.assign({}, instr, {
       open: () => this.setState({ openInstructor: idx }),
@@ -708,7 +709,7 @@ class Component extends DCLogic {
 
     const openIdx = this.state.openInstructor;
     const instrModalOpen = openIdx !== null && openIdx >= 0 ? true : null;
-    const instrModal = (openIdx !== null && openIdx >= 0) ? instrData[openIdx] : { name: '', role: '', bio: '', specs: [], teaches: [], slot: 'pil-inst-1' };
+    const instrModal = (openIdx !== null && openIdx >= 0) ? instrData[openIdx] : { name: '', role: '', bio: '', specs: [], teaches: [], slot: 'pil-inst-1', photo: '' };
 
     const authUser = window.takeOffAuth && window.takeOffAuth.user;
 
