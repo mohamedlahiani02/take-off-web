@@ -310,7 +310,12 @@
       <sc-for list="{{ products }}" as="p" hint-placeholder-count="5">
         <div style="background:#fff; border-radius:18px; overflow:hidden; border:1px solid rgba(12,35,80,.06);" class="lift">
           <div style="position:relative; aspect-ratio:1/1; background:#f4f5ee;">
-            <image-slot id="{{ p.slot }}" placeholder="Drop product photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+            <sc-if value="{{ p.hasPhoto }}" hint-placeholder-val="">
+              <image-slot src="{{ p.photoUrl }}" placeholder="" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+            </sc-if>
+            <sc-if value="{{ p.noPhoto }}" hint-placeholder-val="">
+              <image-slot id="{{ p.slot }}" placeholder="Drop product photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+            </sc-if>
             <div style="position:absolute; top:12px; left:12px; font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; padding:5px 9px; border-radius:999px; background:rgba(12,35,80,.85); color:#c4ef3f;">{{ p.tag }}</div>
           </div>
           <div style="padding:16px;">

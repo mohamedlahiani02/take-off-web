@@ -880,6 +880,7 @@ class Component extends DCLogic {
             entryFee: Number(t.entryFeeDt),
             status: t.status,
             slot: 'pad-tourn-' + (i + 1),
+            bannerUrl: t.bannerUrl || '',
           };
         })
       : FALLBACK_TOURNAMENTS;
@@ -1029,9 +1030,9 @@ class Component extends DCLogic {
       return Object.assign({}, t, {
         title: ci.name || t.title,
         date: ci.date || t.date,
-        photoUrl: ci.photoUrl || '',
-        hasPhoto: ci.photoUrl ? true : null,
-        noPhoto: ci.photoUrl ? null : true,
+        photoUrl: ci.photoUrl || t.bannerUrl || '',
+        hasPhoto: (ci.photoUrl || t.bannerUrl) ? true : null,
+        noPhoto: (ci.photoUrl || t.bannerUrl) ? null : true,
         pct: Math.round(t.filled / t.total * 100),
         signup: () => this._signupTournament(t),
       });
