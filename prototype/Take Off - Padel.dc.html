@@ -532,6 +532,7 @@ class Component extends DCLogic {
     _liveCourts: null,   // [{id, name, activity}]
     _liveSlots: {},      // { "courtId_YYYY-MM-DD": [SlotDto...] }
     _heroProducts: null, // [{id, name, priceDt, category, mainPhotoUrl}]
+    _tournaments: null,
     // coaching form
     coachFormDone: false, coursSelected: {}, availGrid: {}, // key: "day|slot" => bool
     // plans
@@ -574,6 +575,11 @@ class Component extends DCLogic {
           const prods = prodResp && prodResp.content ? prodResp.content : (Array.isArray(prodResp) ? prodResp : []);
           this.setState({ _heroProducts: prods });
         } catch (_) {}
+        try {
+          this.setState({ _tournaments: await window.takeOffApi.tournaments.list() });
+        } catch(e) {
+          this.setState({ _tournaments: [] });
+        }
       }
     })();
   }
@@ -689,7 +695,8 @@ class Component extends DCLogic {
   }
   _signupTournament(t) {
     const doSignup = () => {
-      const item = { name: 'Tournament: ' + t.title, sub: t.date + ' · ' + t.format, price: '80 DT', _raw: 80, kind: 'booking' };
+      const price = t.entryFee != null ? t.entryFee : 80;
+      const item = { name: 'Tournament: ' + t.title, sub: t.date + ' · ' + t.format, price: price + ' DT', _raw: price, kind: 'booking' };
       if (window.takeOffAuth) window.takeOffAuth.recordBooking(item);
       if (window.takeOffCart) window.takeOffCart.add(item);
     };
@@ -842,11 +849,35 @@ class Component extends DCLogic {
 
     const cartCount = window.takeOffCart ? window.takeOffCart.getCount() : 0;
 
-    const tournData = [
+    const apiTournaments = this.state._tournaments && this.state._tournaments.length > 0
+      ? this.state._tournaments
+      : null;
+
+    const FALLBACK_TOURNAMENTS = [
       { date: 'JUL 12-13', title: 'Summer Americano', format: 'AMERICANO · MIXED', prize: 'Trophy + 500 DT shop credit', filled: 22, total: 32, slot: 'pad-tourn-1' },
       { date: 'AUG 02-04', title: 'Take Off Cup', format: 'KNOCKOUT · DOUBLES', prize: 'Cup + Pro racket prize pool', filled: 14, total: 32, slot: 'pad-tourn-2' },
       { date: 'SEP 20', title: 'Night Mixed', format: 'AMERICANO · MIXED', prize: '300 DT cash + bottles', filled: 8, total: 24, slot: 'pad-tourn-3' },
     ];
+
+    const tournData = apiTournaments
+      ? apiTournaments.map((t, i) => {
+          const d = new Date(t.startsAt);
+          const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+          const dateStr = months[d.getMonth()] + ' ' + d.getDate();
+          return {
+            id: t.id,
+            date: dateStr,
+            title: t.title,
+            format: t.format + ' · ' + t.category,
+            prize: t.prize || '',
+            filled: Number(t.currentRegistrations),
+            total: t.maxParticipants || 32,
+            entryFee: Number(t.entryFeeDt),
+            status: t.status,
+            slot: 'pad-tourn-' + (i + 1),
+          };
+        })
+      : FALLBACK_TOURNAMENTS;
     const authUser = window.takeOffAuth && window.takeOffAuth.user;
 
     // Coaches with extended data
