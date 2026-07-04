@@ -772,7 +772,7 @@ async function renderDashboard() {
     if (strip && inqData) strip.children[1].querySelector('.stat-num').textContent = inqData.totalElements || 0;
   } catch (_) {}
   try {
-    var ordData = await window.adminApi.orders.list(0);
+    var ordData = await window.adminApi.orders.list(null, 0);
     var strip = document.getElementById('stats-strip');
     if (strip && ordData) strip.children[2].querySelector('.stat-num').textContent = ordData.totalElements || 0;
   } catch (_) {}
@@ -1011,6 +1011,7 @@ async function iqSaveNote(id){ try{ await window.adminApi.inquiryPipeline.note(i
 async function iqClose(id,outcome){ try{ await window.adminApi.inquiryPipeline.close(id,outcome); toast('Closed.','success'); closeGenModal(); renderInquiries(); }catch(e){ toast(e.message||'Failed.','error'); } }
 
 // ── Orders ─────────────────────────────────────────────────────────────────
+var _ordersStatusFilter = '';
 async function renderOrders() {
   var content = document.getElementById('page-content');
   if (!window.adminApi || !window.adminApi.isOnline()) {
@@ -1018,32 +1019,132 @@ async function renderOrders() {
     return;
   }
   try {
-    var data = await window.adminApi.orders.list(0);
+    var data = await window.adminApi.orders.list(_ordersStatusFilter || null, 0);
     var items = (data && data.content) || [];
-    if (!items.length) {
-      content.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">↗</div><p>No orders yet.</p></div></div>';
-      return;
-    }
+    var statusColors = { PENDING:'#f5c518', CONFIRMED:'#4fa3f7', PREPARING:'#f4a060', SHIPPED:'#4dc2b7', PICKUP_READY:'#c4ef3f', DELIVERED:'#4dce7a', PICKED_UP:'#4dce7a', CANCELLED:'#f4a0a0' };
+    var payLabel = { COD:'COD', WALLET:'Wallet', CARD:'Card', D17:'D17' };
+    var filterOptions = ['','PENDING','CONFIRMED','PREPARING','SHIPPED','PICKUP_READY','DELIVERED','PICKED_UP','CANCELLED']
+      .map(function(s){ return '<option value="' + s + '"' + (s === _ordersStatusFilter ? ' selected' : '') + '>' + (s || 'All statuses') + '</option>'; }).join('');
+    var orderNextAction = {
+      PENDING:      { action:'confirm',      label:'Confirm' },
+      CONFIRMED:    { action:'prepare',      label:'Prepare' },
+      PREPARING:    { action:'__delivery__', label:'' },
+      SHIPPED:      { action:'deliver',      label:'Delivered' },
+      PICKUP_READY: { action:'picked_up',    label:'Picked Up' },
+    };
     var rows = items.map(function (o) {
-      return `<tr>
-        <td style="font-family:'Space Mono';font-size:10px;color:var(--lime);">${esc(o.orderRef)}</td>
-        <td style="font-family:'Space Mono';font-size:10px;color:var(--muted);">${new Date(o.createdAt).toLocaleDateString()}</td>
-        <td><span class="badge" style="background:rgba(255,255,255,.07);color:var(--cream);">${esc(o.status)}</span></td>
-        <td>${esc(o.deliveryMethod)}</td>
-        <td>${esc(o.paymentMethod)}</td>
-        <td style="font-weight:700;color:var(--lime);">${o.totalDt} DT</td>
-      </tr>`;
+      var sc = statusColors[o.status] || 'var(--muted)';
+      var customer = (o.contact && (o.contact.name || o.contact.phone))
+        ? esc(o.contact.name || o.contact.phone)
+        : '<span style="color:var(--muted)">Guest</span>';
+      var na = orderNextAction[o.status];
+      var actionChip = '';
+      if (na) {
+        var act = na.action, lbl = na.label;
+        if (act === '__delivery__') {
+          act = o.deliveryMethod === 'DELIVER' ? 'ship' : 'pickup_ready';
+          lbl = o.deliveryMethod === 'DELIVER' ? 'Ship' : 'Pickup Ready';
+        }
+        actionChip = '<button class="btn-icon" style="color:var(--lime);border-color:rgba(196,239,63,.3);" onclick="event.stopPropagation();doOrderAction(\'' + esc(o.id) + '\',\'' + act + '\')">' + lbl + '</button>';
+      }
+      return '<tr style="cursor:pointer;" onclick="openOrderDetail(\'' + esc(o.id) + '\')">' +
+        '<td style="font-family:\'Space Mono\';font-size:10px;color:var(--lime);">' + esc(o.orderRef) + '</td>' +
+        '<td style="font-size:13px;">' + customer + '</td>' +
+        '<td style="font-family:\'Space Mono\';font-size:10px;color:var(--muted);">' + new Date(o.createdAt).toLocaleDateString() + '</td>' +
+        '<td><span class="badge" style="background:rgba(255,255,255,.07);color:' + sc + ';">' + esc(o.status) + '</span></td>' +
+        '<td style="font-size:12px;color:var(--muted);">' + (o.deliveryMethod === 'DELIVER' ? 'Delivery' : 'Pickup') + '</td>' +
+        '<td style="font-size:12px;color:var(--muted);">' + esc(payLabel[o.paymentMethod] || o.paymentMethod || '') + '</td>' +
+        '<td style="font-weight:700;color:var(--lime);">' + o.totalDt + ' DT</td>' +
+        '<td><div class="row-actions">' + actionChip + '<button class="btn-icon" onclick="event.stopPropagation();openOrderDetail(\'' + esc(o.id) + '\')">Detail</button></div></td>' +
+      '</tr>';
     }).join('');
+    var emptyMsg = _ordersStatusFilter ? 'No ' + _ordersStatusFilter.toLowerCase() + ' orders.' : 'No orders yet.';
     content.innerHTML = `<div class="card">
-      <div class="card-header"><div><div class="kicker">ORDERS</div><h3>${data.totalElements || items.length} total</h3></div></div>
-      <table>
-        <thead><tr><th>REF</th><th>DATE</th><th>STATUS</th><th>DELIVERY</th><th>PAYMENT</th><th>TOTAL</th></tr></thead>
+      <div class="card-header">
+        <div><div class="kicker">ORDERS</div><h3>${data.totalElements || items.length} total</h3></div>
+        <select onchange="_ordersStatusFilter=this.value;renderOrders();" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);font-size:13px;">${filterOptions}</select>
+      </div>
+      ${items.length ? `<table>
+        <thead><tr><th>REF</th><th>CUSTOMER</th><th>DATE</th><th>STATUS</th><th>DELIVERY</th><th>PAYMENT</th><th>TOTAL</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>
+      </table>` : '<div class="empty-state" style="padding:40px 0;"><p>' + emptyMsg + '</p></div>'}
     </div>`;
   } catch (e) {
     content.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + (e.message || 'Failed to load.') + '</p></div>';
   }
+}
+
+async function openOrderDetail(orderId) {
+  try {
+    var o = await window.adminApi.orders.get(orderId);
+    var statusColors = { PENDING:'#f5c518', CONFIRMED:'#4fa3f7', PREPARING:'#f4a060', SHIPPED:'#4dc2b7', PICKUP_READY:'#c4ef3f', DELIVERED:'#4dce7a', PICKED_UP:'#4dce7a', CANCELLED:'#f4a0a0' };
+    var statusColor = statusColors[o.status] || 'var(--muted)';
+    var itemRows = (o.items || []).map(function (it) {
+      return '<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);padding:4px 0;">' +
+        '<span>' + esc(it.productName || it.name || '') + (it.size ? ' · ' + esc(it.size) : '') + ' ×' + (it.qty || 1) + '</span>' +
+        '<span style="color:var(--lime);">' + ((it.unitPriceDt || 0) * (it.qty || 1)).toFixed(3) + ' DT</span>' +
+      '</div>';
+    }).join('');
+
+    var isDelivery = o.deliveryMethod === 'DELIVER';
+    var payLabel = { COD:'Cash on Delivery', WALLET:'Wallet', CARD:'Card', D17:'D17' };
+    var canTransition = o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && o.status !== 'PICKED_UP';
+    // Delivery-aware action map: PREPARING branches into ship (delivery) or pickup_ready (pickup)
+    var preparingNext = isDelivery ? [['ship','Mark Shipped']] : [['pickup_ready','Ready for Pickup']];
+    var actionMap = {
+      PENDING:      [['confirm','Confirm Payment'],['cancel','Cancel']],
+      CONFIRMED:    [['prepare','Start Preparing'],['cancel','Cancel']],
+      PREPARING:    preparingNext.concat([['cancel','Cancel']]),
+      SHIPPED:      [['deliver','Mark Delivered'],['cancel','Cancel']],
+      PICKUP_READY: [['picked_up','Picked Up'],['cancel','Cancel']],
+    };
+    var actions = (canTransition && actionMap[o.status]) || [];
+    var actionBtns = actions.map(function (a) {
+      var isDanger = a[0] === 'cancel';
+      return '<button class="btn-sm ' + (isDanger ? 'btn-danger' : 'btn-ghost') + '" style="margin-right:6px;" onclick="doOrderAction(\'' + esc(orderId) + '\',\'' + a[0] + '\')">' + a[1] + '</button>';
+    }).join('');
+
+    var deliveryAddr = o.deliveryAddress;
+    var addrLine = deliveryAddr ? (deliveryAddr.addr || '') + (deliveryAddr.city ? ', ' + deliveryAddr.city : '') : '';
+
+    var body =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<div style="font-family:\'Space Mono\';font-size:10px;letter-spacing:.14em;color:var(--muted);">STATUS</div>' +
+        '<span class="badge" style="background:rgba(255,255,255,.07);color:' + statusColor + ';">' + esc(o.status) + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
+        '<span style="font-size:11px;background:rgba(255,255,255,.06);color:var(--muted);border-radius:6px;padding:3px 8px;">' +
+          (isDelivery ? ('Delivery' + (addrLine ? ': ' + esc(addrLine) : '')) : 'Pickup') +
+        '</span>' +
+        '<span style="font-size:11px;background:rgba(255,255,255,.06);color:var(--muted);border-radius:6px;padding:3px 8px;">' +
+          esc(payLabel[o.paymentMethod] || o.paymentMethod || '') +
+        '</span>' +
+      '</div>' +
+      (o.contact ? '<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">' + esc(o.contact.name || '') + ' · ' + esc(o.contact.phone || '') + (o.contact.email ? ' · ' + esc(o.contact.email) : '') + '</div>' : '') +
+      '<div style="background:var(--navy);border-radius:10px;padding:12px;margin-bottom:14px;">' + (itemRows || '<div style="color:var(--muted);font-size:13px;">No items</div>') + '</div>' +
+      '<div style="text-align:right;font-family:Anton,sans-serif;font-size:20px;color:var(--lime);margin-bottom:16px;">' + (o.totalDt || 0) + ' DT</div>' +
+      (actionBtns ? '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">' + actionBtns + '</div>' : '');
+
+    openGenModal(esc(o.orderRef || orderId), body, null, null, 580);
+  } catch (e) {
+    toast(e.message || 'Failed to load order.', 'error');
+  }
+}
+
+function doOrderAction(orderId, action) {
+  var labels = { confirm:'Confirm order', prepare:'Mark as Preparing', ship:'Mark as Shipped', deliver:'Mark as Delivered', pickup_ready:'Mark as Pickup Ready', picked_up:'Mark as Picked Up', cancel:'Cancel order' };
+  var label = labels[action] || action;
+  confirmDialog(label, 'Proceed with "' + label + '" for this order?', label, async function () {
+    try {
+      await window.adminApi.orders.updateStatus(orderId, action);
+      toast('Order updated.', 'success');
+      closeConfirm();
+      closeGenModal();
+      renderOrders();
+    } catch (e) {
+      toast(e.message || 'Failed.', 'error');
+    }
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1635,7 +1736,8 @@ async function renderProducts() {
         '<td>' + prodTotalStock(d) + '</td>' +
         '<td>' + (p.isActive ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-inactive">HIDDEN</span>') + '</td>' +
         '<td><div class="row-actions">' +
-          "<button class='btn-icon' onclick='editProduct(" + JSON.stringify(d) + ")'>Edit</button>" +
+          "<button class='btn-icon' style='color:var(--lime);border-color:rgba(196,239,63,.3);' onclick='adjustStockModal(" + JSON.stringify(d).replace(/'/g, '&#39;') + ")'>Stock</button>" +
+          "<button class='btn-icon' onclick='editProduct(" + JSON.stringify(d).replace(/'/g, '&#39;') + ")'>Edit</button>" +
           "<button class='btn-icon danger' onclick=\"deleteProduct('" + p.id + "','" + esc(p.name) + "')\">Delete</button>" +
         '</div></td></tr>';
     }).join('');
@@ -1667,6 +1769,88 @@ function productForm(d) {
   }, 600);
   imgRenderThumbs('prod-imgs'); variantRender();
 }
+// ── Stock management ──────────────────────────────────────────────────────────
+function adjustStockModal(d) {
+  var p = d.product;
+  var hasVariants = d.variants && d.variants.length > 0;
+
+  function varRow(vid, label, currentStock) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(196,239,63,.06);">' +
+      '<div>' +
+        '<span style="font-size:13px;color:var(--cream);font-weight:600;">' + esc(label) + '</span>' +
+        '&nbsp;<span style="font-size:12px;color:var(--muted);" id="sv-lbl-' + vid + '">' + currentStock + ' in stock</span>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<button class="btn-icon" style="width:30px;height:30px;padding:0;text-align:center;font-size:18px;line-height:1;" ' +
+          'onclick="stockDelta(\'' + p.id + '\',\'' + vid + '\',-1)">−</button>' +
+        '<span id="sv-' + vid + '" style="font-family:\'Space Mono\';font-size:13px;min-width:32px;text-align:center;color:var(--lime);">' + currentStock + '</span>' +
+        '<button class="btn-icon" style="width:30px;height:30px;padding:0;text-align:center;font-size:18px;line-height:1;" ' +
+          'onclick="stockDelta(\'' + p.id + '\',\'' + vid + '\',1)">+</button>' +
+        '<span style="color:var(--muted);font-size:11px;margin-left:4px;">or set:</span>' +
+        '<input id="si-' + vid + '" type="number" min="0" placeholder="qty" style="width:64px;padding:6px 8px;border-radius:8px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);font-size:13px;text-align:center;">' +
+        '<button class="btn-sm btn-lime" style="padding:6px 10px;font-size:12px;" onclick="setStock(\'' + p.id + '\',\'' + vid + '\')">Set</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  var rows = hasVariants
+    ? d.variants.map(function(v){ return varRow(v.id, v.size, v.stock); }).join('')
+    : varRow('_global_', 'Total stock', p.stock);
+
+  var body =
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:14px;">' + esc(p.name) + ' &middot; ' + esc(p.category) + '</div>' +
+    '<div style="background:var(--navy);border-radius:10px;padding:12px 16px;">' + rows + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-top:10px;">−/+ adjusts by 1. "Set" sets the absolute value. Saves immediately.</div>';
+
+  openGenModal('Manage Stock — ' + esc(p.name), body, null, null, 580);
+}
+
+async function stockDelta(productId, variantId, delta) {
+  var displayId = 'sv-' + variantId;
+  var lblId = 'sv-lbl-' + variantId;
+  var vid = variantId === '_global_' ? undefined : variantId;
+  try {
+    var result = await window.adminApi.products.adjustStock(productId, delta, vid);
+    var newStock = _stockFromResult(result, vid);
+    var el = document.getElementById(displayId);
+    var lbl = document.getElementById(lblId);
+    if (el) el.textContent = newStock;
+    if (lbl) lbl.textContent = newStock + ' in stock';
+    renderProducts();
+  } catch(e) { toast(e.message || 'Failed.', 'error'); }
+}
+
+async function setStock(productId, variantId) {
+  var inputEl = document.getElementById('si-' + variantId);
+  if (!inputEl || inputEl.value === '') return;
+  var target = parseInt(inputEl.value, 10);
+  if (isNaN(target) || target < 0) { toast('Enter a valid number ≥ 0.', 'error'); return; }
+  var displayEl = document.getElementById('sv-' + variantId);
+  var current = displayEl ? parseInt(displayEl.textContent, 10) || 0 : 0;
+  var delta = target - current;
+  if (delta === 0) { inputEl.value = ''; return; }
+  var vid = variantId === '_global_' ? undefined : variantId;
+  try {
+    var result = await window.adminApi.products.adjustStock(productId, delta, vid);
+    var newStock = _stockFromResult(result, vid);
+    if (displayEl) displayEl.textContent = newStock;
+    var lbl = document.getElementById('sv-lbl-' + variantId);
+    if (lbl) lbl.textContent = newStock + ' in stock';
+    inputEl.value = '';
+    toast('Stock set to ' + newStock + '.', 'success');
+    renderProducts();
+  } catch(e) { toast(e.message || 'Failed.', 'error'); }
+}
+
+function _stockFromResult(result, variantId) {
+  if (variantId && result.variants) {
+    var v = result.variants.find(function(v){ return v.id === variantId; });
+    return v ? v.stock : 0;
+  }
+  return result.product ? result.product.stock : 0;
+}
+// ── End stock management ──────────────────────────────────────────────────────
+
 function deleteProduct(id, name) {
   confirmDialog('Delete product', 'Delete "'+name+'"?', 'Delete', async function () {
     try { await window.adminApi.products.remove(id); toast('Deleted.','success'); closeConfirm(); renderProducts(); }
@@ -1902,7 +2086,7 @@ function tournamentForm(t) {
       toast('Saved.','success'); closeGenModal(); renderTournaments(); } catch(e){ toast(e.message||'Failed.','error'); }
   });
 }
-function deleteTournament(id,title){ confirmDialog('Delete tournament','Delete "'+title+'" and all its registrations?','Delete', async function(){ try{ await window.adminApi.tournaments.remove(id); toast('Deleted.','success'); closeConfirm(); renderTournaments(); }catch(e){ toast(e.message||'Failed.','error'); } }); }
+function deleteTournament(id,title){ confirmDialog('Delete tournament','Delete "'+title+'" and all its registrations?','Delete', async function(){ try{ await window.adminApi.tournaments.remove(id); toast('Deleted.','success'); closeConfirm(); renderTournaments(); }catch(e){ if(e.status===404){ toast('Tournament already removed.','success'); closeConfirm(); renderTournaments(); } else { toast(e.message||'Failed.','error'); } } }); }
 async function openTournament(id) {
   try {
     var d = await window.adminApi.tournaments.detail(id);
@@ -2623,8 +2807,8 @@ async function renderMedia() {
     if (!items.length) { grid.innerHTML = '<div class="empty-state"><div class="icon">🖼</div><p>No media uploaded yet.</p></div>'; return; }
     grid.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;">' +
       items.map(function(m) {
-        var date = m.uploadedAt ? new Date(m.uploadedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
-        var fname = (m.fileName||m.url||'').split('/').pop();
+        var date = m.createdAt ? new Date(m.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+        var fname = (m.filename||m.url||'').split('/').pop();
         return '<div class="card" style="padding:0;overflow:hidden;">' +
           '<div style="position:relative;aspect-ratio:1/1;background:var(--navy);overflow:hidden;">' +
             '<img src="'+esc(m.url)+'" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\'">' +
@@ -2632,7 +2816,10 @@ async function renderMedia() {
           '<div style="padding:10px 12px;">' +
             '<div style="font-size:12px;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;" title="'+esc(fname)+'">'+esc(fname)+'</div>' +
             '<div style="font-family:Space Mono;font-size:10px;color:var(--muted);margin-bottom:8px;">'+esc(date)+'</div>' +
-            '<button class="btn-sm btn-ghost" style="width:100%;" onclick="mediaCopy(\''+esc(m.url)+'\')">Copy URL</button>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<button class="btn-sm btn-ghost" style="flex:1;" onclick="mediaCopy(\''+esc(m.url)+'\')">Copy URL</button>' +
+              '<button class="btn-sm btn-ghost" style="color:#ff6b6b;" title="Delete" onclick="mediaDelete(\''+m.id+'\')">✕</button>' +
+            '</div>' +
           '</div>' +
         '</div>';
       }).join('') + '</div>';
@@ -2658,6 +2845,11 @@ function mediaFallbackCopy(url) {
   var ta = document.createElement('textarea'); ta.value = url; ta.style.position='fixed'; ta.style.opacity='0';
   document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
   toast('URL copied!','success');
+}
+async function mediaDelete(id) {
+  if (!confirm('Delete this media asset? This only removes it from the library, not from pages already using its URL.')) return;
+  try { await window.adminApi.media.remove(id); toast('Deleted.','success'); renderMedia(); }
+  catch(e){ toast(e.message||'Failed.','error'); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

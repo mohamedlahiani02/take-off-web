@@ -54,7 +54,8 @@
             return data;
           });
       },
-      logout: function () {
+      logout: async function () {
+        try { await request('POST', '/api/v1/admin/auth/logout'); } catch(e) {}
         clearToken();
         window.dispatchEvent(new CustomEvent('admin:logout'));
       },
@@ -69,7 +70,15 @@
     },
 
     orders: {
-      list: function (page) { return request('GET', '/api/v1/admin/orders?page=' + (page || 0)); },
+      list: function (status, page) {
+        var qs = 'page=' + (page || 0) + '&size=50';
+        if (status) qs += '&status=' + encodeURIComponent(status);
+        return request('GET', '/api/v1/admin/orders?' + qs);
+      },
+      get: function (id) { return request('GET', '/api/v1/admin/orders/' + id); },
+      updateStatus: function (id, action) {
+        return request('PATCH', '/api/v1/admin/orders/' + id + '/status', { action: action });
+      },
     },
 
     inquiries: {
@@ -92,6 +101,9 @@
       block: function (id) { return request('POST', '/api/v1/admin/users/' + id + '/block'); },
       unblock: function (id) { return request('POST', '/api/v1/admin/users/' + id + '/unblock'); },
       remove: function (id) { return request('DELETE', '/api/v1/admin/users/' + id); },
+      addWalletCredit: function (userId, amountDt) {
+        return request('POST', '/api/v1/admin/wallet/topup/' + userId, { amountDt: amountDt });
+      },
     },
 
     // ── Epic C: courts ──
@@ -158,6 +170,11 @@
       create: function (dto) { return request('POST', '/api/v1/admin/products', dto); },
       update: function (id, dto) { return request('PUT', '/api/v1/admin/products/' + id, dto); },
       remove: function (id) { return request('DELETE', '/api/v1/admin/products/' + id); },
+      adjustStock: function (id, delta, variantId) {
+        var body = { delta: delta };
+        if (variantId) body.variantId = variantId;
+        return request('PATCH', '/api/v1/admin/products/' + id + '/stock', body);
+      },
     },
 
     // ── Epic H3: inquiry pipeline ──
@@ -185,6 +202,15 @@
         if (!res.ok) { var e = {}; try { e = await res.json(); } catch (_) {} throw { status: res.status, message: e.title || e.message || 'Upload failed' }; }
         return res.json();
       },
+      list: function () { return request('GET', '/api/v1/admin/content/media'); },
+      remove: function (id) { return request('DELETE', '/api/v1/admin/content/media/' + id); },
+    },
+
+    // ── Admin accounts (staff) — SUPER_ADMIN only ──
+    admins: {
+      list: function () { return request('GET', '/api/v1/admin/accounts'); },
+      create: function (dto) { return request('POST', '/api/v1/admin/accounts', dto); },
+      toggleActive: function (id, active) { return request('PATCH', '/api/v1/admin/accounts/' + id + '/active', { active: active }); },
     },
 
     // ── Epic I: content / CMS ──
