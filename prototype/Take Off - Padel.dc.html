@@ -533,6 +533,7 @@ class Component extends DCLogic {
     _liveSlots: {},      // { "courtId_YYYY-MM-DD": [SlotDto...] }
     _heroProducts: null, // [{id, name, priceDt, category, mainPhotoUrl}]
     _tournaments: null,
+    _packTypes: null,
     // coaching form
     coachFormDone: false, coursSelected: {}, availGrid: {}, // key: "day|slot" => bool
     // plans
@@ -580,6 +581,10 @@ class Component extends DCLogic {
         } catch(e) {
           this.setState({ _tournaments: [] });
         }
+        try {
+          const packData = await window.takeOffApi.classes.packTypes();
+          if (packData) this.setState({ _packTypes: packData });
+        } catch(e) { /* leave _packTypes null, fallback will apply */ }
       }
     })();
   }
@@ -710,7 +715,7 @@ class Component extends DCLogic {
         price: pack.rawPrice + ' DT',
         _raw: pack.rawPrice,
         kind: 'pack',
-        _packMeta: { id: pack.id, name: pack.name, total: pack.matches, months: pack.months },
+        _packMeta: { id: pack.id, packTypeId: pack.packTypeId || pack.id, name: pack.name, total: pack.matches, months: pack.months },
       });
     };
     if (window.takeOffAuth) { window.takeOffAuth.requireAuth(doBuy); } else { doBuy(); }
@@ -905,12 +910,43 @@ class Component extends DCLogic {
     // Packs plans
     const cmsPlansEarly = (this.state._cms || {}).plans || {};
     const plansCmsItems = cmsPlansEarly.items || [];
-    const packsData = [
+    const apiPacks = (this.state._packTypes || []).filter(p => p.activity === 'PADEL' && p.active !== false).sort((a,b) => a.displayOrder - b.displayOrder);
+
+    const FALLBACK_PACKS = [
       { id: 'dropin', name: 'Drop-in', rawPrice: 20, matches: 1, months: 0, kicker: 'SANS ENGAGEMENT', price: '20', per: 'DT / match', accent: '#0a1733', bg: '#f4f5ee', fg: '#0a1733', bd: 'transparent', popular: null, feats: ['Un share, une session', 'Sans abonnement', 'Invités bienvenus', 'Matériel en location'], ctaLabel: 'Book now', btnBg: '#0a1733', btnFg: '#c4ef3f', href: '#book' },
       { id: 'pack10', name: 'Pack 10', rawPrice: 190, matches: 10, months: 3, kicker: 'ÉCONOMISEZ 5%', price: '190', per: 'DT · 10 matchs', accent: '#c4ef3f', bg: '#0f1f44', fg: '#fff', bd: 'rgba(196,239,63,.3)', popular: true, feats: ['10 matchs · économisez 5%', 'Valable 3 mois', 'Priorité réservation', 'Rechargeable'], ctaLabel: 'Get the pack', btnBg: '#c4ef3f', btnFg: '#0a1733' },
       { id: 'pack25', name: 'Pack 25', rawPrice: 450, matches: 25, months: 6, kicker: 'ÉCONOMISEZ 10%', price: '450', per: 'DT · 25 matchs', accent: '#c4ef3f', bg: '#0f1f44', fg: '#fff', bd: 'rgba(196,239,63,.2)', popular: null, feats: ['25 matchs · économisez 10%', 'Valable 6 mois', 'Coaching -10%', 'Transferrable une fois'], ctaLabel: 'Get the pack', btnBg: '#c4ef3f', btnFg: '#0a1733' },
       { id: 'pack50', name: 'Pack 50', rawPrice: 800, matches: 50, months: 12, kicker: 'ÉCONOMISEZ 20%', price: '800', per: 'DT · 50 matchs', accent: '#c4ef3f', bg: '#0f1f44', fg: '#fff', bd: 'rgba(196,239,63,.2)', popular: null, feats: ['50 matchs · économisez 20%', 'Valable 12 mois', 'Coaching -15% · Shop -10%', 'Invite 1 guest / mois'], ctaLabel: 'Get the pack', btnBg: '#c4ef3f', btnFg: '#0a1733' },
     ];
+
+    const packsData = apiPacks.length > 0
+      ? apiPacks.map((p, i) => {
+          const highlighted = p.unlimited || (apiPacks.length > 2 && i === 1);
+          return {
+            id: p.id,
+            packTypeId: p.id,
+            name: p.name,
+            rawPrice: Number(p.priceDt),
+            price: String(Math.round(Number(p.priceDt))),
+            per: p.unlimited ? 'DT / mois' : ('DT · ' + p.creditCount + ' matchs'),
+            kicker: p.unlimited ? 'ILLIMITÉ' : (i === 0 ? 'SANS ENGAGEMENT' : 'ÉCONOMISEZ'),
+            accent: highlighted ? '#c4ef3f' : '#0a1733',
+            bg: highlighted ? '#0f1f44' : '#f4f5ee',
+            fg: highlighted ? '#fff' : '#0a1733',
+            bd: highlighted ? 'rgba(196,239,63,.3)' : 'transparent',
+            popular: highlighted ? true : null,
+            feats: [
+              p.unlimited ? 'Accès illimité' : (p.creditCount + ' matchs'),
+              'Valable ' + p.validityMonths + ' mois',
+              'Tous niveaux',
+              'Courts panoramiques',
+            ],
+            ctaLabel: p.unlimited ? 'Go unlimited' : 'Get the pack',
+            btnBg: highlighted ? '#c4ef3f' : '#0a1733',
+            btnFg: highlighted ? '#0a1733' : '#c4ef3f',
+          };
+        })
+      : FALLBACK_PACKS;
     const plans = packsData.map((pk, i) => {
       const ci = plansCmsItems[i] || {};
       const name = ci.name || pk.name;
