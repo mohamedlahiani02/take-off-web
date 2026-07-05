@@ -30,8 +30,8 @@
         ]},
       ],
       thumbs: [
-        { label: 'Book a court', href: '/padel#book', img: './photos/intense-padel-play-stockcake.webp' },
-        { label: 'The pro shop', href: '/store?cat=rackets', img: './photos/698d8cbb156292a5a7895eac_raquettes-main-filet-padelshot.webp' },
+        { label: 'Book a court', href: '/padel#book', img: '/prototype-assets/Photos/intense-padel-play-stockcake.webp' },
+        { label: 'The pro shop', href: '/store?cat=rackets', img: '/prototype-assets/Photos/698d8cbb156292a5a7895eac_raquettes-main-filet-padelshot.webp' },
       ],
     },
     pilates: {
@@ -57,8 +57,8 @@
         ]},
       ],
       thumbs: [
-        { label: 'The studio', href: '/pilates#classes', img: './photos/Reformer_pilates_pose.jpg' },
-        { label: 'The shop',   href: '/store?cat=pilates', img: './photos/Mat_pilates.jpg' },
+        { label: 'The studio', href: '/pilates#classes', img: '/prototype-assets/Photos/Reformer_pilates_pose.jpg' },
+        { label: 'The shop',   href: '/store?cat=pilates', img: '/prototype-assets/Photos/Mat_pilates.jpg' },
       ],
     },
     shop: {
@@ -81,8 +81,8 @@
         ]},
       ],
       thumbs: [
-        { label: 'Bestsellers', href: '/store', img: './photos/698d8cbb156292a5a7895eac_raquettes-main-filet-padelshot.webp' },
-        { label: 'New in',      href: '/store', img: './photos/ThePilatesClubDublin-56-1.png' },
+        { label: 'Bestsellers', href: '/store', img: '/prototype-assets/Photos/698d8cbb156292a5a7895eac_raquettes-main-filet-padelshot.webp' },
+        { label: 'New in',      href: '/store', img: '/prototype-assets/Photos/ThePilatesClubDublin-56-1.png' },
       ],
     },
     membership: {
@@ -99,7 +99,7 @@
         ]},
       ],
       thumbs: [
-        { label: 'Memberships', href: '/padel#plans', img: './photos/Volley_Routines_with_a_Partner.webp' },
+        { label: 'Memberships', href: '/padel#plans', img: '/prototype-assets/Photos/Volley_Routines_with_a_Partner.webp' },
       ],
     },
     club: {
@@ -111,7 +111,7 @@
         ]},
       ],
       thumbs: [
-        { label: 'Meet the coaches', href: '/coaches', img: './photos/padelgirl.jpg' },
+        { label: 'Meet the coaches', href: '/coaches', img: '/prototype-assets/Photos/padelgirl.jpg' },
       ],
     },
   };
@@ -188,7 +188,7 @@
       <div class="tk-menu-panel">
         <div class="tk-menu-top">
           <div class="tk-menu-close" data-close="1"><div class="tk-menu-x"><span></span><span></span></div>CLOSE</div>
-          <div class="tk-menu-brand"><img src="./Logo/LOGO.svg" alt="Take Off"><span class="tag">PADEL · PILATES</span></div>
+          <div class="tk-menu-brand"><img src="/prototype-assets/Logo/LOGO.svg" alt="Take Off"><span class="tag">PADEL · PILATES</span></div>
           <div class="tk-menu-util"><span data-act="search">SEARCH</span><span data-act="cart">CART</span><span data-act="account">ACCOUNT</span></div>
         </div>
         <div class="tk-menu-body">
@@ -221,7 +221,7 @@
         </div>
         <div class="tk-menu-foot">
           <span>SFAX · ROUTE DE L'AÉROPORT KM4</span>
-          <img src="./Logo/LOGO.svg" alt="Take Off">
+          <img src="/prototype-assets/Logo/LOGO.svg" alt="Take Off">
           <span>OPEN 7/7 · 7AM — 11PM</span>
         </div>
       </div>
