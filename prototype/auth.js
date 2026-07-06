@@ -383,7 +383,7 @@
         '</div>' +
         '<div class="tk-tabs">' +
           ['bookings','packs','orders','profile'].map(function (t) {
-            return '<button class="tk-tab' + (drawerTab === t ? ' active' : '') + '" data-tab="' + t + '">' + t.toUpperCase() + '</button>';
+            return '<button class="tk-tab' + (drawerTab === t ? ' active' : '') + '" data-tab="' + t + '">' + esc(t).toUpperCase() + '</button>';
           }).join('') +
         '</div>' +
         '<div class="tk-body" id="tk-dr-body">' + bodyHTML() + '</div>' +
@@ -634,7 +634,7 @@
 
     var tracksRow = allTracks.map(function (t) {
       var on = activeTracks.indexOf(t) >= 0;
-      return '<button id="tk-track-' + t + '" data-track="' + t + '" style="padding:7px 16px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.1em;cursor:pointer;border:1px solid ' + (on ? '#c4ef3f' : 'rgba(244,245,238,.2)') + ';background:' + (on ? 'rgba(196,239,63,.18)' : 'transparent') + ';color:' + (on ? '#c4ef3f' : 'rgba(244,245,238,.4)') + ';">' + t.toUpperCase() + '</button>';
+      return '<button id="tk-track-' + t + '" data-track="' + t + '" style="padding:7px 16px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.1em;cursor:pointer;border:1px solid ' + (on ? '#c4ef3f' : 'rgba(244,245,238,.2)') + ';background:' + (on ? 'rgba(196,239,63,.18)' : 'transparent') + ';color:' + (on ? '#c4ef3f' : 'rgba(244,245,238,.4)') + ';">' + esc(t).toUpperCase() + '</button>';
     }).join('');
 
     return (
@@ -728,11 +728,13 @@
       if (newPhone) payload.phone = newPhone;
       var client = api();
       if (client && client.isOnline()) {
-        try { await client.auth.updateMe(payload); } catch (e) { toast(e.message || 'Update failed.', 2500); return; }
+        try {
+          await client.auth.updateMe(payload);
+          auth.user.name = newName;
+          if (newPhone) auth.user.phone = newPhone;
+          storageSet('takeoff_user', auth.user);
+        } catch (e) { toast(e.message || 'Update failed.', 2500); return; }
       }
-      auth.user.name = newName;
-      if (newPhone) auth.user.phone = newPhone;
-      storageSet('takeoff_user', auth.user);
       var dispEl = document.getElementById('tk-uname-disp');
       if (dispEl) dispEl.textContent = newName;
       hideProfileForm('tk-name-edit');
