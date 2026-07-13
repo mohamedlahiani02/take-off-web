@@ -245,6 +245,10 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
       <div class="nav-item" onclick="navigate('media')" id="nav-media">
         <span class="icon">🖼</span> Media Library
       </div>
+      <div class="nav-section">FINANCE</div>
+      <div class="nav-item" onclick="navigate('expenses')" id="nav-expenses">
+        <span class="icon">$</span> Expenses
+      </div>
       <div class="nav-section">SETTINGS</div>
       <div class="nav-item" onclick="navigate('admins')" id="nav-admins">
         <span class="icon">👤</span> Admin Accounts
@@ -697,7 +701,8 @@ function navigate(page) {
 
   var titles = { dashboard: 'Dashboard', coaches: 'Coaches', users: 'Users', courts: 'Court Calendar',
     classes: 'Pilates Classes', tournaments: 'Tournaments', inquiries: 'Coaching Inquiries', orders: 'Orders',
-    products: 'Products', packs: 'Packs & Plans', content: 'Site Content', media: 'Media Library', admins: 'Admin Accounts' };
+    products: 'Products', packs: 'Packs & Plans', content: 'Site Content', media: 'Media Library', admins: 'Admin Accounts',
+    expenses: 'Expenses' };
   document.getElementById('page-title').textContent = titles[page] || page;
 
   var content = document.getElementById('page-content');
@@ -716,66 +721,69 @@ function navigate(page) {
   else if (page === 'content') renderContent();
   else if (page === 'media') renderMedia();
   else if (page === 'admins') renderAdmins();
+  else if (page === 'expenses') renderExpenses();
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 async function renderDashboard() {
   var content = document.getElementById('page-content');
-  content.innerHTML = `
-    <div class="stats-strip" id="stats-strip">
-      <div class="stat-card"><div class="stat-num">—</div><div class="stat-label">COACHES ACTIVE</div></div>
-      <div class="stat-card"><div class="stat-num">—</div><div class="stat-label">OPEN INQUIRIES</div></div>
-      <div class="stat-card"><div class="stat-num">—</div><div class="stat-label">ORDERS TODAY</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div><div class="kicker">QUICK LINKS</div><h3>Jump to</h3></div></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;padding:20px;">
-        <div onclick="navigate('users')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
-          <div style="font-size:22px;margin-bottom:8px;">☺</div>
-          <div style="font-weight:600;margin-bottom:4px;">Users</div>
-          <div style="font-size:12px;color:var(--muted);">Search, create, wallet, block</div>
-        </div>
-        <div onclick="navigate('courts')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
-          <div style="font-size:22px;margin-bottom:8px;">▦</div>
-          <div style="font-weight:600;margin-bottom:4px;">Court Calendar</div>
-          <div style="font-size:12px;color:var(--muted);">Book on behalf, cancel, block</div>
-        </div>
-        <div onclick="navigate('coaches')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
-          <div style="font-size:22px;margin-bottom:8px;">◎</div>
-          <div style="font-weight:600;margin-bottom:4px;">Manage Coaches</div>
-          <div style="font-size:12px;color:var(--muted);">Add, edit, reorder coaches</div>
-        </div>
-        <div onclick="navigate('inquiries')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
-          <div style="font-size:22px;margin-bottom:8px;">✉</div>
-          <div style="font-weight:600;margin-bottom:4px;">Coaching Inquiries</div>
-          <div style="font-size:12px;color:var(--muted);">Review and respond</div>
-        </div>
-        <div onclick="navigate('orders')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background='rgba(196,239,63,.06)'" onmouseout="this.style.background='var(--navy)'">
-          <div style="font-size:22px;margin-bottom:8px;">↗</div>
-          <div style="font-weight:600;margin-bottom:4px;">Orders</div>
-          <div style="font-size:12px;color:var(--muted);">View and manage orders</div>
-        </div>
-      </div>
-    </div>
-  `;
+  content.innerHTML =
+    '<div class="stats-strip" id="kpi-strip">' +
+      '<div class="stat-card"><div class="stat-num" id="kpi-rev">—</div><div class="stat-label">REVENUE MTD</div></div>' +
+      '<div class="stat-card"><div class="stat-num" id="kpi-exp">—</div><div class="stat-label">EXPENSES MTD</div></div>' +
+      '<div class="stat-card"><div class="stat-num" id="kpi-net">—</div><div class="stat-label">NET CASH FLOW</div></div>' +
+      '<div class="stat-card"><div class="stat-num" id="kpi-pend">—</div><div class="stat-label">PENDING ORDERS</div></div>' +
+      '<div class="stat-card"><div class="stat-num" id="kpi-today">—</div><div class="stat-label">ORDERS TODAY</div></div>' +
+    '</div>' +
+    '<div class="card" id="chart-card" style="margin-bottom:18px;">' +
+      '<div class="card-header"><div><div class="kicker">LAST 14 DAYS</div><h3>Revenue</h3></div></div>' +
+      '<div id="rev-chart" style="padding:20px 20px 8px;display:flex;align-items:flex-end;gap:4px;height:140px;"></div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="card-header"><div><div class="kicker">QUICK LINKS</div><h3>Jump to</h3></div></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;padding:20px;">' +
+        ql('users','☺','Users','Search, create, wallet') +
+        ql('courts','▦','Court Calendar','Book, cancel, block') +
+        ql('classes','❍','Pilates Classes','Schedule & roster') +
+        ql('orders','↗','Orders','View and manage') +
+        ql('expenses','$','Expenses','Log costs & suppliers') +
+      '</div></div>';
 
   if (!window.adminApi || !window.adminApi.isOnline()) return;
   try {
-    var coaches = await window.adminApi.coaches.list();
-    var active = coaches.filter(function (c) { return c.active; }).length;
-    var strip = document.getElementById('stats-strip');
-    if (strip) strip.children[0].querySelector('.stat-num').textContent = active;
+    var s = await window.adminApi.dashboard.stats();
+    document.getElementById('kpi-rev').textContent = Number(s.revenueMtd).toFixed(0) + ' DT';
+    document.getElementById('kpi-exp').textContent = Number(s.expensesMtd).toFixed(0) + ' DT';
+    var net = Number(s.netCashFlow);
+    var netEl = document.getElementById('kpi-net');
+    netEl.textContent = (net >= 0 ? '+' : '') + net.toFixed(0) + ' DT';
+    netEl.style.color = net >= 0 ? 'var(--lime)' : '#f87171';
+    document.getElementById('kpi-pend').textContent = s.pendingOrders;
+    document.getElementById('kpi-today').textContent = s.ordersToday;
   } catch (_) {}
   try {
-    var inqData = await window.adminApi.inquiries.list(0);
-    var strip = document.getElementById('stats-strip');
-    if (strip && inqData) strip.children[1].querySelector('.stat-num').textContent = inqData.totalElements || 0;
+    var r = await window.adminApi.dashboard.revenue(14);
+    var days = r.days || [];
+    if (days.length) {
+      var max = Math.max.apply(null, days.map(function(d){ return Number(d.revenue); })) || 1;
+      document.getElementById('rev-chart').innerHTML = days.map(function(d) {
+        var h = Math.max(4, Math.round((Number(d.revenue) / max) * 100));
+        var label = d.date.slice(5); // MM-DD
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;">' +
+          '<div style="font-size:9px;color:var(--muted);">' + (Number(d.revenue) > 0 ? Number(d.revenue).toFixed(0) : '') + '</div>' +
+          '<div style="width:100%;height:' + h + 'px;background:var(--lime);border-radius:4px 4px 0 0;opacity:.85;min-height:4px;"></div>' +
+          '<div style="font-size:9px;color:var(--muted);white-space:nowrap;">' + esc(label) + '</div>' +
+          '</div>';
+      }).join('');
+    }
   } catch (_) {}
-  try {
-    var ordData = await window.adminApi.orders.list(null, 0);
-    var strip = document.getElementById('stats-strip');
-    if (strip && ordData) strip.children[2].querySelector('.stat-num').textContent = ordData.totalElements || 0;
-  } catch (_) {}
+}
+function ql(page, icon, title, sub) {
+  return '<div onclick="navigate(\'' + page + '\')" style="cursor:pointer;padding:18px;border-radius:12px;border:1px solid var(--border);background:var(--navy);transition:background .12s;" onmouseover="this.style.background=\'rgba(196,239,63,.06)\'" onmouseout="this.style.background=\'var(--navy)\'">' +
+    '<div style="font-size:22px;margin-bottom:8px;">' + icon + '</div>' +
+    '<div style="font-weight:600;margin-bottom:4px;">' + esc(title) + '</div>' +
+    '<div style="font-size:12px;color:var(--muted);">' + esc(sub) + '</div>' +
+    '</div>';
 }
 
 // ── Coaches ────────────────────────────────────────────────────────────────
@@ -2850,6 +2858,85 @@ async function mediaDelete(id) {
   if (!confirm('Delete this media asset? This only removes it from the library, not from pages already using its URL.')) return;
   try { await window.adminApi.media.remove(id); toast('Deleted.','success'); renderMedia(); }
   catch(e){ toast(e.message||'Failed.','error'); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// EXPENSES (ERP)
+// ════════════════════════════════════════════════════════════════════════════
+var _expenses = [];
+var EXP_CATS = ['RENT','UTILITIES','SALARIES','MAINTENANCE','EQUIPMENT','MARKETING','SUPPLIES','OTHER'];
+
+async function renderExpenses() {
+  var content = document.getElementById('page-content');
+  content.innerHTML =
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:14px;">' +
+      '<button class="btn-sm btn-lime" onclick="expenseForm()">+ Add expense</button>' +
+    '</div>' +
+    '<div id="exp-wrap"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
+  loadExpenses();
+}
+
+async function loadExpenses() {
+  try {
+    var data = await window.adminApi.expenses.list(0);
+    _expenses = (data && data.content) ? data.content : [];
+    renderExpenseTable();
+  } catch (e) {
+    document.getElementById('exp-wrap').innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message || 'Failed to load expenses.') + '</p></div>';
+  }
+}
+
+function renderExpenseTable() {
+  var rows = _expenses.map(function(e) {
+    return '<tr>' +
+      '<td style="font-family:Space Mono;font-size:11px;">' + esc(e.date) + '</td>' +
+      '<td><span class="badge" style="background:rgba(196,239,63,.1);color:var(--lime);">' + esc(e.category) + '</span></td>' +
+      '<td style="font-weight:600;">' + Number(e.amountDt).toFixed(3) + ' DT</td>' +
+      '<td>' + esc(e.supplier || '—') + '</td>' +
+      '<td style="color:var(--muted);font-size:12px;">' + esc(e.notes || '') + '</td>' +
+      '<td><div class="row-actions">' +
+        '<button class="btn-icon" onclick="expenseForm(' + JSON.stringify(e).replace(/"/g,'&quot;') + ')">Edit</button>' +
+        '<button class="btn-icon danger" onclick="deleteExpense(\'' + e.id + '\')">Delete</button>' +
+      '</div></td>' +
+      '</tr>';
+  }).join('');
+  document.getElementById('exp-wrap').innerHTML =
+    '<div class="card"><table>' +
+    '<thead><tr><th>DATE</th><th>CATEGORY</th><th>AMOUNT</th><th>SUPPLIER</th><th>NOTES</th><th></th></tr></thead>' +
+    '<tbody>' + (rows || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No expenses yet.</td></tr>') + '</tbody>' +
+    '</table></div>';
+}
+
+function expenseForm(e) {
+  var catOpts = EXP_CATS.map(function(c){ return {v:c, t:c}; });
+  var body =
+    '<input type="hidden" id="exp-id" value="' + (e ? e.id : '') + '">' +
+    '<div class="form-row">' + fld('DATE','exp-date','date', e ? e.date : new Date().toISOString().slice(0,10)) + sel('CATEGORY','exp-cat', catOpts, e ? e.category : 'OTHER') + '</div>' +
+    '<div class="form-row">' + fld('AMOUNT (DT)','exp-amt','number', e ? e.amountDt : '') + fld('SUPPLIER','exp-sup','text', e ? (e.supplier || '') : '') + '</div>' +
+    '<div class="form-row full"><div class="form-group"><label>NOTES</label><textarea id="exp-notes">' + esc(e ? (e.notes || '') : '') + '</textarea></div></div>';
+  openGenModal(e ? 'Edit expense' : 'Add expense', body, 'Save', async function() {
+    var dto = {
+      date: gv('exp-date'),
+      category: gv('exp-cat'),
+      amountDt: gnum('exp-amt'),
+      supplier: gv('exp-sup') || null,
+      notes: document.getElementById('exp-notes').value.trim() || null,
+    };
+    if (!dto.date || !dto.amountDt) { toast('Date and amount are required.', 'error'); return; }
+    try {
+      var id = gv('exp-id');
+      if (id) await window.adminApi.expenses.update(id, dto);
+      else await window.adminApi.expenses.create(dto);
+      toast('Saved.', 'success'); closeGenModal(); loadExpenses();
+    } catch (e) { toast(e.message || 'Failed.', 'error'); }
+  });
+}
+
+function deleteExpense(id) {
+  confirmDialog('Delete expense', 'Permanently delete this expense record?', 'Delete', async function() {
+    try { await window.adminApi.expenses.delete(id); toast('Deleted.', 'success'); closeConfirm(); loadExpenses(); }
+    catch (e) { toast(e.message || 'Failed.', 'error'); }
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════════════
