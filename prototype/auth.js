@@ -158,7 +158,7 @@
       auth.openLogin();
     },
 
-    openLogin: function () { showModal('login'); },
+    openLogin: function () { showModal(); },
     openAccount: function (tab) { showDrawer(tab); },
   };
 
@@ -239,71 +239,194 @@
       '</svg>';
   }
 
-  // ── Modal ─────────────────────────────────────────────────────────────────
+  // ── Modal (OTP phone auth) ────────────────────────────────────────────────
 
-  var modalRoot = null, modalMode = 'login';
+  var modalRoot = null;
+  var _otpPhone = '', _otpIsNew = false, _otpTimer = null;
 
-  function modalHTML(mode) {
-    var isReg = mode === 'register';
+  function modalHTML() {
     return '<div class="tk-ov" id="tk-modal-ov">' +
       '<div class="tk-card">' +
         '<button class="tk-close" id="tk-modal-x">×</button>' +
         sigSVG() +
         '<div style="text-align:center;font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.22em;color:rgba(244,245,238,.5);margin-bottom:6px;">TAKE OFF CLUB</div>' +
-        '<div class="tk-title" style="text-align:center;">' + (isReg ? 'Create account' : 'Sign in') + '</div>' +
-        '<p class="tk-sub" style="text-align:center;">' + (isReg ? 'Join the club — padel, pilates, and more.' : 'Welcome back.') + '</p>' +
-        '<div id="tk-modal-err" style="display:none;" class="tk-err"></div>' +
-        (isReg ? '<label class="tk-lbl">YOUR NAME</label><input class="tk-inp" id="tk-f-name" type="text" placeholder="Full name">' : '') +
-        (isReg
-          ? '<label class="tk-lbl">EMAIL</label><input class="tk-inp" id="tk-f-email" type="email" placeholder="your@email.com">' +
-            '<label class="tk-lbl">PHONE</label><input class="tk-inp" id="tk-f-phone" type="tel" inputmode="numeric" placeholder="+216 XX XXX XXX">'
-          : '<label class="tk-lbl">PHONE</label><input class="tk-inp" id="tk-f-email" type="tel" inputmode="numeric" placeholder="+216 XX XXX XXX">') +
-        '<label class="tk-lbl">PASSWORD</label><input class="tk-inp" id="tk-f-pass" type="password" placeholder="••••••••">' +
-        (isReg ? '<label class="tk-lbl">I\'M INTO</label><div class="tk-checks"><label class="tk-check"><input type="checkbox" id="tk-tr-pad" checked> Padel</label><label class="tk-check"><input type="checkbox" id="tk-tr-pil"> Pilates</label></div>' : '') +
-        '<button class="tk-btn" id="tk-modal-sub">' + (isReg ? 'Create account' : 'Sign in') + '</button>' +
-        '<div class="tk-switch">' + (isReg ? 'Already have an account? <a id="tk-modal-swap">Sign in</a>' : 'No account? <a id="tk-modal-swap">Create one</a>') + '</div>' +
+        // Step 1 — phone
+        '<div id="tk-otp-s1">' +
+          '<div class="tk-title" style="text-align:center;">Welcome</div>' +
+          '<p class="tk-sub" style="text-align:center;opacity:.6;font-size:13px;margin-bottom:16px;">Enter your phone to sign in or create an account</p>' +
+          '<div id="tk-otp-e1" class="tk-err" style="display:none;color:#e74c3c;font-size:13px;margin-bottom:8px;"></div>' +
+          '<label class="tk-lbl">PHONE NUMBER</label>' +
+          '<input class="tk-inp" id="tk-otp-phone" type="tel" inputmode="numeric" placeholder="+216 XX XXX XXX" autocomplete="tel">' +
+          '<button class="tk-btn" id="tk-otp-send">Continue →</button>' +
+        '</div>' +
+        // Step 2 — code
+        '<div id="tk-otp-s2" style="display:none;">' +
+          '<div class="tk-title" style="text-align:center;">Enter the code</div>' +
+          '<p class="tk-sub" style="text-align:center;opacity:.6;font-size:13px;margin-bottom:16px;">Sent to <span id="tk-otp-ph-lbl" style="color:#c4ef3f;"></span></p>' +
+          '<div id="tk-otp-e2" class="tk-err" style="display:none;color:#e74c3c;font-size:13px;margin-bottom:8px;"></div>' +
+          '<input class="tk-inp" id="tk-otp-code" type="tel" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" style="font-size:2rem;letter-spacing:.5em;text-align:center;font-weight:700;">' +
+          '<div id="tk-otp-name-row" style="display:none;">' +
+            '<label class="tk-lbl">YOUR NAME</label>' +
+            '<input class="tk-inp" id="tk-otp-name" type="text" placeholder="Full name" autocomplete="name">' +
+          '</div>' +
+          '<button class="tk-btn" id="tk-otp-verify">Confirm</button>' +
+          '<div style="text-align:center;margin-top:10px;font-size:12px;opacity:.6;" id="tk-otp-resend-row">' +
+            '<span id="tk-otp-timer"></span>' +
+            '<a href="#" id="tk-otp-resend" style="display:none;">Resend code</a>' +
+          '</div>' +
+          '<div style="text-align:center;margin-top:12px;"><a href="#" id="tk-otp-back" style="font-size:12px;opacity:.5;">← Change number</a></div>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }
 
-  function showModal(mode) {
-    modalMode = mode || 'login';
+  function startOtpTimer() {
+    var s = 60;
+    document.getElementById('tk-otp-timer').textContent = 'Resend in ' + s + 's';
+    var resendEl = document.getElementById('tk-otp-resend');
+    if (resendEl) resendEl.style.display = 'none';
+    if (_otpTimer) clearInterval(_otpTimer);
+    _otpTimer = setInterval(function () {
+      s--;
+      var timerEl = document.getElementById('tk-otp-timer');
+      var resEl = document.getElementById('tk-otp-resend');
+      if (s <= 0) {
+        clearInterval(_otpTimer);
+        if (timerEl) timerEl.textContent = '';
+        if (resEl) resEl.style.display = 'inline';
+      } else {
+        if (timerEl) timerEl.textContent = 'Resend in ' + s + 's';
+      }
+    }, 1000);
+  }
+
+  async function doSendOtp(phone) {
+    var client = api();
+    if (!client || !client.isOnline()) {
+      return { ok: false, error: 'No network connection.' };
+    }
+    try {
+      var res = await client.auth.sendOtp(phone);
+      return { ok: true, isNewUser: res.isNewUser };
+    } catch (e) {
+      return { ok: false, error: e.message || 'Could not send code.' };
+    }
+  }
+
+  function showModal() {
     if (!modalRoot) { modalRoot = document.createElement('div'); document.body.appendChild(modalRoot); }
-    modalRoot.innerHTML = modalHTML(modalMode);
+    modalRoot.innerHTML = modalHTML();
+
     document.getElementById('tk-modal-x').onclick = closeModal;
     document.getElementById('tk-modal-ov').onclick = function (e) { if (e.target.id === 'tk-modal-ov') closeModal(); };
-    document.getElementById('tk-modal-swap').onclick = function () { showModal(modalMode === 'login' ? 'register' : 'login'); };
-    document.getElementById('tk-modal-sub').onclick = handleSubmit;
-    modalRoot.querySelectorAll('input').forEach(function (inp) { inp.onkeydown = function (e) { if (e.key === 'Enter') handleSubmit(); }; });
     document.addEventListener('keydown', onEscModal);
+
+    // Step 1 — Send OTP
+    document.getElementById('tk-otp-send').onclick = async function () {
+      var raw = (document.getElementById('tk-otp-phone') || {}).value || '';
+      var phone = normalizePhone(raw.trim());
+      var errEl = document.getElementById('tk-otp-e1');
+      errEl.style.display = 'none';
+      if (!/^\+216[0-9]{8}$/.test(phone)) {
+        errEl.textContent = 'Enter a valid Tunisian number (+216 followed by 8 digits)';
+        errEl.style.display = 'block';
+        return;
+      }
+      this.disabled = true; this.textContent = '...';
+      var result = await doSendOtp(phone);
+      if (!result.ok) {
+        errEl.textContent = result.error;
+        errEl.style.display = 'block';
+        this.disabled = false; this.textContent = 'Continue →';
+        return;
+      }
+      _otpPhone = phone;
+      _otpIsNew = !!result.isNewUser;
+      document.getElementById('tk-otp-ph-lbl').textContent = phone;
+      var nameRow = document.getElementById('tk-otp-name-row');
+      if (nameRow) nameRow.style.display = _otpIsNew ? 'block' : 'none';
+      document.getElementById('tk-otp-s1').style.display = 'none';
+      document.getElementById('tk-otp-s2').style.display = 'block';
+      var codeEl = document.getElementById('tk-otp-code');
+      if (codeEl) { codeEl.value = ''; codeEl.focus(); }
+      startOtpTimer();
+      this.disabled = false; this.textContent = 'Continue →';
+    };
+
+    // Step 2 — Verify OTP
+    document.getElementById('tk-otp-verify').onclick = async function () {
+      var code = ((document.getElementById('tk-otp-code') || {}).value || '').trim();
+      var name = _otpIsNew ? (((document.getElementById('tk-otp-name') || {}).value || '').trim()) : undefined;
+      var errEl = document.getElementById('tk-otp-e2');
+      errEl.style.display = 'none';
+      if (!code || code.length < 4) { errEl.textContent = 'Enter the code sent to your phone'; errEl.style.display = 'block'; return; }
+      if (_otpIsNew && !name) { errEl.textContent = 'Please enter your name'; errEl.style.display = 'block'; return; }
+      this.disabled = true; this.textContent = '...';
+      var client = api();
+      try {
+        var res = await client.auth.verifyOtp(_otpPhone, code, name);
+        auth.user = res.user;
+        storageSet('takeoff_user', res.user);
+        notify();
+        closeModal();
+        if (_pendingCb) { var cb = _pendingCb; _pendingCb = null; setTimeout(cb, 50); }
+      } catch (e) {
+        errEl.textContent = e.message || 'Invalid code, please try again';
+        errEl.style.display = 'block';
+      }
+      this.disabled = false; this.textContent = 'Confirm';
+    };
+
+    // Auto-submit when 6 digits entered
+    var codeInput = document.getElementById('tk-otp-code');
+    if (codeInput) {
+      codeInput.addEventListener('input', function () {
+        if (this.value.length === 6) document.getElementById('tk-otp-verify').click();
+      });
+      codeInput.onkeydown = function (e) { if (e.key === 'Enter') document.getElementById('tk-otp-verify').click(); };
+    }
+
+    // Phone input enter key
+    var phoneInput = document.getElementById('tk-otp-phone');
+    if (phoneInput) {
+      phoneInput.onkeydown = function (e) { if (e.key === 'Enter') document.getElementById('tk-otp-send').click(); };
+    }
+
+    // Resend
+    var resendEl = document.getElementById('tk-otp-resend');
+    if (resendEl) {
+      resendEl.onclick = async function (e) {
+        e.preventDefault();
+        this.style.display = 'none';
+        var result = await doSendOtp(_otpPhone);
+        if (!result.ok) {
+          var errEl = document.getElementById('tk-otp-e2');
+          errEl.textContent = result.error; errEl.style.display = 'block';
+        } else {
+          startOtpTimer();
+        }
+      };
+    }
+
+    // Back link
+    var backEl = document.getElementById('tk-otp-back');
+    if (backEl) {
+      backEl.onclick = function (e) {
+        e.preventDefault();
+        if (_otpTimer) clearInterval(_otpTimer);
+        document.getElementById('tk-otp-s2').style.display = 'none';
+        document.getElementById('tk-otp-s1').style.display = 'block';
+        var phoneEl = document.getElementById('tk-otp-phone');
+        if (phoneEl) phoneEl.focus();
+      };
+    }
   }
 
   function onEscModal(e) { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEscModal); } }
 
-  function closeModal() { if (modalRoot) modalRoot.innerHTML = ''; }
-
-  async function handleSubmit() {
-    var errEl = document.getElementById('tk-modal-err');
-    errEl.style.display = 'none';
-    var sub = document.getElementById('tk-modal-sub');
-    sub.disabled = true; sub.textContent = '...';
-    var email = (document.getElementById('tk-f-email') || {}).value || '';
-    var pass = (document.getElementById('tk-f-pass') || {}).value || '';
-    var result;
-    if (modalMode === 'register') {
-      var name = (document.getElementById('tk-f-name') || {}).value || '';
-      var phone = (document.getElementById('tk-f-phone') || {}).value || '';
-      var tracks = [];
-      if (document.getElementById('tk-tr-pad') && document.getElementById('tk-tr-pad').checked) tracks.push('padel');
-      if (document.getElementById('tk-tr-pil') && document.getElementById('tk-tr-pil').checked) tracks.push('pilates');
-      result = await auth.register({ email: email, name: name, phone: phone, password: pass, tracks: tracks });
-    } else {
-      result = await auth.login(email, pass);
-    }
-    sub.disabled = false; sub.textContent = modalMode === 'register' ? 'Create account' : 'Sign in';
-    if (!result.ok) { errEl.textContent = result.error; errEl.style.display = 'block'; return; }
-    closeModal();
-    if (_pendingCb) { var cb = _pendingCb; _pendingCb = null; setTimeout(cb, 50); }
+  function closeModal() {
+    if (_otpTimer) clearInterval(_otpTimer);
+    if (modalRoot) modalRoot.innerHTML = '';
   }
 
   // ── Account Drawer ────────────────────────────────────────────────────────

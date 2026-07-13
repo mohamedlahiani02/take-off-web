@@ -113,6 +113,15 @@
       },
       forgotPassword: function (email) { return request('POST', '/api/v1/auth/forgot-password', { email: email }, true); },
       resetPassword: function (token, newPassword) { return request('POST', '/api/v1/auth/reset-password', { token: token, newPassword: newPassword }, true); },
+      sendOtp: function (phone) { return request('POST', '/api/v1/auth/send-otp', { phone: phone }, true); },
+      verifyOtp: function (phone, code, name) {
+        var body = { phone: phone, code: code };
+        if (name) body.name = name;
+        return request('POST', '/api/v1/auth/verify-otp', body, true).then(function (data) {
+          if (data) storeTokens(data.tokens);
+          return data;
+        });
+      },
     },
 
     payments: {
