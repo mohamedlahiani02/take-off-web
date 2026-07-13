@@ -213,6 +213,20 @@
       toggleActive: function (id, active) { return request('PATCH', '/api/v1/admin/accounts/' + id + '/active', { active: active }); },
     },
 
+    // ── ERP: Dashboard & Reports ──
+    dashboard: {
+      stats: function () { return request('GET', '/api/v1/admin/dashboard'); },
+      revenue: function (days) { return request('GET', '/api/v1/admin/reports/revenue?days=' + (days || 14)); },
+    },
+
+    // ── ERP: Expenses ──
+    expenses: {
+      list: function (page) { return request('GET', '/api/v1/admin/expenses?page=' + (page || 0) + '&size=50'); },
+      create: function (dto) { return request('POST', '/api/v1/admin/expenses', dto); },
+      update: function (id, dto) { return request('PATCH', '/api/v1/admin/expenses/' + id, dto); },
+      delete: function (id) { return request('DELETE', '/api/v1/admin/expenses/' + id); },
+    },
+
     // ── Epic I: content / CMS ──
     content: {
       page: function (page) { return request('GET', '/api/v1/admin/content/' + page); },
