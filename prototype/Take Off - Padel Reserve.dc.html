@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<script src="./api-client.js?v=9" defer></script>
+<script src="./auth.js?v=9" defer></script>
+<script src="./menu.js?v=9" defer></script>
+<link rel="stylesheet" href="./mobile.css?v=9">
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; overflow-x:hidden; }
+  body{ font-family:'Space Grotesk',sans-serif; background:#0a1733; color:#f4f5ee; }
+  ::selection{ background:#c4ef3f; color:#0a1733; }
+  .anton{ font-family:'Anton',sans-serif; font-weight:400; text-transform:uppercase; }
+  a{ color:inherit; text-decoration:none; }
+  @keyframes logoIn{ to{ opacity:1; transform:scale(1); } }
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(20px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  image-slot{ display:block; }
+
+  /* NAV */
+  .pr-nav{ position:fixed; top:0; left:0; right:0; z-index:90; display:flex; align-items:center; justify-content:space-between; padding:18px 5vw; background:rgba(10,23,51,.82); backdrop-filter:blur(14px); border-bottom:1px solid rgba(196,239,63,.14); }
+
+  /* WEEK NAV */
+  .pr-week-nav{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .pr-week-btn{ background:none; border:1px solid rgba(196,239,63,.3); color:#c4ef3f; font-family:'Space Mono'; font-size:12px; letter-spacing:.1em; padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .2s; }
+  .pr-week-btn:hover{ background:rgba(196,239,63,.1); }
+  .pr-week-label{ font-family:'Space Mono'; font-size:12px; letter-spacing:.08em; color:rgba(244,245,238,.7); min-width:200px; text-align:center; }
+  .pr-today-btn{ background:#c4ef3f; border:none; color:#0a1733; font-family:'Space Mono'; font-size:11px; letter-spacing:.12em; padding:7px 14px; border-radius:999px; cursor:pointer; font-weight:700; transition:all .2s; }
+  .pr-today-btn:hover{ background:#d8ff5a; }
+
+  /* COURT TABS */
+  .pr-court-tabs{ display:flex; gap:4px; border-bottom:1px solid rgba(196,239,63,.14); padding-bottom:0; margin-bottom:28px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .pr-court-tab{ background:none; border:none; color:rgba(244,245,238,.5); font-family:'Space Mono'; font-size:12px; letter-spacing:.1em; padding:12px 20px; cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; white-space:nowrap; }
+  .pr-court-tab.active{ color:#c4ef3f; border-bottom-color:#c4ef3f; }
+  .pr-court-tab:hover:not(.active){ color:rgba(244,245,238,.8); }
+
+  /* WEEK GRID */
+  .pr-grid-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .pr-grid{ display:grid; grid-template-columns:64px repeat(7, 1fr); border:1px solid rgba(196,239,63,.1); border-radius:16px; overflow:hidden; min-width:600px; }
+  .pr-grid-header{ display:contents; }
+  .pr-grid-header-cell{ padding:12px 8px; text-align:center; font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.5); background:#0f1f44; border-bottom:1px solid rgba(196,239,63,.1); }
+  .pr-grid-header-cell.today{ color:#c4ef3f; background:#0f1f44; }
+  .pr-grid-time{ padding:12px 8px; text-align:right; font-family:'Space Mono'; font-size:10px; letter-spacing:.06em; color:rgba(244,245,238,.4); background:#0a1733; border-bottom:1px solid rgba(196,239,63,.06); border-right:1px solid rgba(196,239,63,.06); display:flex; align-items:center; justify-content:flex-end; }
+  .pr-slot{ min-height:56px; border-bottom:1px solid rgba(196,239,63,.06); border-right:1px solid rgba(196,239,63,.06); display:flex; align-items:center; justify-content:center; padding:4px; position:relative; transition:background .15s; }
+  .pr-slot:nth-child(7n){ border-right:none; }
+  .pr-slot-inner{ width:100%; height:100%; min-height:44px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:'Space Mono'; font-size:10px; letter-spacing:.05em; transition:all .15s; }
+  .pr-slot-free{ border:1px solid rgba(196,239,63,.5); color:#c4ef3f; cursor:pointer; }
+  .pr-slot-free:hover{ background:rgba(196,239,63,.12); border-color:#c4ef3f; }
+  .pr-slot-booked{ background:rgba(244,245,238,.05); color:rgba(244,245,238,.25); text-decoration:line-through; cursor:not-allowed; }
+  .pr-slot-blocked{ background:rgba(220,38,38,.08); border:1px solid rgba(220,38,38,.2); color:rgba(220,38,38,.5); cursor:not-allowed; }
+  .pr-slot-choosing{ border:1px solid #c4ef3f; background:#0a1733; cursor:default; flex-direction:column; gap:6px; padding:6px; }
+
+  /* CHOOSING PANEL */
+  .pr-choose-panel{ position:absolute; z-index:20; top:50%; left:50%; transform:translate(-50%,-50%); background:#0f1f44; border:1px solid #c4ef3f; border-radius:12px; padding:12px; min-width:160px; display:flex; flex-direction:column; gap:8px; box-shadow:0 8px 32px rgba(0,0,0,.5); }
+  .pr-choose-title{ font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.6); text-align:center; }
+  .pr-choose-btns{ display:flex; gap:6px; }
+  .pr-btn-share{ flex:1; padding:8px 6px; border-radius:8px; background:#c4ef3f; color:#0a1733; font-family:'Space Mono'; font-size:10px; font-weight:700; cursor:pointer; border:none; letter-spacing:.04em; transition:all .15s; }
+  .pr-btn-share:hover{ background:#d8ff5a; }
+  .pr-btn-full{ flex:1; padding:8px 6px; border-radius:8px; background:transparent; border:1px solid #c4ef3f; color:#c4ef3f; font-family:'Space Mono'; font-size:10px; font-weight:700; cursor:pointer; letter-spacing:.04em; transition:all .15s; }
+  .pr-btn-full:hover{ background:rgba(196,239,63,.1); }
+  .pr-btn-cancel{ background:none; border:none; color:rgba(244,245,238,.4); font-family:'Space Mono'; font-size:9px; cursor:pointer; text-align:center; letter-spacing:.06em; }
+  .pr-btn-cancel:hover{ color:rgba(244,245,238,.7); }
+
+  /* LEGEND */
+  .pr-legend{ display:flex; gap:20px; flex-wrap:wrap; align-items:center; }
+  .pr-legend-item{ display:flex; align-items:center; gap:7px; font-family:'Space Mono'; font-size:10px; letter-spacing:.08em; color:rgba(244,245,238,.5); }
+  .pr-legend-dot{ width:14px; height:14px; border-radius:4px; flex-shrink:0; }
+
+  /* TOAST */
+  .pr-toast{ position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(100px); background:#c4ef3f; color:#0a1733; font-family:'Space Mono'; font-size:12px; font-weight:700; letter-spacing:.08em; padding:14px 28px; border-radius:999px; z-index:500; transition:transform .4s cubic-bezier(.2,.7,.2,1), opacity .4s; opacity:0; white-space:nowrap; }
+  .pr-toast.show{ transform:translateX(-50%) translateY(0); opacity:1; }
+
+  /* OTP MODAL */
+  .pr-otp-overlay{ position:fixed; inset:0; z-index:400; background:rgba(10,23,51,.85); backdrop-filter:blur(6px); display:flex; align-items:flex-end; justify-content:center; }
+  @media(min-width:641px){ .pr-otp-overlay{ align-items:center; } }
+  .pr-otp-panel{ background:#0f1f44; border:1px solid rgba(196,239,63,.2); border-radius:20px 20px 0 0; padding:32px 24px calc(32px + env(safe-area-inset-bottom,0px)); width:100%; max-width:460px; animation:fadeUp .35s ease; }
+  @media(min-width:641px){ .pr-otp-panel{ border-radius:20px; } }
+  .pr-otp-title{ font-family:'Space Mono'; font-size:11px; letter-spacing:.2em; color:#c4ef3f; margin-bottom:8px; }
+  .pr-otp-h2{ font-size:22px; font-weight:700; margin:0 0 20px; }
+  .pr-otp-label{ font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.5); margin-bottom:6px; display:block; }
+  .pr-otp-input{ width:100%; background:#0a1733; border:1px solid rgba(196,239,63,.3); border-radius:10px; padding:14px 16px; color:#f4f5ee; font-family:'Space Mono'; font-size:16px; outline:none; transition:border-color .2s; margin-bottom:12px; }
+  .pr-otp-input:focus{ border-color:#c4ef3f; }
+  .pr-otp-btn{ width:100%; padding:15px; border-radius:10px; background:#c4ef3f; color:#0a1733; font-family:'Space Mono'; font-size:13px; font-weight:700; letter-spacing:.1em; border:none; cursor:pointer; transition:background .2s; }
+  .pr-otp-btn:hover{ background:#d8ff5a; }
+  .pr-otp-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .pr-otp-close{ background:none; border:none; color:rgba(244,245,238,.4); font-size:13px; cursor:pointer; float:right; padding:0; font-family:'Space Mono'; }
+  .pr-otp-err{ color:#f87171; font-family:'Space Mono'; font-size:11px; margin-bottom:10px; }
+  .pr-otp-info{ font-family:'Space Mono'; font-size:10px; color:rgba(244,245,238,.4); margin-top:-6px; margin-bottom:12px; line-height:1.6; }
+
+  /* LOADER */
+  .pr-spinner{ width:32px; height:32px; border:3px solid rgba(196,239,63,.2); border-top-color:#c4ef3f; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto; }
+
+  /* FOOTER */
+  .pr-footer{ padding:40px 5vw; background:#060e1f; border-top:1px solid rgba(196,239,63,.08); }
+  .pr-footer-inner{ max-width:960px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .pr-footer-copy{ font-family:'Space Mono'; font-size:10px; letter-spacing:.12em; color:rgba(244,245,238,.35); }
+  .pr-footer-links{ display:flex; gap:20px; }
+  .pr-footer-links a{ font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.4); transition:color .2s; }
+  .pr-footer-links a:hover{ color:#c4ef3f; }
+</style>
+</helmet>
+
+<!-- LOADER -->
+<div id="pr-loader" style="position:fixed;inset:0;z-index:200;background:#0a1733;display:flex;align-items:center;justify-content:center;transition:opacity .6s ease,visibility .6s;">
+  <img src="./Logo/LOGO-lime.svg" alt="Take Off" style="width:200px;height:auto;opacity:0;transform:scale(.7);animation:logoIn 1s cubic-bezier(.2,.7,.2,1) .1s forwards;">
+</div>
+
+<div style="max-width:100%;overflow-x:hidden;">
+
+  <!-- ░ NAV ░ -->
+  <div class="pr-nav">
+    <a href="Take Off - Gateway.dc.html" style="display:flex;align-items:center;gap:11px;">
+      <img class="tk-nav-logo" src="./Logo/LOGO.svg" alt="Take Off" style="width:78px;height:auto;display:block;">
+      <span class="tk-nav-word" style="font-weight:700;font-size:14px;letter-spacing:.14em;">TAKE OFF</span>
+      <span style="width:9px;height:9px;border-radius:50%;background:#c4ef3f;"></span>
+      <span class="tk-nav-tag" style="font-family:'Space Mono';font-size:10px;letter-spacing:.22em;color:rgba(244,245,238,.55);">PADEL</span>
+    </a>
+    <div class="tk-nav-links" style="display:flex;align-items:center;gap:20px;">
+      <a href="Take Off - Padel.dc.html" style="font-family:'Space Mono';font-size:11px;letter-spacing:.14em;color:rgba(244,245,238,.65);transition:color .2s;" class="tk-nav-links">← Padel</a>
+      <div id="pr-nav-auth" style="font-family:'Space Mono';font-size:11px;letter-spacing:.1em;cursor:pointer;color:rgba(244,245,238,.65);"></div>
+    </div>
+  </div>
+
+  <!-- ░ HEADER ░ -->
+  <div style="padding:120px 5vw 60px;max-width:960px;margin:0 auto;">
+    <a href="Take Off - Padel.dc.html" style="display:inline-flex;align-items:center;gap:8px;font-family:'Space Mono';font-size:11px;letter-spacing:.12em;color:rgba(244,245,238,.45);margin-bottom:28px;transition:color .2s;" onmouseover="this.style.color='#c4ef3f'" onmouseout="this.style.color='rgba(244,245,238,.45)'">← Padel</a>
+    <div style="font-family:'Space Mono';font-size:11px;letter-spacing:.3em;color:#c4ef3f;margin-bottom:14px;">01 — BOOK YOUR SLOT</div>
+    <h1 class="anton" style="font-size:clamp(42px,7vw,88px);line-height:.9;color:#fff;margin:0 0 16px;">Reserve a court</h1>
+    <p style="font-family:'Space Mono';font-size:12px;letter-spacing:.06em;color:rgba(244,245,238,.5);line-height:1.8;max-width:400px;">Two courts · 1h30 fixed · 20 DT share or 80 DT full</p>
+  </div>
+
+  <!-- ░ BOOKING ░ -->
+  <div style="padding:0 5vw 80px;max-width:960px;margin:0 auto;">
+
+    <!-- Week nav -->
+    <div class="pr-week-nav" style="margin-bottom:28px;">
+      <button class="pr-week-btn" id="pr-prev-week">‹ Prev week</button>
+      <span class="pr-week-label" id="pr-week-label">Loading…</span>
+      <button class="pr-week-btn" id="pr-next-week">Next week ›</button>
+      <button class="pr-today-btn" id="pr-today-btn">Today</button>
+    </div>
+
+    <!-- Court tabs -->
+    <div class="pr-court-tabs" id="pr-court-tabs">
+      <div style="font-family:'Space Mono';font-size:11px;letter-spacing:.1em;color:rgba(244,245,238,.4);padding:12px 0;">Loading courts…</div>
+    </div>
+
+    <!-- Grid -->
+    <div class="pr-grid-wrap tk-week-grid-wrap">
+      <div class="pr-grid tk-week-grid" id="pr-grid">
+        <div style="grid-column:1/-1;padding:40px;text-align:center;">
+          <div class="pr-spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="pr-legend" style="margin-top:20px;">
+      <div class="pr-legend-item">
+        <div class="pr-legend-dot" style="border:1px solid rgba(196,239,63,.5);"></div>
+        FREE
+      </div>
+      <div class="pr-legend-item">
+        <div class="pr-legend-dot" style="background:#c4ef3f;"></div>
+        SHARE (20 DT)
+      </div>
+      <div class="pr-legend-item">
+        <div class="pr-legend-dot" style="background:#0f1f44;border:1px solid #c4ef3f;"></div>
+        FULL (80 DT)
+      </div>
+      <div class="pr-legend-item">
+        <div class="pr-legend-dot" style="background:rgba(244,245,238,.07);"></div>
+        BOOKED
+      </div>
+    </div>
+  </div>
+
+  <!-- ░ FOOTER ░ -->
+  <div class="pr-footer">
+    <div class="pr-footer-inner">
+      <div class="pr-footer-copy">© Take Off Club · Sfax · Route de l'aéroport KM4</div>
+      <div class="pr-footer-links">
+        <a href="Take Off - Padel.dc.html">Padel</a>
+        <a href="Take Off - Pilates.dc.html">Pilates</a>
+        <a href="Take Off - Store.dc.html">Store</a>
+        <a href="Take Off - Coaches.dc.html">Coaches</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /overflow wrapper -->
+
+<!-- ░ TOAST ░ -->
+<div class="pr-toast" id="pr-toast"></div>
+
+<!-- ░ OTP MODAL ░ -->
+<div class="pr-otp-overlay" id="pr-otp-overlay" style="display:none;">
+  <div class="pr-otp-panel">
+    <button class="pr-otp-close" id="pr-otp-close">✕ close</button>
+    <div class="pr-otp-title" id="pr-otp-kicker">SIGN IN</div>
+    <h2 class="pr-otp-h2" id="pr-otp-heading">Enter your phone number</h2>
+    <div id="pr-otp-err" class="pr-otp-err" style="display:none;"></div>
+
+    <!-- Step 1: phone -->
+    <div id="pr-otp-step1">
+      <label class="pr-otp-label">PHONE</label>
+      <input class="pr-otp-input" id="pr-otp-phone" type="tel" placeholder="+216 XX XXX XXX" autocomplete="tel">
+      <div class="pr-otp-info">We'll send a one-time code via SMS.</div>
+      <button class="pr-otp-btn" id="pr-otp-send">Send code →</button>
+    </div>
+
+    <!-- Step 2: name (new users only) -->
+    <div id="pr-otp-step-name" style="display:none;">
+      <label class="pr-otp-label">YOUR NAME</label>
+      <input class="pr-otp-input" id="pr-otp-name" type="text" placeholder="First name" autocomplete="given-name">
+      <button class="pr-otp-btn" id="pr-otp-name-next">Continue →</button>
+    </div>
+
+    <!-- Step 3: code -->
+    <div id="pr-otp-step2" style="display:none;">
+      <label class="pr-otp-label">VERIFICATION CODE</label>
+      <input class="pr-otp-input" id="pr-otp-code" type="text" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+      <div class="pr-otp-info" id="pr-otp-phone-hint"></div>
+      <button class="pr-otp-btn" id="pr-otp-verify">Verify →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ░ BOOKING MODE MODAL ░ -->
+<div class="pr-otp-overlay" id="pr-mode-overlay" style="display:none;">
+  <div class="pr-otp-panel tk-booking-panel">
+    <button class="pr-otp-close" id="pr-mode-close">✕ close</button>
+    <div class="pr-otp-title">CHOOSE YOUR BOOKING</div>
+    <h2 class="pr-otp-h2" id="pr-mode-heading">Select booking type</h2>
+    <div id="pr-mode-slot-info" style="font-family:'Space Mono';font-size:11px;letter-spacing:.08em;color:rgba(244,245,238,.5);margin-bottom:24px;line-height:1.8;"></div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <button class="pr-otp-btn" id="pr-mode-share" style="background:#c4ef3f;color:#0a1733;">
+        Share — 20 DT <span style="opacity:.6;font-size:10px;">Split court with another player</span>
+      </button>
+      <button class="pr-otp-btn" id="pr-mode-full" style="background:transparent;border:1px solid #c4ef3f;color:#c4ef3f;">
+        Full court — 80 DT <span style="opacity:.6;font-size:10px;">Exclusive access for 90 min</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var CAL_SLOTS = ['07:00','08:30','10:00','11:30','13:00','14:30','16:00','17:30','19:00','20:30'];
+  var DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  var _courts = [];
+  var _selectedCourt = null;
+  var _weekStart = null;
+  var _slotsData = {}; // courtId -> { 'YYYY-MM-DD' -> { 'HH:MM' -> status } }
+  var _choosing = null; // { courtId, date, time }
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function toDateStr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+
+  function getWeekStart(date){
+    var d = new Date(date);
+    var dow = d.getDay();
+    var diff = dow === 0 ? -6 : 1 - dow;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function weekLabel(ws){
+    var we = new Date(ws); we.setDate(we.getDate()+6);
+    return DAYS_SHORT[ws.getDay()]+' '+ws.getDate()+' – '+DAYS_SHORT[we.getDay()]+' '+we.getDate()+' '+MONTHS_SHORT[we.getMonth()];
+  }
+
+  function showToast(msg, ms){
+    var t = document.getElementById('pr-toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, ms || 3500);
+  }
+
+  function showErr(msg){
+    var el = document.getElementById('pr-otp-err');
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  /* ── GRID RENDER ────────────────────────────────────────────────── */
+  function renderGrid(){
+    var grid = document.getElementById('pr-grid');
+    if(!_weekStart || !_selectedCourt){ return; }
+    var courtId = _selectedCourt.id || _selectedCourt._id;
+    var slots = (_slotsData[courtId] || {});
+    var today = toDateStr(new Date());
+
+    var days = [];
+    for(var i=0;i<7;i++){
+      var d = new Date(_weekStart);
+      d.setDate(d.getDate()+i);
+      days.push(d);
+    }
+
+    var html = '';
+    // Corner
+    html += '<div class="pr-grid-header-cell" style="background:#0a1733;border-right:1px solid rgba(196,239,63,.06);"></div>';
+    // Day headers
+    days.forEach(function(d){
+      var ds = toDateStr(d);
+      var isTod = ds === today;
+      html += '<div class="pr-grid-header-cell'+(isTod?' today':'')+'">';
+      html += '<div>'+DAYS_SHORT[d.getDay()]+'</div>';
+      html += '<div style="font-size:16px;font-weight:700;font-family:\'Space Grotesk\';color:'+(isTod?'#c4ef3f':'#f4f5ee')+';">'+d.getDate()+'</div>';
+      html += '</div>';
+    });
+
+    // Time rows
+    CAL_SLOTS.forEach(function(time){
+      html += '<div class="pr-grid-time">'+time+'</div>';
+      days.forEach(function(d){
+        var ds = toDateStr(d);
+        var st = (slots[ds] && slots[ds][time]) || 'FREE';
+        var isPast = d < new Date() && toDateStr(d) !== today;
+        if(isPast) st = 'BLOCKED';
+        var inner = '';
+        if(st === 'FREE'){
+          inner = '<div class="pr-slot-inner pr-slot-free" onclick="prSlotClick(\''+courtId+'\',\''+ds+'\',\''+time+'\')">'+time+'</div>';
+        } else if(st === 'BLOCKED'){
+          inner = '<div class="pr-slot-inner pr-slot-blocked" title="Past">—</div>';
+        } else {
+          // BOOKED, SHARE, FULL
+          var label = st === 'SHARE' ? 'SHARE' : st === 'FULL' ? 'FULL' : 'BOOKED';
+          inner = '<div class="pr-slot-inner pr-slot-booked">'+time+'<br><span style="font-size:9px;opacity:.7;">'+label+'</span></div>';
+        }
+        html += '<div class="pr-slot">'+inner+'</div>';
+      });
+    });
+
+    grid.innerHTML = html;
+  }
+
+  window.prSlotClick = function(courtId, date, time){
+    _choosing = { courtId: courtId, date: date, time: time };
+    // Check if logged in
+    var api = window.takeOffApi;
+    var loggedIn = api && api.auth && api.auth.isLoggedIn ? api.auth.isLoggedIn() : false;
+    if(!loggedIn){
+      // Show OTP flow
+      openOtp(function(){
+        openModeModal();
+      });
+    } else {
+      openModeModal();
+    }
+  };
+
+  /* ── OTP FLOW ────────────────────────────────────────────────────── */
+  var _otpCallback = null;
+  var _otpPhone = '';
+  var _otpName = '';
+
+  function openOtp(cb){
+    _otpCallback = cb;
+    _otpPhone = '';
+    _otpName = '';
+    document.getElementById('pr-otp-phone').value = '';
+    document.getElementById('pr-otp-name').value = '';
+    document.getElementById('pr-otp-code').value = '';
+    showErr('');
+    document.getElementById('pr-otp-step1').style.display = 'block';
+    document.getElementById('pr-otp-step-name').style.display = 'none';
+    document.getElementById('pr-otp-step2').style.display = 'none';
+    document.getElementById('pr-otp-heading').textContent = 'Enter your phone number';
+    document.getElementById('pr-otp-overlay').style.display = 'flex';
+  }
+
+  function closeOtp(){
+    document.getElementById('pr-otp-overlay').style.display = 'none';
+    _otpCallback = null;
+  }
+
+  document.getElementById('pr-otp-close').onclick = closeOtp;
+  document.getElementById('pr-otp-overlay').onclick = function(e){ if(e.target===this) closeOtp(); };
+
+  document.getElementById('pr-otp-send').onclick = function(){
+    var phone = document.getElementById('pr-otp-phone').value.trim();
+    if(!phone){ showErr('Please enter your phone number.'); return; }
+    _otpPhone = phone;
+    var btn = this;
+    btn.disabled = true; btn.textContent = 'Sending…';
+    showErr('');
+    var api = window.takeOffApi;
+    if(api && api.auth && api.auth.sendOtp){
+      api.auth.sendOtp(phone).then(function(){
+        btn.disabled = false; btn.textContent = 'Send code →';
+        document.getElementById('pr-otp-step1').style.display = 'none';
+        // Check if new user — show name step first
+        document.getElementById('pr-otp-step-name').style.display = 'block';
+        document.getElementById('pr-otp-heading').textContent = 'What\'s your name?';
+      }).catch(function(e){
+        btn.disabled = false; btn.textContent = 'Send code →';
+        showErr(e && e.message ? e.message : 'Failed to send code. Try again.');
+      });
+    } else {
+      // Fallback for dev mode without API
+      btn.disabled = false; btn.textContent = 'Send code →';
+      document.getElementById('pr-otp-step1').style.display = 'none';
+      document.getElementById('pr-otp-step-name').style.display = 'block';
+      document.getElementById('pr-otp-heading').textContent = 'What\'s your name?';
+    }
+  };
+
+  document.getElementById('pr-otp-name-next').onclick = function(){
+    _otpName = document.getElementById('pr-otp-name').value.trim();
+    document.getElementById('pr-otp-step-name').style.display = 'none';
+    document.getElementById('pr-otp-step2').style.display = 'block';
+    document.getElementById('pr-otp-phone-hint').textContent = 'Code sent to '+_otpPhone;
+    document.getElementById('pr-otp-heading').textContent = 'Enter your code';
+  };
+
+  document.getElementById('pr-otp-verify').onclick = function(){
+    var code = document.getElementById('pr-otp-code').value.trim();
+    if(!code){ showErr('Please enter the verification code.'); return; }
+    var btn = this;
+    btn.disabled = true; btn.textContent = 'Verifying…';
+    showErr('');
+    var api = window.takeOffApi;
+    if(api && api.auth && api.auth.verifyOtp){
+      api.auth.verifyOtp(_otpPhone, code, _otpName).then(function(){
+        btn.disabled = false; btn.textContent = 'Verify →';
+        closeOtp();
+        if(_otpCallback) _otpCallback();
+      }).catch(function(e){
+        btn.disabled = false; btn.textContent = 'Verify →';
+        showErr(e && e.message ? e.message : 'Invalid code. Please try again.');
+      });
+    } else {
+      // Dev fallback
+      btn.disabled = false; btn.textContent = 'Verify →';
+      closeOtp();
+      if(_otpCallback) _otpCallback();
+    }
+  };
+
+  /* ── MODE MODAL ─────────────────────────────────────────────────── */
+  function openModeModal(){
+    if(!_choosing) return;
+    document.getElementById('pr-mode-slot-info').innerHTML =
+      'Court: <strong>'+(_selectedCourt.name||'Court')+'</strong><br>'+
+      'Date: <strong>'+_choosing.date+'</strong><br>'+
+      'Time: <strong>'+_choosing.time+' — 90 min</strong>';
+    document.getElementById('pr-mode-overlay').style.display = 'flex';
+  }
+
+  function closeModeModal(){
+    document.getElementById('pr-mode-overlay').style.display = 'none';
+    _choosing = null;
+    renderGrid();
+  }
+
+  document.getElementById('pr-mode-close').onclick = closeModeModal;
+  document.getElementById('pr-mode-overlay').onclick = function(e){ if(e.target===this) closeModeModal(); };
+
+  function doBook(mode){
+    if(!_choosing) return;
+    var btn = mode === 'SHARE' ? document.getElementById('pr-mode-share') : document.getElementById('pr-mode-full');
+    btn.disabled = true;
+    var api = window.takeOffApi;
+    var courtId = _choosing.courtId;
+    var startsAt = _choosing.date + 'T' + _choosing.time + ':00';
+    if(api && api.courts && api.courts.book){
+      api.courts.book(courtId, startsAt, mode, 'PAY_AT_CLUB').then(function(){
+        btn.disabled = false;
+        document.getElementById('pr-mode-overlay').style.display = 'none';
+        // Mark slot locally
+        if(!_slotsData[courtId]) _slotsData[courtId] = {};
+        if(!_slotsData[courtId][_choosing.date]) _slotsData[courtId][_choosing.date] = {};
+        _slotsData[courtId][_choosing.date][_choosing.time] = mode;
+        _choosing = null;
+        renderGrid();
+        showToast('🎾 Booked! We\'ll see you on the court!', 4000);
+      }).catch(function(e){
+        btn.disabled = false;
+        showToast((e && e.message) ? e.message : 'Booking failed. Please try again.', 3500);
+      });
+    } else {
+      // Dev fallback
+      btn.disabled = false;
+      if(!_slotsData[courtId]) _slotsData[courtId] = {};
+      if(!_slotsData[courtId][_choosing.date]) _slotsData[courtId][_choosing.date] = {};
+      _slotsData[courtId][_choosing.date][_choosing.time] = mode;
+      _choosing = null;
+      document.getElementById('pr-mode-overlay').style.display = 'none';
+      renderGrid();
+      showToast('🎾 Booked! We\'ll see you on the court!', 4000);
+    }
+  }
+
+  document.getElementById('pr-mode-share').onclick = function(){ doBook('SHARE'); };
+  document.getElementById('pr-mode-full').onclick = function(){ doBook('FULL'); };
+
+  /* ── LOAD SLOTS ────────────────────────────────────────────────── */
+  function loadSlots(){
+    if(!_selectedCourt || !_weekStart) return;
+    var courtId = _selectedCourt.id || _selectedCourt._id;
+    var api = window.takeOffApi;
+    if(api && api.courts && api.courts.slots){
+      var weekEnd = new Date(_weekStart); weekEnd.setDate(weekEnd.getDate()+6);
+      api.courts.slots(courtId, toDateStr(_weekStart), toDateStr(weekEnd)).then(function(data){
+        // data is expected: { slots: [{date, time, status}] } or similar
+        var map = {};
+        if(data && data.slots){
+          data.slots.forEach(function(s){
+            if(!map[s.date]) map[s.date] = {};
+            map[s.date][s.time] = s.status || 'BOOKED';
+          });
+        } else if(Array.isArray(data)){
+          data.forEach(function(s){
+            var dateStr = s.startsAt ? s.startsAt.slice(0,10) : (s.date || '');
+            var timeStr = s.startsAt ? s.startsAt.slice(11,16) : (s.time || '');
+            if(!map[dateStr]) map[dateStr] = {};
+            map[dateStr][timeStr] = s.status || 'BOOKED';
+          });
+        }
+        _slotsData[courtId] = map;
+        renderGrid();
+      }).catch(function(){
+        renderGrid();
+      });
+    } else {
+      renderGrid();
+    }
+  }
+
+  /* ── WEEK NAVIGATION ────────────────────────────────────────────── */
+  function setWeek(ws){
+    _weekStart = ws;
+    document.getElementById('pr-week-label').textContent = weekLabel(ws);
+    loadSlots();
+  }
+
+  document.getElementById('pr-prev-week').onclick = function(){
+    var ws = new Date(_weekStart); ws.setDate(ws.getDate()-7);
+    setWeek(ws);
+  };
+  document.getElementById('pr-next-week').onclick = function(){
+    var ws = new Date(_weekStart); ws.setDate(ws.getDate()+7);
+    setWeek(ws);
+  };
+  document.getElementById('pr-today-btn').onclick = function(){
+    setWeek(getWeekStart(new Date()));
+  };
+
+  /* ── COURT TABS ─────────────────────────────────────────────────── */
+  function renderCourtTabs(){
+    var tabs = document.getElementById('pr-court-tabs');
+    if(!_courts.length){
+      tabs.innerHTML = '<div style="font-family:\'Space Mono\';font-size:11px;letter-spacing:.1em;color:rgba(244,245,238,.4);padding:12px 0;">No courts found.</div>';
+      return;
+    }
+    var selectedId = _selectedCourt ? (_selectedCourt.id || _selectedCourt._id) : null;
+    tabs.innerHTML = _courts.map(function(c){
+      var id = c.id || c._id;
+      var active = id === selectedId ? ' active' : '';
+      return '<button class="pr-court-tab'+active+'" onclick="prSelectCourt(\''+id+'\')">'+c.name+'</button>';
+    }).join('');
+  }
+
+  window.prSelectCourt = function(id){
+    var c = _courts.find(function(x){ return (x.id||x._id)===id; });
+    if(c){ _selectedCourt = c; renderCourtTabs(); loadSlots(); }
+  };
+
+  /* ── INIT ───────────────────────────────────────────────────────── */
+  function init(){
+    _weekStart = getWeekStart(new Date());
+    document.getElementById('pr-week-label').textContent = weekLabel(_weekStart);
+
+    var api = window.takeOffApi;
+    if(api && api.courts && api.courts.list){
+      api.courts.list().then(function(data){
+        _courts = Array.isArray(data) ? data : (data && data.courts ? data.courts : []);
+        if(_courts.length){ _selectedCourt = _courts[0]; }
+        renderCourtTabs();
+        loadSlots();
+      }).catch(function(){
+        // Show placeholder courts for dev
+        _courts = [{_id:'c1',name:'Court 1',surface:'Glass'},{_id:'c2',name:'Court 2',surface:'Glass'}];
+        _selectedCourt = _courts[0];
+        renderCourtTabs();
+        renderGrid();
+      });
+    } else {
+      // No API yet — show placeholder
+      _courts = [{_id:'c1',name:'Court 1',surface:'Glass'},{_id:'c2',name:'Court 2',surface:'Glass'}];
+      _selectedCourt = _courts[0];
+      renderCourtTabs();
+      renderGrid();
+    }
+
+    // Hide loader
+    setTimeout(function(){
+      var loader = document.getElementById('pr-loader');
+      if(loader){ loader.style.opacity='0'; loader.style.visibility='hidden'; }
+    }, 600);
+  }
+
+  // Wait for API to be ready, then init
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){
+      setTimeout(init, 100);
+    });
+  } else {
+    setTimeout(init, 100);
+  }
+
+})();
+</script>
+
+</x-dc>
+</body>
+</html>

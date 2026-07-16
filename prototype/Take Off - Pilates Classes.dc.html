@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<script src="./api-client.js?v=9" defer></script>
+<script src="./auth.js?v=9" defer></script>
+<script src="./menu.js?v=9" defer></script>
+<link rel="stylesheet" href="./mobile.css?v=9">
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; overflow-x:hidden; }
+  body{ font-family:'Space Grotesk',sans-serif; background:#f4f5ee; color:#0c2350; }
+  ::selection{ background:#c4ef3f; color:#0c2350; }
+  a{ color:inherit; text-decoration:none; }
+  @keyframes logoIn{ to{ opacity:1; transform:scale(1); } }
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(20px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes slideUp{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  image-slot{ display:block; }
+  .eyebrow{ font-family:'Space Mono'; font-size:12px; letter-spacing:.26em; text-transform:uppercase; display:inline-flex; align-items:center; gap:9px; }
+
+  /* NAV */
+  .pc-nav{ position:fixed; top:0; left:0; right:0; z-index:90; display:flex; align-items:center; justify-content:space-between; padding:18px 5vw; background:rgba(244,245,238,.88); backdrop-filter:blur(14px); border-bottom:1px solid rgba(12,35,80,.08); }
+
+  /* FILTER BAR */
+  .pc-filter-bar{ display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; white-space:nowrap; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
+  .pc-filter-bar::-webkit-scrollbar{ display:none; }
+  .pc-filter-btn{ background:none; border:1px solid rgba(12,35,80,.15); color:rgba(12,35,80,.6); font-family:'Space Mono'; font-size:11px; letter-spacing:.1em; padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .2s; white-space:nowrap; flex-shrink:0; }
+  .pc-filter-btn.active{ background:#0c2350; color:#f4f5ee; border-color:#0c2350; }
+  .pc-filter-btn:hover:not(.active){ background:rgba(12,35,80,.06); }
+
+  /* WEEK NAV */
+  .pc-week-nav{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:28px; }
+  .pc-week-btn{ background:none; border:1px solid rgba(12,35,80,.2); color:#0c2350; font-family:'Space Mono'; font-size:11px; letter-spacing:.1em; padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .2s; }
+  .pc-week-btn:hover{ background:rgba(12,35,80,.06); }
+  .pc-week-label{ font-family:'Space Mono'; font-size:12px; letter-spacing:.08em; color:rgba(12,35,80,.6); min-width:200px; text-align:center; }
+  .pc-today-btn{ background:#0c2350; border:none; color:#f4f5ee; font-family:'Space Mono'; font-size:11px; letter-spacing:.12em; padding:8px 16px; border-radius:999px; cursor:pointer; font-weight:700; transition:all .2s; }
+  .pc-today-btn:hover{ background:#0f2a6e; }
+
+  /* WEEK GRID */
+  .pc-grid-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .pc-grid{ display:grid; grid-template-columns:80px repeat(7, 1fr); border:1px solid rgba(12,35,80,.08); border-radius:16px; overflow:hidden; min-width:700px; background:#fff; }
+  .pc-grid-corner{ background:#eceadf; border-bottom:1px solid rgba(12,35,80,.08); border-right:1px solid rgba(12,35,80,.08); }
+  .pc-grid-day-header{ background:#eceadf; border-bottom:1px solid rgba(12,35,80,.08); border-right:1px solid rgba(12,35,80,.06); padding:12px 8px; text-align:center; }
+  .pc-grid-day-name{ font-family:'Space Mono'; font-size:9px; letter-spacing:.14em; color:rgba(12,35,80,.5); }
+  .pc-grid-day-num{ font-size:18px; font-weight:700; color:#0c2350; line-height:1.2; }
+  .pc-grid-day-num.today{ color:#c4ef3f; background:#0c2350; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; margin:4px auto 0; }
+  .pc-time-cell{ border-right:1px solid rgba(12,35,80,.06); border-bottom:1px solid rgba(12,35,80,.04); padding:0 8px; font-family:'Space Mono'; font-size:9px; letter-spacing:.08em; color:rgba(12,35,80,.4); display:flex; align-items:flex-start; padding-top:8px; min-height:60px; background:#fcfcfa; }
+  .pc-grid-cell{ border-right:1px solid rgba(12,35,80,.06); border-bottom:1px solid rgba(12,35,80,.04); min-height:60px; padding:4px; position:relative; background:#fff; }
+  .pc-session-card{ border-radius:8px; padding:7px 9px; cursor:pointer; transition:all .18s; margin-bottom:3px; }
+  .pc-session-card:hover{ filter:brightness(.95); transform:translateY(-1px); box-shadow:0 4px 12px rgba(12,35,80,.12); }
+  .pc-session-name{ font-size:11px; font-weight:700; letter-spacing:-.01em; line-height:1.2; margin-bottom:2px; }
+  .pc-session-coach{ font-family:'Space Mono'; font-size:10px; color:#c4ef3f; margin-bottom:2px; }
+  .pc-session-level{ font-family:'Space Mono'; font-size:9px; opacity:.6; margin-bottom:3px; }
+  .pc-session-spots{ font-family:'Space Mono'; font-size:9px; font-weight:700; }
+  .pc-spots-ok{ color:#16a34a; }
+  .pc-spots-low{ color:#ca8a04; }
+  .pc-spots-full{ color:#dc2626; }
+
+  /* TOAST */
+  .pc-toast{ position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(100px); background:#0c2350; color:#f4f5ee; font-family:'Space Mono'; font-size:12px; font-weight:700; letter-spacing:.08em; padding:14px 28px; border-radius:999px; z-index:500; transition:transform .4s cubic-bezier(.2,.7,.2,1), opacity .4s; opacity:0; white-space:nowrap; }
+  .pc-toast.show{ transform:translateX(-50%) translateY(0); opacity:1; }
+
+  /* BOOKING DRAWER */
+  .pc-drawer-overlay{ position:fixed; inset:0; z-index:400; background:rgba(12,35,80,.5); backdrop-filter:blur(4px); display:flex; align-items:flex-end; justify-content:center; }
+  @media(min-width:641px){ .pc-drawer-overlay{ align-items:center; } }
+  .pc-drawer{ background:#fff; border-radius:20px 20px 0 0; padding:28px 24px calc(28px + env(safe-area-inset-bottom,0px)); width:100%; max-width:480px; animation:slideUp .3s ease; max-height:80vh; overflow-y:auto; }
+  @media(min-width:641px){ .pc-drawer{ border-radius:20px; } }
+  .pc-drawer-close{ float:right; background:none; border:none; font-size:14px; cursor:pointer; color:rgba(12,35,80,.4); font-family:'Space Mono'; }
+  .pc-drawer-tag{ font-family:'Space Mono'; font-size:10px; letter-spacing:.2em; color:#c4ef3f; margin-bottom:6px; }
+  .pc-drawer-title{ font-size:22px; font-weight:700; margin:0 0 4px; }
+  .pc-drawer-meta{ font-family:'Space Mono'; font-size:11px; color:rgba(12,35,80,.5); line-height:1.8; margin-bottom:20px; }
+  .pc-drawer-price{ font-size:28px; font-weight:700; color:#0c2350; margin-bottom:20px; }
+  .pc-drawer-price span{ font-size:14px; font-weight:400; opacity:.5; }
+  .pc-drawer-btn{ width:100%; padding:15px; border-radius:12px; background:#c4ef3f; color:#0c2350; font-family:'Space Mono'; font-size:13px; font-weight:700; letter-spacing:.1em; border:none; cursor:pointer; transition:background .2s; }
+  .pc-drawer-btn:hover{ background:#d8ff5a; }
+  .pc-drawer-btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  /* OTP */
+  .pc-otp-label{ font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(12,35,80,.5); margin-bottom:6px; display:block; margin-top:16px; }
+  .pc-otp-input{ width:100%; background:#f4f5ee; border:1px solid rgba(12,35,80,.2); border-radius:10px; padding:13px 15px; color:#0c2350; font-family:'Space Mono'; font-size:16px; outline:none; transition:border-color .2s; margin-bottom:4px; }
+  .pc-otp-input:focus{ border-color:#0c2350; }
+  .pc-otp-info{ font-family:'Space Mono'; font-size:10px; color:rgba(12,35,80,.4); margin-bottom:14px; line-height:1.6; }
+  .pc-otp-err{ color:#dc2626; font-family:'Space Mono'; font-size:11px; margin-bottom:10px; }
+
+  /* SPINNER */
+  .pc-spinner{ width:28px; height:28px; border:3px solid rgba(12,35,80,.1); border-top-color:#0c2350; border-radius:50%; animation:spin 0.8s linear infinite; margin:40px auto; }
+
+  /* EMPTY STATE */
+  .pc-empty{ padding:48px 24px; text-align:center; font-family:'Space Mono'; font-size:11px; letter-spacing:.08em; color:rgba(12,35,80,.4); }
+
+  /* FOOTER */
+  .pc-footer{ padding:40px 5vw; background:#0c2350; }
+  .pc-footer-inner{ max-width:960px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .pc-footer-copy{ font-family:'Space Mono'; font-size:10px; letter-spacing:.12em; color:rgba(244,245,238,.35); }
+  .pc-footer-links{ display:flex; gap:20px; }
+  .pc-footer-links a{ font-family:'Space Mono'; font-size:10px; letter-spacing:.1em; color:rgba(244,245,238,.45); transition:color .2s; }
+  .pc-footer-links a:hover{ color:#c4ef3f; }
+</style>
+</helmet>
+
+<!-- LOADER -->
+<div id="pc-loader" style="position:fixed;inset:0;z-index:200;background:#f4f5ee;display:flex;align-items:center;justify-content:center;transition:opacity .6s ease,visibility .6s;">
+  <img src="./Logo/LOGO-navy.svg" alt="Take Off" style="width:200px;height:auto;opacity:0;transform:scale(.7);animation:logoIn 1s cubic-bezier(.2,.7,.2,1) .1s forwards;">
+</div>
+
+<div style="max-width:100%;overflow-x:hidden;">
+
+  <!-- ░ NAV ░ -->
+  <div class="pc-nav">
+    <a href="Take Off - Gateway.dc.html" style="display:flex;align-items:center;gap:11px;">
+      <img class="tk-nav-logo" src="./Logo/LOGO-navy.svg" alt="Take Off" style="width:78px;height:auto;display:block;">
+      <span class="tk-nav-word" style="font-weight:700;font-size:14px;letter-spacing:.14em;">TAKE OFF</span>
+      <span style="width:9px;height:9px;border-radius:50%;background:#c4ef3f;box-shadow:0 0 0 2px rgba(12,35,80,.12);"></span>
+      <span class="tk-nav-tag" style="font-family:'Space Mono';font-size:10px;letter-spacing:.22em;color:rgba(12,35,80,.5);">PILATES</span>
+    </a>
+    <div class="tk-nav-links" style="display:flex;align-items:center;gap:20px;">
+      <a href="Take Off - Pilates.dc.html" style="font-family:'Space Mono';font-size:11px;letter-spacing:.14em;color:rgba(12,35,80,.5);transition:color .2s;">← Pilates</a>
+      <div id="pc-nav-auth" style="font-family:'Space Mono';font-size:11px;letter-spacing:.1em;cursor:pointer;color:rgba(12,35,80,.5);"></div>
+    </div>
+  </div>
+
+  <!-- ░ HEADER ░ -->
+  <div style="padding:120px 5vw 48px;max-width:1040px;margin:0 auto;">
+    <a href="Take Off - Pilates.dc.html" style="display:inline-flex;align-items:center;gap:8px;font-family:'Space Mono';font-size:11px;letter-spacing:.12em;color:rgba(12,35,80,.4);margin-bottom:24px;transition:color .2s;" onmouseover="this.style.color='#0c2350'" onmouseout="this.style.color='rgba(12,35,80,.4)'">← Pilates</a>
+    <div class="eyebrow" style="color:rgba(12,35,80,.45);margin-bottom:14px;"><span style="color:#c4ef3f;">✦</span> PLANNING HEBDOMADAIRE</div>
+    <h1 style="font-size:clamp(36px,5.5vw,72px);font-weight:700;line-height:1;letter-spacing:-.02em;margin:0 0 14px;">Programme de cours</h1>
+    <p style="font-family:'Space Mono';font-size:12px;letter-spacing:.06em;color:rgba(12,35,80,.5);line-height:1.8;max-width:420px;">Sélectionnez un cours pour réserver votre place</p>
+  </div>
+
+  <!-- ░ SCHEDULE ░ -->
+  <div style="padding:0 5vw 80px;max-width:1040px;margin:0 auto;">
+
+    <!-- Filter bar -->
+    <div class="pc-filter-bar tk-day-tabs" id="pc-filter-bar">
+      <button class="pc-filter-btn active" onclick="pcSetFilter('ALL')" data-filter="ALL">TOUS</button>
+    </div>
+
+    <!-- Week nav -->
+    <div class="pc-week-nav">
+      <button class="pc-week-btn" id="pc-prev-week">‹ Semaine préc.</button>
+      <span class="pc-week-label" id="pc-week-label">Chargement…</span>
+      <button class="pc-week-btn" id="pc-next-week">Semaine suiv. ›</button>
+      <button class="pc-today-btn" id="pc-today-btn">Aujourd'hui</button>
+    </div>
+
+    <!-- Grid -->
+    <div class="pc-grid-scroll tk-week-grid-wrap">
+      <div class="pc-grid tk-week-grid" id="pc-grid">
+        <div style="grid-column:1/-1;"><div class="pc-spinner"></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ░ FOOTER ░ -->
+  <div class="pc-footer">
+    <div class="pc-footer-inner">
+      <div class="pc-footer-copy">© Take Off Club · Sfax · Route de l'aéroport KM4</div>
+      <div class="pc-footer-links">
+        <a href="Take Off - Padel.dc.html">Padel</a>
+        <a href="Take Off - Pilates.dc.html">Pilates</a>
+        <a href="Take Off - Store.dc.html">Store</a>
+        <a href="Take Off - Coaches.dc.html">Coaches</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /overflow wrapper -->
+
+<!-- ░ TOAST ░ -->
+<div class="pc-toast" id="pc-toast"></div>
+
+<!-- ░ BOOKING DRAWER ░ -->
+<div class="pc-drawer-overlay" id="pc-drawer-overlay" style="display:none;">
+  <div class="pc-drawer tk-booking-panel">
+    <button class="pc-drawer-close" id="pc-drawer-close">✕ fermer</button>
+    <div class="pc-drawer-tag" id="pc-drawer-tag">COURS</div>
+    <h2 class="pc-drawer-title" id="pc-drawer-title"></h2>
+    <div class="pc-drawer-meta" id="pc-drawer-meta"></div>
+    <div class="pc-drawer-price" id="pc-drawer-price"></div>
+
+    <!-- Auth gate (shown if not logged in) -->
+    <div id="pc-auth-gate" style="display:none;">
+      <div style="font-family:'Space Mono';font-size:11px;letter-spacing:.08em;color:rgba(12,35,80,.6);margin-bottom:16px;line-height:1.7;">
+        Connectez-vous pour réserver votre place.
+      </div>
+      <!-- Step 1: phone -->
+      <div id="pc-otp-step1">
+        <label class="pc-otp-label">NUMÉRO DE TÉLÉPHONE</label>
+        <input class="pc-otp-input" id="pc-otp-phone" type="tel" placeholder="+216 XX XXX XXX" autocomplete="tel">
+        <div class="pc-otp-info">Nous enverrons un code par SMS.</div>
+        <div class="pc-otp-err" id="pc-otp-err" style="display:none;"></div>
+        <button class="pc-drawer-btn" id="pc-otp-send">Envoyer le code →</button>
+      </div>
+      <!-- Step 2: name -->
+      <div id="pc-otp-step-name" style="display:none;">
+        <label class="pc-otp-label">VOTRE PRÉNOM</label>
+        <input class="pc-otp-input" id="pc-otp-name" type="text" placeholder="Prénom" autocomplete="given-name">
+        <button class="pc-drawer-btn" id="pc-otp-name-next" style="margin-top:8px;">Continuer →</button>
+      </div>
+      <!-- Step 3: code -->
+      <div id="pc-otp-step2" style="display:none;">
+        <label class="pc-otp-label">CODE DE VÉRIFICATION</label>
+        <input class="pc-otp-input" id="pc-otp-code" type="text" placeholder="Code à 6 chiffres" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+        <div class="pc-otp-info" id="pc-otp-phone-hint"></div>
+        <div class="pc-otp-err" id="pc-otp-err2" style="display:none;"></div>
+        <button class="pc-drawer-btn" id="pc-otp-verify">Vérifier →</button>
+      </div>
+    </div>
+
+    <!-- Book button (shown if logged in) -->
+    <div id="pc-book-section" style="display:none;">
+      <button class="pc-drawer-btn" id="pc-book-btn">Réserver ma place →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var DAYS_SHORT = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  var MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var HOURS = [];
+  for(var h=7;h<=21;h++) HOURS.push(h);
+
+  var _weekStart = null;
+  var _sessions = []; // raw from API
+  var _filter = 'ALL';
+  var _types = []; // unique class type names
+  var _selectedSession = null;
+  var _otpPhone = '';
+  var _otpName = '';
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function toDateStr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+
+  function getWeekStart(date){
+    var d = new Date(date);
+    var dow = d.getDay();
+    var diff = dow === 0 ? -6 : 1 - dow;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function weekLabel(ws){
+    var we = new Date(ws); we.setDate(we.getDate()+6);
+    return 'Lun '+ws.getDate()+' – Dim '+we.getDate()+' '+MONTHS_SHORT[we.getMonth()];
+  }
+
+  function showToast(msg, ms){
+    var t = document.getElementById('pc-toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, ms || 3500);
+  }
+
+  function isLoggedIn(){
+    var api = window.takeOffApi;
+    return api && api.auth && api.auth.isLoggedIn ? api.auth.isLoggedIn() : false;
+  }
+
+  /* ── FILTER ─────────────────────────────────────────────────────── */
+  window.pcSetFilter = function(type){
+    _filter = type;
+    document.querySelectorAll('.pc-filter-btn').forEach(function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-filter') === type);
+    });
+    renderGrid();
+  };
+
+  function buildFilterBar(){
+    var bar = document.getElementById('pc-filter-bar');
+    // Keep TOUS btn, add type buttons
+    var extraBtns = _types.map(function(t){
+      return '<button class="pc-filter-btn" onclick="pcSetFilter(\''+t+'\')" data-filter="'+t+'">'+t.toUpperCase()+'</button>';
+    }).join('');
+    bar.innerHTML = '<button class="pc-filter-btn'+(_filter==='ALL'?' active':'')+'" onclick="pcSetFilter(\'ALL\')" data-filter="ALL">TOUS</button>'+extraBtns;
+    // Re-apply active state
+    bar.querySelectorAll('.pc-filter-btn').forEach(function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-filter') === _filter);
+    });
+  }
+
+  /* ── GRID ────────────────────────────────────────────────────────── */
+  function renderGrid(){
+    var grid = document.getElementById('pc-grid');
+    if(!_weekStart){
+      grid.innerHTML = '<div style="grid-column:1/-1;"><div class="pc-spinner"></div></div>';
+      return;
+    }
+
+    var today = toDateStr(new Date());
+    var days = [];
+    for(var i=0;i<7;i++){
+      var d = new Date(_weekStart);
+      d.setDate(d.getDate()+i);
+      days.push(d);
+    }
+
+    var html = '';
+    // Header row
+    html += '<div class="pc-grid-corner"></div>';
+    days.forEach(function(d){
+      var ds = toDateStr(d);
+      var isTod = ds === today;
+      html += '<div class="pc-grid-day-header">';
+      html += '<div class="pc-grid-day-name">'+DAYS_SHORT[d.getDay()]+'</div>';
+      html += '<div class="pc-grid-day-num'+(isTod?' today':'')+'">'+(isTod?'<span>'+d.getDate()+'</span>':d.getDate())+'</div>';
+      html += '</div>';
+    });
+
+    // Filter sessions
+    var filtered = _filter === 'ALL' ? _sessions : _sessions.filter(function(s){
+      var name = (s.session && s.session.classTypeName) || (s.classType && (s.classType.name||s.classType)) || '';
+      return name === _filter;
+    });
+
+    // Build per-cell map: dayIndex -> hourIndex -> sessions[]
+    var cellMap = {};
+    filtered.forEach(function(item){
+      var sess = item.session || item;
+      var startsAt = sess.startsAt || sess.startTime || sess.date;
+      if(!startsAt) return;
+      var d = new Date(startsAt);
+      // Find day column (0-6)
+      for(var di=0;di<days.length;di++){
+        if(toDateStr(days[di]) === toDateStr(d)){
+          var hour = d.getHours();
+          var key = di+'_'+hour;
+          if(!cellMap[key]) cellMap[key] = [];
+          cellMap[key].push({item:item, sess:sess, d:d});
+          break;
+        }
+      }
+    });
+
+    // Time rows
+    HOURS.forEach(function(hour){
+      html += '<div class="pc-time-cell">'+pad(hour)+':00</div>';
+      days.forEach(function(d, di){
+        var key = di+'_'+hour;
+        var cells = cellMap[key] || [];
+        html += '<div class="pc-grid-cell">';
+        cells.forEach(function(entry){
+          var item = entry.item;
+          var sess = entry.sess;
+          var name = (item.session && item.session.classTypeName) || (item.classType && (item.classType.name||item.classType)) || sess.name || 'Class';
+          var coach = (item.coach && (item.coach.name||item.coach.firstName+' '+item.coach.lastName)) || sess.coachName || '';
+          var level = sess.level || (item.session && item.session.level) || '';
+          var booked = item.bookedCount || sess.bookedCount || 0;
+          var max = item.maxSpots || sess.maxSpots || 10;
+          var remaining = max - booked;
+          var spotsClass = remaining <= 0 ? 'pc-spots-full' : remaining <= 2 ? 'pc-spots-low' : 'pc-spots-ok';
+          var spotsLabel = remaining <= 0 ? 'Complet' : remaining+'/'+max+' places';
+          var bg = '#0c2350';
+          var fg = '#f4f5ee';
+          var id = sess._id || sess.id || '';
+          html += '<div class="pc-session-card" style="background:'+bg+';color:'+fg+';" onclick="pcOpenSession(\''+id+'\')">'+
+            '<div class="pc-session-name">'+name+'</div>'+
+            (coach ? '<div class="pc-session-coach">'+coach+'</div>' : '')+
+            (level ? '<div class="pc-session-level">'+level+'</div>' : '')+
+            '<div class="pc-session-spots '+spotsClass+'">'+spotsLabel+'</div>'+
+            '</div>';
+        });
+        html += '</div>';
+      });
+    });
+
+    if(filtered.length === 0){
+      grid.innerHTML = '<div style="grid-column:1/-1;"><div class="pc-empty">Aucune séance cette semaine.<br><br><a href="https://wa.me/21627314100" style="color:#0c2350;font-weight:700;">Contactez-nous sur WhatsApp →</a></div></div>';
+      return;
+    }
+
+    grid.innerHTML = html;
+  }
+
+  /* ── SESSION LOOKUP ─────────────────────────────────────────────── */
+  function findSessionById(id){
+    for(var i=0;i<_sessions.length;i++){
+      var item = _sessions[i];
+      var sess = item.session || item;
+      if((sess._id||sess.id) === id) return item;
+    }
+    return null;
+  }
+
+  window.pcOpenSession = function(id){
+    var item = findSessionById(id);
+    if(!item) return;
+    _selectedSession = item;
+    var sess = item.session || item;
+    var name = (item.session && item.session.classTypeName) || (item.classType && (item.classType.name||item.classType)) || sess.name || 'Class';
+    var coach = (item.coach && (item.coach.name||(item.coach.firstName+' '+item.coach.lastName))) || sess.coachName || '';
+    var level = sess.level || (item.session && item.session.level) || '';
+    var startsAt = sess.startsAt || sess.startTime || '';
+    var dt = startsAt ? new Date(startsAt) : null;
+    var timeStr = dt ? (pad(dt.getHours())+':'+pad(dt.getMinutes())) : '';
+    var dateStr = dt ? dt.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}) : '';
+    var booked = item.bookedCount || sess.bookedCount || 0;
+    var max = item.maxSpots || sess.maxSpots || 10;
+    var price = sess.priceDt || (item.session && item.session.priceDt) || '35';
+
+    document.getElementById('pc-drawer-tag').textContent = name.toUpperCase();
+    document.getElementById('pc-drawer-title').textContent = name;
+    document.getElementById('pc-drawer-meta').innerHTML =
+      (coach ? 'Coach: <strong>'+coach+'</strong><br>' : '')+
+      (level ? 'Niveau: <strong>'+level+'</strong><br>' : '')+
+      (dateStr ? dateStr+' à '+timeStr+'<br>' : '')+
+      'Places: <strong>'+booked+'/'+max+'</strong>';
+    document.getElementById('pc-drawer-price').innerHTML = price+' DT <span>/ personne</span>';
+
+    // Reset OTP
+    resetOtpForm();
+
+    if(isLoggedIn()){
+      document.getElementById('pc-auth-gate').style.display = 'none';
+      document.getElementById('pc-book-section').style.display = 'block';
+    } else {
+      document.getElementById('pc-auth-gate').style.display = 'block';
+      document.getElementById('pc-book-section').style.display = 'none';
+    }
+
+    document.getElementById('pc-drawer-overlay').style.display = 'flex';
+  };
+
+  function resetOtpForm(){
+    _otpPhone = ''; _otpName = '';
+    var ids = ['pc-otp-phone','pc-otp-name','pc-otp-code'];
+    ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    showOtpStep(1);
+    showOtpErr('');
+  }
+
+  function showOtpStep(step){
+    document.getElementById('pc-otp-step1').style.display = step===1 ? 'block' : 'none';
+    document.getElementById('pc-otp-step-name').style.display = step===1.5 ? 'block' : 'none';
+    document.getElementById('pc-otp-step2').style.display = step===2 ? 'block' : 'none';
+  }
+
+  function showOtpErr(msg){
+    ['pc-otp-err','pc-otp-err2'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el){ el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
+    });
+  }
+
+  function closeDrawer(){
+    document.getElementById('pc-drawer-overlay').style.display = 'none';
+    _selectedSession = null;
+  }
+
+  document.getElementById('pc-drawer-close').onclick = closeDrawer;
+  document.getElementById('pc-drawer-overlay').onclick = function(e){ if(e.target===this) closeDrawer(); };
+
+  /* OTP steps */
+  document.getElementById('pc-otp-send').onclick = function(){
+    var phone = document.getElementById('pc-otp-phone').value.trim();
+    if(!phone){ showOtpErr('Veuillez entrer votre numéro.'); return; }
+    _otpPhone = phone;
+    var btn = this; btn.disabled=true; btn.textContent='Envoi…';
+    showOtpErr('');
+    var api = window.takeOffApi;
+    var doNext = function(){
+      btn.disabled=false; btn.textContent='Envoyer le code →';
+      showOtpStep(1.5);
+    };
+    if(api && api.auth && api.auth.sendOtp){
+      api.auth.sendOtp(phone).then(doNext).catch(function(e){
+        btn.disabled=false; btn.textContent='Envoyer le code →';
+        showOtpErr(e&&e.message?e.message:'Échec d\'envoi. Réessayez.');
+      });
+    } else { doNext(); }
+  };
+
+  document.getElementById('pc-otp-name-next').onclick = function(){
+    _otpName = document.getElementById('pc-otp-name').value.trim();
+    showOtpStep(2);
+    document.getElementById('pc-otp-phone-hint').textContent = 'Code envoyé au '+_otpPhone;
+  };
+
+  document.getElementById('pc-otp-verify').onclick = function(){
+    var code = document.getElementById('pc-otp-code').value.trim();
+    if(!code){ showOtpErr('Veuillez entrer le code.'); return; }
+    var btn = this; btn.disabled=true; btn.textContent='Vérification…';
+    showOtpErr('');
+    var api = window.takeOffApi;
+    var doNext = function(){
+      btn.disabled=false; btn.textContent='Vérifier →';
+      document.getElementById('pc-auth-gate').style.display = 'none';
+      document.getElementById('pc-book-section').style.display = 'block';
+    };
+    if(api && api.auth && api.auth.verifyOtp){
+      api.auth.verifyOtp(_otpPhone, code, _otpName).then(doNext).catch(function(e){
+        btn.disabled=false; btn.textContent='Vérifier →';
+        showOtpErr(e&&e.message?e.message:'Code invalide. Réessayez.');
+      });
+    } else { doNext(); }
+  };
+
+  /* Book button */
+  document.getElementById('pc-book-btn').onclick = function(){
+    if(!_selectedSession) return;
+    var sess = _selectedSession.session || _selectedSession;
+    var id = sess._id || sess.id;
+    var btn = this; btn.disabled=true; btn.textContent='Réservation…';
+    var api = window.takeOffApi;
+    var doSuccess = function(){
+      btn.disabled=false; btn.textContent='Réserver ma place →';
+      closeDrawer();
+      showToast('✅ Réservé ! À bientôt sur le tapis.', 4000);
+      loadSchedule();
+    };
+    if(api && api.classes && api.classes.bookSession){
+      api.classes.bookSession(id).then(doSuccess).catch(function(e){
+        btn.disabled=false; btn.textContent='Réserver ma place →';
+        showToast((e&&e.message)?e.message:'Échec de réservation.', 3500);
+      });
+    } else {
+      doSuccess();
+    }
+  };
+
+  /* ── LOAD SCHEDULE ──────────────────────────────────────────────── */
+  function loadSchedule(){
+    if(!_weekStart) return;
+    var weekEnd = new Date(_weekStart); weekEnd.setDate(weekEnd.getDate()+6);
+    var api = window.takeOffApi;
+
+    var grid = document.getElementById('pc-grid');
+    grid.innerHTML = '<div style="grid-column:1/-1;"><div class="pc-spinner"></div></div>';
+
+    if(api && api.classes && api.classes.schedule){
+      api.classes.schedule(_weekStart.toISOString(), weekEnd.toISOString()).then(function(data){
+        _sessions = Array.isArray(data) ? data : (data && data.sessions ? data.sessions : []);
+        buildTypes();
+        buildFilterBar();
+        renderGrid();
+      }).catch(function(){
+        _sessions = [];
+        renderGrid();
+      });
+    } else {
+      _sessions = [];
+      renderGrid();
+    }
+  }
+
+  function buildTypes(){
+    var seen = {};
+    _types = [];
+    _sessions.forEach(function(item){
+      var sess = item.session || item;
+      var name = (item.session && item.session.classTypeName) || (item.classType && (item.classType.name||item.classType)) || sess.name || '';
+      if(name && !seen[name]){ seen[name]=1; _types.push(name); }
+    });
+  }
+
+  /* ── WEEK NAVIGATION ─────────────────────────────────────────────── */
+  function setWeek(ws){
+    _weekStart = ws;
+    document.getElementById('pc-week-label').textContent = weekLabel(ws);
+    loadSchedule();
+  }
+
+  document.getElementById('pc-prev-week').onclick = function(){
+    var ws = new Date(_weekStart); ws.setDate(ws.getDate()-7); setWeek(ws);
+  };
+  document.getElementById('pc-next-week').onclick = function(){
+    var ws = new Date(_weekStart); ws.setDate(ws.getDate()+7); setWeek(ws);
+  };
+  document.getElementById('pc-today-btn').onclick = function(){
+    setWeek(getWeekStart(new Date()));
+  };
+
+  /* ── INIT ────────────────────────────────────────────────────────── */
+  function init(){
+    _weekStart = getWeekStart(new Date());
+    document.getElementById('pc-week-label').textContent = weekLabel(_weekStart);
+    loadSchedule();
+    setTimeout(function(){
+      var loader = document.getElementById('pc-loader');
+      if(loader){ loader.style.opacity='0'; loader.style.visibility='hidden'; }
+    }, 600);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 100); });
+  } else {
+    setTimeout(init, 100);
+  }
+
+})();
+</script>
+
+</x-dc>
+</body>
+</html>
