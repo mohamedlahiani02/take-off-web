@@ -12,10 +12,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="./image-slot.js"></script>
-<script src="./api-client.js?v=9" defer></script>
-<script src="./auth.js?v=9" defer></script>
-<script src="./menu.js?v=9" defer></script>
-<link rel="stylesheet" href="./mobile.css?v=9">
+<script src="./api-client.js?v=10" defer></script>
+<script src="./auth.js?v=10" defer></script>
+<script src="./menu.js?v=10" defer></script>
+<link rel="stylesheet" href="./mobile.css?v=10">
 <style>
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; overflow-x:hidden; }
@@ -267,7 +267,18 @@
 
   function isLoggedIn(){
     var api = window.takeOffApi;
-    return api && api.auth && api.auth.isLoggedIn ? api.auth.isLoggedIn() : false;
+    return !!(api && api.getToken && api.getToken());
+  }
+
+  // Africa/Tunis = UTC+1 year-round (no DST)
+  function tunisiaTime(isoStr){
+    var ms = new Date(isoStr).getTime() + 3600000;
+    var t = new Date(ms);
+    return {
+      dateStr: t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate()),
+      hour: t.getUTCHours(),
+      timeStr: pad(t.getUTCHours())+':'+pad(t.getUTCMinutes())
+    };
   }
 
   /* ── FILTER ─────────────────────────────────────────────────────── */
@@ -322,24 +333,19 @@
 
     // Filter sessions
     var filtered = _filter === 'ALL' ? _sessions : _sessions.filter(function(s){
-      var name = (s.session && s.session.classTypeName) || (s.classType && (s.classType.name||s.classType)) || '';
-      return name === _filter;
+      return (s.className || '') === _filter;
     });
 
-    // Build per-cell map: dayIndex -> hourIndex -> sessions[]
+    // Build per-cell map: dayIndex_hour -> sessions[]
     var cellMap = {};
-    filtered.forEach(function(item){
-      var sess = item.session || item;
-      var startsAt = sess.startsAt || sess.startTime || sess.date;
-      if(!startsAt) return;
-      var d = new Date(startsAt);
-      // Find day column (0-6)
+    filtered.forEach(function(s){
+      if(!s.startsAt) return;
+      var tt = tunisiaTime(s.startsAt);
       for(var di=0;di<days.length;di++){
-        if(toDateStr(days[di]) === toDateStr(d)){
-          var hour = d.getHours();
-          var key = di+'_'+hour;
+        if(toDateStr(days[di]) === tt.dateStr){
+          var key = di+'_'+tt.hour;
           if(!cellMap[key]) cellMap[key] = [];
-          cellMap[key].push({item:item, sess:sess, d:d});
+          cellMap[key].push(s);
           break;
         }
       }
@@ -352,21 +358,16 @@
         var key = di+'_'+hour;
         var cells = cellMap[key] || [];
         html += '<div class="pc-grid-cell">';
-        cells.forEach(function(entry){
-          var item = entry.item;
-          var sess = entry.sess;
-          var name = (item.session && item.session.classTypeName) || (item.classType && (item.classType.name||item.classType)) || sess.name || 'Class';
-          var coach = (item.coach && (item.coach.name||item.coach.firstName+' '+item.coach.lastName)) || sess.coachName || '';
-          var level = sess.level || (item.session && item.session.level) || '';
-          var booked = item.bookedCount || sess.bookedCount || 0;
-          var max = item.maxSpots || sess.maxSpots || 10;
+        cells.forEach(function(s){
+          var name = s.className || 'Class';
+          var coach = s.instructorName || '';
+          var level = s.level || '';
+          var booked = s.bookedSpots || 0;
+          var max = s.maxSpots || 10;
           var remaining = max - booked;
           var spotsClass = remaining <= 0 ? 'pc-spots-full' : remaining <= 2 ? 'pc-spots-low' : 'pc-spots-ok';
           var spotsLabel = remaining <= 0 ? 'Complet' : remaining+'/'+max+' places';
-          var bg = '#0c2350';
-          var fg = '#f4f5ee';
-          var id = sess._id || sess.id || '';
-          html += '<div class="pc-session-card" style="background:'+bg+';color:'+fg+';" onclick="pcOpenSession(\''+id+'\')">'+
+          html += '<div class="pc-session-card" style="background:#0c2350;color:#f4f5ee;" onclick="pcOpenSession(\''+s.id+'\')">'+
             '<div class="pc-session-name">'+name+'</div>'+
             (coach ? '<div class="pc-session-coach">'+coach+'</div>' : '')+
             (level ? '<div class="pc-session-level">'+level+'</div>' : '')+
@@ -388,28 +389,24 @@
   /* ── SESSION LOOKUP ─────────────────────────────────────────────── */
   function findSessionById(id){
     for(var i=0;i<_sessions.length;i++){
-      var item = _sessions[i];
-      var sess = item.session || item;
-      if((sess._id||sess.id) === id) return item;
+      if(_sessions[i].id === id) return _sessions[i];
     }
     return null;
   }
 
   window.pcOpenSession = function(id){
-    var item = findSessionById(id);
-    if(!item) return;
-    _selectedSession = item;
-    var sess = item.session || item;
-    var name = (item.session && item.session.classTypeName) || (item.classType && (item.classType.name||item.classType)) || sess.name || 'Class';
-    var coach = (item.coach && (item.coach.name||(item.coach.firstName+' '+item.coach.lastName))) || sess.coachName || '';
-    var level = sess.level || (item.session && item.session.level) || '';
-    var startsAt = sess.startsAt || sess.startTime || '';
-    var dt = startsAt ? new Date(startsAt) : null;
-    var timeStr = dt ? (pad(dt.getHours())+':'+pad(dt.getMinutes())) : '';
-    var dateStr = dt ? dt.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}) : '';
-    var booked = item.bookedCount || sess.bookedCount || 0;
-    var max = item.maxSpots || sess.maxSpots || 10;
-    var price = sess.priceDt || (item.session && item.session.priceDt) || '35';
+    var sess = findSessionById(id);
+    if(!sess) return;
+    _selectedSession = sess;
+    var name = sess.className || 'Class';
+    var coach = sess.instructorName || '';
+    var level = sess.level || '';
+    var tt = sess.startsAt ? tunisiaTime(sess.startsAt) : null;
+    var timeStr = tt ? tt.timeStr : '';
+    var dateStr = sess.startsAt ? new Date(new Date(sess.startsAt).getTime()+3600000).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}) : '';
+    var booked = sess.bookedSpots || 0;
+    var max = sess.maxSpots || 10;
+    var price = sess.priceDt || '35';
 
     document.getElementById('pc-drawer-tag').textContent = name.toUpperCase();
     document.getElementById('pc-drawer-title').textContent = name;
@@ -511,8 +508,7 @@
   /* Book button */
   document.getElementById('pc-book-btn').onclick = function(){
     if(!_selectedSession) return;
-    var sess = _selectedSession.session || _selectedSession;
-    var id = sess._id || sess.id;
+    var id = _selectedSession.id;
     var btn = this; btn.disabled=true; btn.textContent='Réservation…';
     var api = window.takeOffApi;
     var doSuccess = function(){
@@ -559,9 +555,8 @@
   function buildTypes(){
     var seen = {};
     _types = [];
-    _sessions.forEach(function(item){
-      var sess = item.session || item;
-      var name = (item.session && item.session.classTypeName) || (item.classType && (item.classType.name||item.classType)) || sess.name || '';
+    _sessions.forEach(function(s){
+      var name = s.className || '';
       if(name && !seen[name]){ seen[name]=1; _types.push(name); }
     });
   }

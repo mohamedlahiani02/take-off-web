@@ -73,13 +73,13 @@ function rewritePrototypeHtml(html: string) {
   }
 
   return out
-    .replaceAll('./support.js', '/prototype-assets/support.js?v=9')
-    .replaceAll('./image-slot.js', '/prototype-assets/image-slot.js?v=9')
-    .replaceAll('./api-client.js', '/prototype-assets/api-client.js?v=9')
-    .replaceAll('./auth.js', '/prototype-assets/auth.js?v=9')
-    .replaceAll('./menu.js', '/prototype-assets/menu.js?v=9')
-    .replaceAll('./cart.js', '/prototype-assets/cart.js?v=9')
-    .replaceAll('./mobile.css', '/prototype-assets/mobile.css?v=9')
+    .replaceAll('./support.js', '/prototype-assets/support.js?v=10')
+    .replaceAll('./image-slot.js', '/prototype-assets/image-slot.js?v=10')
+    .replaceAll('./api-client.js', '/prototype-assets/api-client.js?v=10')
+    .replaceAll('./auth.js', '/prototype-assets/auth.js?v=10')
+    .replaceAll('./menu.js', '/prototype-assets/menu.js?v=10')
+    .replaceAll('./cart.js', '/prototype-assets/cart.js?v=10')
+    .replaceAll('./mobile.css', '/prototype-assets/mobile.css?v=10')
     .replaceAll('./Logo/', '/prototype-assets/Logo/')
     .replaceAll('./logo/', '/prototype-assets/Logo/')
     .replaceAll('./photos/', '/prototype-assets/Photos/')

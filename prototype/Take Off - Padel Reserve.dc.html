@@ -12,10 +12,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="./image-slot.js"></script>
-<script src="./api-client.js?v=9" defer></script>
-<script src="./auth.js?v=9" defer></script>
-<script src="./menu.js?v=9" defer></script>
-<link rel="stylesheet" href="./mobile.css?v=9">
+<script src="./api-client.js?v=10" defer></script>
+<script src="./auth.js?v=10" defer></script>
+<script src="./menu.js?v=10" defer></script>
+<link rel="stylesheet" href="./mobile.css?v=10">
 <style>
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; overflow-x:hidden; }
@@ -330,12 +330,15 @@
       html += '<div class="pr-grid-time">'+time+'</div>';
       days.forEach(function(d){
         var ds = toDateStr(d);
-        var st = (slots[ds] && slots[ds][time]) || 'FREE';
+        var entry = slots[ds] && slots[ds][time];
+        var st = entry ? (typeof entry === 'object' ? entry.status : entry) : 'FREE';
+        var slotStartsAt = entry && entry.startsAt ? entry.startsAt : null;
         var isPast = d < new Date() && toDateStr(d) !== today;
         if(isPast) st = 'BLOCKED';
         var inner = '';
         if(st === 'FREE'){
-          inner = '<div class="pr-slot-inner pr-slot-free" onclick="prSlotClick(\''+courtId+'\',\''+ds+'\',\''+time+'\')">'+time+'</div>';
+          var saArg = slotStartsAt ? ',\''+slotStartsAt+'\'' : '';
+          inner = '<div class="pr-slot-inner pr-slot-free" onclick="prSlotClick(\''+courtId+'\',\''+ds+'\',\''+time+'\''+saArg+')">'+time+'</div>';
         } else if(st === 'BLOCKED'){
           inner = '<div class="pr-slot-inner pr-slot-blocked" title="Past">—</div>';
         } else {
@@ -350,11 +353,11 @@
     grid.innerHTML = html;
   }
 
-  window.prSlotClick = function(courtId, date, time){
-    _choosing = { courtId: courtId, date: date, time: time };
+  window.prSlotClick = function(courtId, date, time, startsAt){
+    _choosing = { courtId: courtId, date: date, time: time, startsAt: startsAt || null };
     // Check if logged in
     var api = window.takeOffApi;
-    var loggedIn = api && api.auth && api.auth.isLoggedIn ? api.auth.isLoggedIn() : false;
+    var loggedIn = !!(api && api.getToken && api.getToken());
     if(!loggedIn){
       // Show OTP flow
       openOtp(function(){
@@ -478,7 +481,12 @@
     btn.disabled = true;
     var api = window.takeOffApi;
     var courtId = _choosing.courtId;
-    var startsAt = _choosing.date + 'T' + _choosing.time + ':00';
+    // Use UTC ISO from backend; fallback subtracts 1h for Tunisia (UTC+1)
+    var startsAt = _choosing.startsAt;
+    if(!startsAt){
+      var h = parseInt(_choosing.time.slice(0,2)) - 1;
+      startsAt = _choosing.date + 'T' + pad(h < 0 ? 23 : h) + ':' + _choosing.time.slice(3) + ':00Z';
+    }
     if(api && api.courts && api.courts.book){
       api.courts.book(courtId, startsAt, mode, 'PAY_AT_CLUB').then(function(){
         btn.disabled = false;
@@ -511,36 +519,47 @@
   document.getElementById('pr-mode-full').onclick = function(){ doBook('FULL'); };
 
   /* ── LOAD SLOTS ────────────────────────────────────────────────── */
+  // Tunisia is UTC+1 year-round (no DST)
+  function toTunisiaTime(isoStr){
+    var ms = new Date(isoStr).getTime() + 3600000;
+    var t = new Date(ms);
+    return {
+      dateStr: t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate()),
+      timeStr: pad(t.getUTCHours())+':'+pad(t.getUTCMinutes())
+    };
+  }
+
   function loadSlots(){
     if(!_selectedCourt || !_weekStart) return;
     var courtId = _selectedCourt.id || _selectedCourt._id;
     var api = window.takeOffApi;
-    if(api && api.courts && api.courts.slots){
-      var weekEnd = new Date(_weekStart); weekEnd.setDate(weekEnd.getDate()+6);
-      api.courts.slots(courtId, toDateStr(_weekStart), toDateStr(weekEnd)).then(function(data){
-        // data is expected: { slots: [{date, time, status}] } or similar
-        var map = {};
-        if(data && data.slots){
-          data.slots.forEach(function(s){
-            if(!map[s.date]) map[s.date] = {};
-            map[s.date][s.time] = s.status || 'BOOKED';
-          });
-        } else if(Array.isArray(data)){
-          data.forEach(function(s){
-            var dateStr = s.startsAt ? s.startsAt.slice(0,10) : (s.date || '');
-            var timeStr = s.startsAt ? s.startsAt.slice(11,16) : (s.time || '');
-            if(!map[dateStr]) map[dateStr] = {};
-            map[dateStr][timeStr] = s.status || 'BOOKED';
-          });
-        }
-        _slotsData[courtId] = map;
-        renderGrid();
-      }).catch(function(){
-        renderGrid();
-      });
-    } else {
-      renderGrid();
+    if(!api || !api.courts || !api.courts.slots){ renderGrid(); return; }
+
+    // Fetch one day at a time — backend only accepts a single ?date= param
+    var dates = [];
+    for(var i=0;i<7;i++){
+      var d = new Date(_weekStart); d.setDate(d.getDate()+i);
+      dates.push(toDateStr(d));
     }
+    var promises = dates.map(function(dateStr){
+      return api.courts.slots(courtId, dateStr)
+        .then(function(data){ return { dateStr: dateStr, slots: Array.isArray(data) ? data : [] }; })
+        .catch(function(){ return { dateStr: dateStr, slots: [] }; });
+    });
+
+    Promise.all(promises).then(function(results){
+      var map = {};
+      results.forEach(function(r){
+        r.slots.forEach(function(s){
+          if(!s.startsAt) return;
+          var tt = toTunisiaTime(s.startsAt);
+          if(!map[tt.dateStr]) map[tt.dateStr] = {};
+          map[tt.dateStr][tt.timeStr] = { status: s.available ? 'FREE' : 'BOOKED', startsAt: s.startsAt };
+        });
+      });
+      _slotsData[courtId] = map;
+      renderGrid();
+    });
   }
 
   /* ── WEEK NAVIGATION ────────────────────────────────────────────── */
