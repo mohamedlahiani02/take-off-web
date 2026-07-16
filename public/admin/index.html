@@ -491,11 +491,15 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
         <div id="book-user-results" style="margin-top:4px;"></div>
         <div class="form-hint" id="book-user-selected"></div>
       </div></div>
-      <div id="book-ghost-fields">
-        <div class="form-hint" style="margin-bottom:8px;">No match? Create a quick guest profile:</div>
-        <div class="form-row">
-          <div class="form-group"><label>GUEST NAME</label><input id="book-ghost-name" type="text" placeholder="Walk-in name"></div>
-          <div class="form-group"><label>GUEST PHONE</label><input id="book-ghost-phone" type="text" placeholder="44 412 115"></div>
+      <div id="book-new-member-wrap" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
+        <button type="button" class="btn-sm btn-ghost" onclick="toggleNewMemberForm()" style="font-size:12px;margin-bottom:6px;">+ New member (no account yet)</button>
+        <div id="book-new-member" style="display:none;">
+          <div class="form-row">
+            <div class="form-group"><label>FULL NAME *</label><input id="book-nm-name" type="text" placeholder="Aymen Ben Ali" autocomplete="off"></div>
+            <div class="form-group"><label>PHONE *</label><input id="book-nm-phone" type="text" placeholder="55 123 456" autocomplete="off"></div>
+          </div>
+          <div class="form-row full"><div class="form-group"><label>EMAIL (optional)</label><input id="book-nm-email" type="email" placeholder="aymen@example.com" autocomplete="off"></div></div>
+          <button type="button" class="btn-sm btn-lime" onclick="createAndSelectMember()" style="margin-top:4px;">Create &amp; select member</button>
         </div>
       </div>
       <div class="form-row full"><div class="form-group">
@@ -1592,7 +1596,8 @@ function renderCalendarWeek(wrap, courts) {
         var cName = !filterCourtId ? ('<div style="font-size:9px;color:var(--muted);margin-bottom:2px;">'+esc(courtMap[b.courtId]||'')+'</div>') : '';
         cards += '<div onclick="showBookingDetail(\''+b.id+'\')" style="background:rgba(196,239,63,.12);border:1px solid rgba(196,239,63,.3);border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;">' +
           cName +
-          '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(b.paymentStatus==='PAID'?'✓ ':'') + esc(b.mode) + '</div>' +
+          '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (b.userName ? esc(b.userName) : esc(b.mode)) + '</div>' +
+          '<div style="font-size:10px;color:'+(b.paymentStatus==='PAID'?'var(--lime)':'var(--muted)')+';">'+esc(b.paymentStatus)+'</div>' +
           (b.status==='CANCELLED'?'<div style="color:#fca5a5;font-size:10px;">CANCELLED</div>':'') +
           '</div>';
       });
@@ -1630,8 +1635,8 @@ function renderCalendarDay(wrap, courts) {
       var cards = '';
       bks.forEach(function(b){
         cards += '<div onclick="showBookingDetail(\''+b.id+'\')" style="background:rgba(196,239,63,.12);border:1px solid rgba(196,239,63,.3);border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;">' +
-          '<div style="font-weight:600;">'+esc(b.mode)+'</div>' +
-          '<div style="font-size:10px;color:var(--muted);">'+esc(b.paymentStatus)+'</div>' +
+          '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (b.userName ? esc(b.userName) : esc(b.mode)) + '</div>' +
+          '<div style="font-size:10px;color:'+(b.paymentStatus==='PAID'?'var(--lime)':'var(--muted)')+';">'+esc(b.paymentStatus)+'</div>' +
           (b.status==='CANCELLED'?'<div style="color:#fca5a5;font-size:10px;">CANCELLED</div>':'') +
           '<button class="btn-icon danger" onclick="event.stopPropagation();openCancelModal(\''+b.id+'\')" style="margin-top:4px;font-size:10px;padding:2px 6px;">Cancel</button>' +
           '</div>';
@@ -1656,16 +1661,51 @@ function showBookingDetail(bookingId) {
   if (!b) return;
   var court = (_cal.courts||[]).find(function(c){ return c.id===b.courtId; });
   var courtName = court ? court.name : '?';
+
+  var payOpts = ['PENDING','PAID','PAY_AT_CLUB','REFUNDED'].map(function(v){
+    return '<option value="'+v+'"'+(b.paymentStatus===v?' selected':'')+'>'+v.replace('_',' ')+'</option>';
+  }).join('');
+
   var body = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
     '<div><div class="kicker">COURT</div><div>'+esc(courtName)+'</div></div>' +
     '<div><div class="kicker">TIME</div><div>'+fmtTime(b.startsAt)+' – '+fmtTime(b.endsAt)+'</div></div>' +
-    '<div><div class="kicker">MODE</div><div>'+esc(b.mode)+'</div></div>' +
-    '<div><div class="kicker">PRICE</div><div>'+Number(b.priceDt).toFixed(0)+' DT</div></div>' +
-    '<div><div class="kicker">PAYMENT</div><div>'+esc(b.paymentStatus)+'</div></div>' +
-    '<div><div class="kicker">STATUS</div><div>'+bookingStatusBadge(b.status)+'</div></div>' +
-    '</div>' +
-    (b.status==='CONFIRMED' ? '<button class="btn-sm btn-danger" onclick="openCancelModal(\''+b.id+'\');closeGenModal()">Cancel this booking</button>' : '');
-  openGenModal('Booking detail', body, null, null, 420);
+    '<div><div class="kicker">PLAYER</div><div>'+(b.userName ? esc(b.userName) : '<span style="color:var(--muted)">—</span>')+'</div></div>' +
+    '<div><div class="kicker">MODE</div><div>'+esc(b.mode)+' — '+Number(b.priceDt).toFixed(0)+' DT</div></div>' +
+    '<div style="grid-column:1/-1"><div class="kicker">PAYMENT STATUS</div>' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:4px;">' +
+    '<select id="detail-pay-status" style="flex:1;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">'+payOpts+'</select>' +
+    '<button class="btn-sm btn-lime" onclick="savePaymentStatus(\''+b.id+'\')">Save</button>' +
+    '</div></div>' +
+    '<div><div class="kicker">BOOKING STATUS</div><div>'+bookingStatusBadge(b.status)+'</div></div>' +
+    '</div>';
+
+  // Co-player panel for SHARE bookings
+  if (b.mode === 'SHARE') {
+    var coPlayers = (_cal.bookings||[]).filter(function(x){
+      return x.courtId===b.courtId && x.startsAt===b.startsAt && x.id!==b.id && x.status==='CONFIRMED';
+    });
+    body += '<hr style="border:none;border-top:1px solid var(--border);margin:4px 0 12px;">';
+    body += '<div class="kicker" style="margin-bottom:8px;">CO-PLAYERS IN THIS SLOT ('+coPlayers.length+'/3)</div>';
+    if (coPlayers.length === 0) {
+      body += '<div style="color:var(--muted);font-size:13px;margin-bottom:10px;">No other players yet.</div>';
+    } else {
+      coPlayers.forEach(function(cp){
+        body += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
+          '<span>'+(cp.userName ? esc(cp.userName) : '<span style="color:var(--muted)">Unknown</span>')+'</span>' +
+          '<span style="color:var(--muted);">'+esc(cp.paymentStatus)+'</span></div>';
+      });
+    }
+    body += '<div style="margin-top:10px;">' +
+      '<input id="coplayer-search" placeholder="Search member to add…" oninput="searchCoPlayer(this.value,\''+esc(b.courtId)+'\',\''+b.startsAt+'\',\''+b.endsAt+'\')" autocomplete="off" ' +
+      'style="width:100%;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);box-sizing:border-box;margin-bottom:6px;">' +
+      '<div id="coplayer-results" style="margin-bottom:6px;"></div>' +
+      '<div id="coplayer-selected" style="font-size:13px;color:var(--lime);margin-bottom:8px;"></div>' +
+      '<button class="btn-sm btn-lime" onclick="addCoPlayer(\''+esc(b.courtId)+'\',\''+b.startsAt+'\',\''+b.endsAt+'\')">Add to slot</button>' +
+      '</div>';
+  }
+
+  body += (b.status==='CONFIRMED' ? '<div style="margin-top:14px;"><button class="btn-sm btn-danger" onclick="openCancelModal(\''+b.id+'\');closeGenModal()">Cancel this booking</button></div>' : '');
+  openGenModal('Booking detail', body, null, null, 460);
 }
 
 function fillCourtSelect(selectId) {
@@ -1687,8 +1727,10 @@ function openBookModal(dateStr, slotTime, courtId) {
   document.getElementById('book-user-search').value = '';
   document.getElementById('book-user-results').innerHTML = '';
   document.getElementById('book-user-selected').textContent = '';
-  document.getElementById('book-ghost-name').value = '';
-  document.getElementById('book-ghost-phone').value = '';
+  document.getElementById('book-nm-name').value = '';
+  document.getElementById('book-nm-phone').value = '';
+  document.getElementById('book-nm-email').value = '';
+  document.getElementById('book-new-member').style.display = 'none';
   document.getElementById('book-payment').value = 'PENDING';
   if (courtId) document.getElementById('book-court').value = courtId;
   _bookSelectedUserId = null;
@@ -1712,7 +1754,7 @@ function onBookUserSearch() {
           style="padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13px;border:1px solid var(--border);margin-top:4px;background:var(--navy);"
           onmouseover="this.style.background='rgba(196,239,63,.08)'" onmouseout="this.style.background='var(--navy)'">
           ${esc(u.name)} <span style="color:var(--muted);font-family:'Space Mono';font-size:11px;">${esc(u.phone)}</span></div>`;
-      }).join('') || '<div class="form-hint" style="margin-top:4px;">No match — fill guest fields below.</div>';
+      }).join('') || '<div class="form-hint" style="margin-top:4px;">No match — use "+ New member" below to create an account.</div>';
     } catch (_) {}
   }, 250);
 }
@@ -1736,10 +1778,7 @@ async function saveBooking() {
   if (_bookSelectedUserId) {
     dto.userId = _bookSelectedUserId;
   } else {
-    var gn = document.getElementById('book-ghost-name').value.trim();
-    var gp = document.getElementById('book-ghost-phone').value.trim();
-    if (!gn || !gp) { toast('Pick a member or enter guest name + phone.', 'error'); return; }
-    dto.ghostName = gn; dto.ghostPhone = gp;
+    toast('Please select or create a member before booking.', 'error'); return;
   }
   var btn = document.getElementById('book-save-btn');
   btn.disabled = true; btn.textContent = 'Booking…';
@@ -1750,6 +1789,82 @@ async function saveBooking() {
     loadCalendar();
   } catch (e) { toast(e.message || 'Booking failed.', 'error'); }
   btn.disabled = false; btn.textContent = 'Create booking';
+}
+
+// ── Payment status update ──
+async function savePaymentStatus(bookingId) {
+  var status = document.getElementById('detail-pay-status').value;
+  try {
+    await window.adminApi.courts.updatePayment(bookingId, { paymentStatus: status });
+    toast('Payment status updated to ' + status + '.', 'success');
+    closeGenModal();
+    loadCalendar();
+  } catch(e) { toast(e.message || 'Update failed.', 'error'); }
+}
+
+// ── New member inline creation (from book modal) ──
+function toggleNewMemberForm() {
+  var el = document.getElementById('book-new-member');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+async function createAndSelectMember() {
+  var name  = (document.getElementById('book-nm-name').value || '').trim();
+  var phone = (document.getElementById('book-nm-phone').value || '').trim();
+  var email = (document.getElementById('book-nm-email').value || '').trim();
+  if (!name || !phone) { toast('Name and phone are required.', 'error'); return; }
+  try {
+    var user = await window.adminApi.users.create({ name: name, phone: phone, email: email || undefined });
+    _bookSelectedUserId = user.id;
+    document.getElementById('book-user-selected').textContent = '✓ Selected: ' + name + ' — ' + phone;
+    document.getElementById('book-new-member').style.display = 'none';
+    document.getElementById('book-nm-name').value = '';
+    document.getElementById('book-nm-phone').value = '';
+    document.getElementById('book-nm-email').value = '';
+    toast('Member created and selected.', 'success');
+  } catch(e) { toast(e.message || 'Could not create member.', 'error'); }
+}
+
+// ── Co-player assignment (from SHARE booking detail) ──
+var _coPlayerSelectedId = null;
+function searchCoPlayer(q, courtId, startsAt, endsAt) {
+  _coPlayerSelectedId = null;
+  document.getElementById('coplayer-selected').textContent = '';
+  if (!q || q.length < 2) { document.getElementById('coplayer-results').innerHTML = ''; return; }
+  clearTimeout(window._coPlayerTimer);
+  window._coPlayerTimer = setTimeout(async function() {
+    try {
+      var results = await window.adminApi.users.search(q);
+      document.getElementById('coplayer-results').innerHTML = (results || []).slice(0, 5).map(function(u) {
+        return '<div onclick="selectCoPlayer(\''+u.id+'\',\''+esc(u.name)+'\')" ' +
+          'style="padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px;border:1px solid var(--border);margin-top:3px;background:var(--navy);" ' +
+          'onmouseover="this.style.background=\'rgba(196,239,63,.08)\'" onmouseout="this.style.background=\'var(--navy)\'">' +
+          esc(u.name) + ' <span style="color:var(--muted);font-size:11px;">'+esc(u.phone)+'</span></div>';
+      }).join('') || '<div style="color:var(--muted);font-size:12px;margin-top:4px;">No match.</div>';
+    } catch(_) {}
+  }, 250);
+}
+function selectCoPlayer(id, name) {
+  _coPlayerSelectedId = id;
+  document.getElementById('coplayer-results').innerHTML = '';
+  document.getElementById('coplayer-selected').textContent = '✓ ' + name;
+}
+async function addCoPlayer(courtId, startsAt, endsAt) {
+  if (!_coPlayerSelectedId) { toast('Select a member first.', 'error'); return; }
+  try {
+    await window.adminApi.courts.book({
+      courtId: courtId,
+      startsAt: startsAt,
+      endsAt: endsAt,
+      mode: 'SHARE',
+      priceDt: 20,
+      userId: _coPlayerSelectedId,
+      paymentStatus: 'PENDING',
+    });
+    _coPlayerSelectedId = null;
+    toast('Co-player added.', 'success');
+    closeGenModal();
+    loadCalendar();
+  } catch(e) { toast(e.message || 'Failed to add co-player.', 'error'); }
 }
 
 // ── Cancel booking ──

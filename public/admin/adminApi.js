@@ -95,6 +95,7 @@
       },
       get: function (id) { return request('GET', '/api/v1/admin/users/' + id); },
       createGhost: function (dto) { return request('POST', '/api/v1/admin/users', dto); },
+      create: function (dto) { return request('POST', '/api/v1/admin/users', dto); },
       update: function (id, dto) { return request('PATCH', '/api/v1/admin/users/' + id, dto); },
       credit: function (id, dto) { return request('POST', '/api/v1/admin/users/' + id + '/wallet/credit', dto); },
       debit: function (id, dto) { return request('POST', '/api/v1/admin/users/' + id + '/wallet/debit', dto); },
@@ -114,6 +115,7 @@
         return request('GET', '/api/v1/admin/courts/calendar?from=' + encodeURIComponent(fromIso) + '&to=' + encodeURIComponent(toIso));
       },
       book: function (dto) { return request('POST', '/api/v1/admin/courts/bookings', dto); },
+      updatePayment: function (id, dto) { return request('PATCH', '/api/v1/admin/courts/bookings/' + id + '/payment', dto); },
       cancel: function (id, dto) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/cancel', dto); },
       reschedule: function (id, dto) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/reschedule', dto); },
       block: function (dto) { return request('POST', '/api/v1/admin/courts/blocks', dto); },
