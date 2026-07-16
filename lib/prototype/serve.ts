@@ -6,7 +6,9 @@ const prototypeRoot = path.join(process.cwd(), 'prototype')
 const htmlRoutes: Record<string, string> = {
   'Take Off - Gateway.dc.html': '/',
   'Take Off - Padel.dc.html': '/padel',
+  'Take Off - Padel Reserve.dc.html': '/padel/reserve',
   'Take Off - Pilates.dc.html': '/pilates',
+  'Take Off - Pilates Classes.dc.html': '/pilates/classes',
   'Take Off - Store.dc.html': '/store',
   'Take Off - Coaches.dc.html': '/coaches',
 }
@@ -71,13 +73,13 @@ function rewritePrototypeHtml(html: string) {
   }
 
   return out
-    .replaceAll('./support.js', '/prototype-assets/support.js?v=8')
-    .replaceAll('./image-slot.js', '/prototype-assets/image-slot.js?v=8')
-    .replaceAll('./api-client.js', '/prototype-assets/api-client.js?v=8')
-    .replaceAll('./auth.js', '/prototype-assets/auth.js?v=8')
-    .replaceAll('./menu.js', '/prototype-assets/menu.js?v=8')
-    .replaceAll('./cart.js', '/prototype-assets/cart.js?v=8')
-    .replaceAll('./mobile.css', '/prototype-assets/mobile.css?v=8')
+    .replaceAll('./support.js', '/prototype-assets/support.js?v=9')
+    .replaceAll('./image-slot.js', '/prototype-assets/image-slot.js?v=9')
+    .replaceAll('./api-client.js', '/prototype-assets/api-client.js?v=9')
+    .replaceAll('./auth.js', '/prototype-assets/auth.js?v=9')
+    .replaceAll('./menu.js', '/prototype-assets/menu.js?v=9')
+    .replaceAll('./cart.js', '/prototype-assets/cart.js?v=9')
+    .replaceAll('./mobile.css', '/prototype-assets/mobile.css?v=9')
     .replaceAll('./Logo/', '/prototype-assets/Logo/')
     .replaceAll('./logo/', '/prototype-assets/Logo/')
     .replaceAll('./photos/', '/prototype-assets/Photos/')
