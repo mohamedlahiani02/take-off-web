@@ -104,6 +104,8 @@
       addWalletCredit: function (userId, amountDt) {
         return request('POST', '/api/v1/admin/wallet/topup/' + userId, { amountDt: amountDt });
       },
+      courtHistory: function (id) { return request('GET', '/api/v1/admin/users/' + id + '/court-bookings'); },
+      classHistory: function (id) { return request('GET', '/api/v1/admin/users/' + id + '/class-bookings'); },
     },
 
     // ── Epic C: courts ──

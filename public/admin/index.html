@@ -481,8 +481,8 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
         <div class="form-group"><label>PRICE (DT)</label><input id="book-price" type="number" min="0" step="0.001" value="80"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>START</label><input id="book-start" type="time" value="18:00"></div>
-        <div class="form-group"><label>END</label><input id="book-end" type="time" value="19:30"></div>
+        <div class="form-group"><label>START TIME</label><input id="book-start" type="time" value="18:00"></div>
+        <div class="form-group"><label>DURATION</label><div style="padding:10px 12px;border-radius:8px;border:1px solid rgba(196,239,63,.22);background:var(--navy);color:var(--muted);font-size:14px;">90 min (fixed)</div></div>
       </div>
       <div style="border-top:1px solid var(--border);margin:8px 0 14px;"></div>
       <div class="form-row full"><div class="form-group">
@@ -603,6 +603,7 @@ var _users = [];
 var _userSearchTimer = null;
 var _cal = null;              // current court calendar payload
 var _calDate = null;          // 'YYYY-MM-DD' currently shown
+var _calView = 'week';        // 'week' | 'day'
 var _bookSelectedUserId = null;
 var _bookSearchTimer = null;
 
@@ -1311,7 +1312,11 @@ async function saveWallet() {
   btn.disabled = false; btn.textContent = 'Apply';
 }
 
+var _profileUserId = null, _profileCourtLoaded = false, _profileClassLoaded = false;
 async function openProfile(id) {
+  _profileUserId = id;
+  _profileCourtLoaded = false;
+  _profileClassLoaded = false;
   document.getElementById('profile-body').innerHTML = '<div class="loading"><div class="spinner"></div>Loading…</div>';
   document.getElementById('profile-modal').style.display = 'flex';
   try {
@@ -1321,29 +1326,93 @@ async function openProfile(id) {
     var ledger = (p.walletLedger || []).map(function (l) {
       var amt = Number(l.amountDt);
       var color = amt >= 0 ? 'var(--lime)' : '#fca5a5';
-      return `<tr>
-        <td style="font-family:'Space Mono';font-size:10px;color:var(--muted);">${new Date(l.createdAt).toLocaleString()}</td>
-        <td>${esc(l.type)}</td>
-        <td style="color:${color};font-weight:600;">${amt >= 0 ? '+' : ''}${amt.toFixed(3)}</td>
-        <td style="color:var(--muted);">${esc(l.reason || '—')}</td>
-      </tr>`;
+      return '<tr>' +
+        '<td style="font-family:\'Space Mono\';font-size:10px;color:var(--muted);">'+new Date(l.createdAt).toLocaleString()+'</td>' +
+        '<td>'+esc(l.type)+'</td>' +
+        '<td style="color:'+color+';font-weight:600;">'+(amt >= 0 ? '+' : '')+amt.toFixed(3)+'</td>' +
+        '<td style="color:var(--muted);">'+esc(l.reason || '—')+'</td>' +
+        '</tr>';
     }).join('');
-    document.getElementById('profile-body').innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
-        <div><div class="kicker">PHONE</div><div>${esc(u.phone)}</div></div>
-        <div><div class="kicker">EMAIL</div><div>${esc(u.email || '—')}</div></div>
-        <div><div class="kicker">STATUS</div><div>${userStatusBadge(u.accountStatus)}</div></div>
-        <div><div class="kicker">WALLET</div><div style="color:var(--lime);font-weight:700;">${Number(u.walletDt).toFixed(3)} DT</div></div>
-        <div><div class="kicker">POINTS</div><div>${p.points}</div></div>
-        <div><div class="kicker">JOINED</div><div>${new Date(u.createdAt).toLocaleDateString()}</div></div>
-      </div>
-      <div class="kicker" style="margin-bottom:8px;">WALLET LEDGER</div>
-      ${ledger ? `<table><thead><tr><th>WHEN</th><th>TYPE</th><th>AMOUNT</th><th>REASON</th></tr></thead><tbody>${ledger}</tbody></table>`
-               : '<p style="color:var(--muted);">No wallet movements yet.</p>'}
-    `;
+    var tabBtn = 'padding:8px 16px;border-radius:0;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;';
+    var tabBtnActive = tabBtn+'color:var(--lime);border-bottom-color:var(--lime);';
+    document.getElementById('profile-body').innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">' +
+        '<div><div class="kicker">PHONE</div><div>'+esc(u.phone)+'</div></div>' +
+        '<div><div class="kicker">EMAIL</div><div>'+esc(u.email || '—')+'</div></div>' +
+        '<div><div class="kicker">STATUS</div><div>'+userStatusBadge(u.accountStatus)+'</div></div>' +
+        '<div><div class="kicker">WALLET</div><div style="color:var(--lime);font-weight:700;">'+Number(u.walletDt).toFixed(3)+' DT</div></div>' +
+        '<div><div class="kicker">POINTS</div><div>'+p.points+'</div></div>' +
+        '<div><div class="kicker">JOINED</div><div>'+new Date(u.createdAt).toLocaleDateString()+'</div></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px;">' +
+        '<button id="ptab-wallet" style="'+tabBtnActive+'" onclick="switchProfileTab(\'wallet\')">Wallet</button>' +
+        '<button id="ptab-court"  style="'+tabBtn+'" onclick="switchProfileTab(\'court\')">Court History</button>' +
+        '<button id="ptab-class"  style="'+tabBtn+'" onclick="switchProfileTab(\'class\')">Class History</button>' +
+      '</div>' +
+      '<div id="ptab-wallet-panel">' +
+        (ledger ? '<table><thead><tr><th>WHEN</th><th>TYPE</th><th>AMOUNT</th><th>REASON</th></tr></thead><tbody>'+ledger+'</tbody></table>'
+                : '<p style="color:var(--muted);">No wallet movements yet.</p>') +
+      '</div>' +
+      '<div id="ptab-court-panel" style="display:none;"><div class="loading"><div class="spinner"></div>Loading…</div></div>' +
+      '<div id="ptab-class-panel" style="display:none;"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
   } catch (e) {
     document.getElementById('profile-body').innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>' + esc(e.message || 'Failed.') + '</p></div>';
   }
+}
+
+function switchProfileTab(tab) {
+  var tabBtn = 'padding:8px 16px;border-radius:0;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;';
+  var tabBtnActive = tabBtn+'color:var(--lime);border-bottom-color:var(--lime);';
+  ['wallet','court','class'].forEach(function(t){
+    var btn = document.getElementById('ptab-'+t);
+    var panel = document.getElementById('ptab-'+t+'-panel');
+    if (btn) btn.style.cssText = (t===tab?tabBtnActive:tabBtn);
+    if (panel) panel.style.display = t===tab?'':'none';
+  });
+  if (tab==='court' && !_profileCourtLoaded) loadProfileCourtHistory();
+  if (tab==='class' && !_profileClassLoaded) loadProfileClassHistory();
+}
+
+async function loadProfileCourtHistory() {
+  _profileCourtLoaded = true;
+  var panel = document.getElementById('ptab-court-panel');
+  if (!panel || !_profileUserId) return;
+  try {
+    var list = await window.adminApi.users.courtHistory(_profileUserId) || [];
+    if (!list.length) { panel.innerHTML = '<p style="color:var(--muted);">No court bookings found.</p>'; return; }
+    var rows = list.map(function(b){
+      return '<tr>' +
+        '<td>'+new Date(b.startsAt).toLocaleDateString()+'</td>' +
+        '<td style="font-family:Space Mono;font-size:11px;">'+fmtTime(b.startsAt)+'</td>' +
+        '<td>'+esc(b.courtName)+'</td>' +
+        '<td>'+esc(b.mode)+'</td>' +
+        '<td>'+Number(b.priceDt).toFixed(0)+' DT</td>' +
+        '<td>'+bookingStatusBadge(b.status)+'</td>' +
+        '</tr>';
+    }).join('');
+    panel.innerHTML = '<table><thead><tr><th>DATE</th><th>TIME</th><th>COURT</th><th>MODE</th><th>PRICE</th><th>STATUS</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  } catch(e) { panel.innerHTML = '<p style="color:#fca5a5;">'+esc(e.message||'Failed.')+'</p>'; }
+}
+
+async function loadProfileClassHistory() {
+  _profileClassLoaded = true;
+  var panel = document.getElementById('ptab-class-panel');
+  if (!panel || !_profileUserId) return;
+  try {
+    var list = await window.adminApi.users.classHistory(_profileUserId) || [];
+    if (!list.length) { panel.innerHTML = '<p style="color:var(--muted);">No class bookings found.</p>'; return; }
+    var rows = list.map(function(b){
+      return '<tr>' +
+        '<td>'+new Date(b.startsAt).toLocaleDateString()+'</td>' +
+        '<td>'+esc(b.className)+'</td>' +
+        '<td style="color:var(--lime);">'+esc(b.instructorName||'—')+'</td>' +
+        '<td>'+esc(b.level||'All')+'</td>' +
+        '<td>'+esc(b.paidWith)+'</td>' +
+        '<td>'+esc(b.status)+'</td>' +
+        '</tr>';
+    }).join('');
+    panel.innerHTML = '<table><thead><tr><th>DATE</th><th>CLASS</th><th>COACH</th><th>LEVEL</th><th>PAID WITH</th><th>STATUS</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  } catch(e) { panel.innerHTML = '<p style="color:#fca5a5;">'+esc(e.message||'Failed.')+'</p>'; }
 }
 function closeProfileModal() { document.getElementById('profile-modal').style.display = 'none'; }
 
@@ -1374,6 +1443,7 @@ function dayWindow(dateStr) {
 function localToIso(dateStr, timeStr) { return new Date(dateStr + 'T' + timeStr + ':00').toISOString(); }
 function fmtTime(iso) { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 
+var CAL_SLOTS = ['07:00','08:30','10:00','11:30','13:00','14:30','16:00','17:30','19:00','20:30'];
 function renderCourts() {
   var content = document.getElementById('page-content');
   if (!window.adminApi || !window.adminApi.isOnline()) {
@@ -1381,30 +1451,51 @@ function renderCourts() {
     return;
   }
   if (!_calDate) _calDate = todayStr();
-  content.innerHTML = `
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-      <button class="btn-sm btn-ghost" onclick="shiftCalDate(-1)">‹ Prev</button>
-      <input id="cal-date" type="date" value="${_calDate}" onchange="changeCalDate(this.value)"
-        style="padding:10px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);">
-      <button class="btn-sm btn-ghost" onclick="shiftCalDate(1)">Next ›</button>
-      <button class="btn-sm btn-ghost" onclick="changeCalDate(todayStr())">Today</button>
-      <div style="flex:1;"></div>
-      <button class="btn-sm btn-ghost" onclick="openBlockModal()">+ Block slot</button>
-      <button class="btn-sm btn-lime" onclick="openBookModal()">+ Book court</button>
-    </div>
-    <div id="cal-wrap"><div class="loading"><div class="spinner"></div>Loading…</div></div>
-  `;
+  var inp = 'padding:10px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);font-size:13px;';
+  content.innerHTML =
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">' +
+      '<div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;">' +
+        '<button id="cv-week" class="btn-sm btn-ghost" onclick="setCalView(\'week\')" style="border-radius:0;'+((_calView==='week')?'background:rgba(196,239,63,.15);color:var(--lime);':'')+'">' +
+          'Week</button>' +
+        '<button id="cv-day"  class="btn-sm btn-ghost" onclick="setCalView(\'day\')"  style="border-radius:0;'+((_calView==='day')?'background:rgba(196,239,63,.15);color:var(--lime);':'')+'">' +
+          'Day</button>' +
+      '</div>' +
+      '<button class="btn-sm btn-ghost" onclick="shiftCalDate(-1)">‹</button>' +
+      '<input id="cal-date" type="date" value="'+_calDate+'" onchange="changeCalDate(this.value)" style="'+inp+'">' +
+      '<button class="btn-sm btn-ghost" onclick="shiftCalDate(1)">›</button>' +
+      '<button class="btn-sm btn-ghost" onclick="changeCalDate(todayStr())">Today</button>' +
+      '<div style="flex:1;"></div>' +
+      '<button class="btn-sm btn-ghost" onclick="openBlockModal()">+ Block slot</button>' +
+      '<button class="btn-sm btn-lime" onclick="openBookModal()">+ Book court</button>' +
+    '</div>' +
+    '<div id="cal-wrap"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
   loadCalendar();
+}
+function setCalView(v) {
+  _calView = v;
+  document.getElementById('cv-week').style.background = v==='week' ? 'rgba(196,239,63,.15)' : '';
+  document.getElementById('cv-week').style.color = v==='week' ? 'var(--lime)' : '';
+  document.getElementById('cv-day').style.background  = v==='day'  ? 'rgba(196,239,63,.15)' : '';
+  document.getElementById('cv-day').style.color  = v==='day'  ? 'var(--lime)' : '';
+  renderCalendar();
 }
 
 function changeCalDate(d) { _calDate = d; var el = document.getElementById('cal-date'); if (el) el.value = d; loadCalendar(); }
-function shiftCalDate(days) {
-  var d = new Date(_calDate + 'T00:00:00'); d.setDate(d.getDate() + days);
+function shiftCalDate(delta) {
+  var d = new Date(_calDate + 'T00:00:00');
+  d.setDate(d.getDate() + (_calView === 'week' ? delta * 7 : delta));
   changeCalDate(d.toISOString().slice(0, 10));
+}
+function weekWindow(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  var dow = d.getDay(); // 0=Sun
+  var mon = new Date(d.getTime() - ((dow === 0 ? 6 : dow - 1) * 86400000));
+  var sun = new Date(mon.getTime() + 7 * 86400000);
+  return { from: mon.toISOString(), to: sun.toISOString(), startDate: mon };
 }
 
 async function loadCalendar() {
-  var w = dayWindow(_calDate);
+  var w = _calView === 'week' ? weekWindow(_calDate) : dayWindow(_calDate);
   try {
     _cal = await window.adminApi.courts.calendar(w.from, w.to);
     renderCalendar();
@@ -1428,47 +1519,129 @@ function renderCalendar() {
     wrap.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">▦</div><p>No courts configured.</p></div></div>';
     return;
   }
-  var html = courts.map(function (court) {
-    var bookings = (_cal.bookings || []).filter(function (b) { return b.courtId === court.id; })
-      .sort(function (a, b) { return new Date(a.startsAt) - new Date(b.startsAt); });
-    var blocks = (_cal.blocks || []).filter(function (b) { return b.courtId === court.id; })
-      .sort(function (a, b) { return new Date(a.startsAt) - new Date(b.startsAt); });
+  if (_calView === 'week') renderCalendarWeek(wrap, courts);
+  else renderCalendarDay(wrap, courts);
+}
 
-    var rows = bookings.map(function (b) {
-      var actions = b.status === 'CONFIRMED'
-        ? `<button class="btn-icon danger" onclick="openCancelModal('${b.id}')">Cancel</button>`
-        : '';
-      return `<tr>
-        <td style="font-family:'Space Mono';font-size:11px;">${fmtTime(b.startsAt)}–${fmtTime(b.endsAt)}</td>
-        <td>${b.mode === 'FULL' ? 'Full' : 'Share'}</td>
-        <td>${Number(b.priceDt).toFixed(0)} DT</td>
-        <td><span class="badge" style="background:rgba(255,255,255,.07);color:var(--cream);">${esc(b.paymentStatus)}</span></td>
-        <td>${bookingStatusBadge(b.status)}</td>
-        <td><div class="row-actions">${actions}</div></td>
-      </tr>`;
+function slotToMinutes(slot) {
+  var parts = slot.split(':');
+  return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+}
+function isoToLocalSlot(iso) {
+  var d = new Date(iso);
+  var h = d.getHours().toString().padStart(2,'0');
+  var m = d.getMinutes().toString().padStart(2,'0');
+  return h + ':' + m;
+}
+function isoDateStr(iso) { return new Date(iso).toISOString().slice(0,10); }
+
+function calClickSlot(dateStr, slotTime, courtId) {
+  openBookModal(dateStr, slotTime, courtId);
+}
+
+function renderCalendarWeek(wrap, courts) {
+  var ww = weekWindow(_calDate);
+  var days = [];
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(ww.startDate.getTime() + i * 86400000);
+    days.push({ iso: d.toISOString().slice(0,10), label: d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) });
+  }
+  var DAYS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+  var colCount = days.length + 1;
+  var gridStyle = 'display:grid;grid-template-columns:54px repeat(7,1fr);border:1px solid var(--border);border-radius:12px;overflow:hidden;';
+  var headerHtml = '<div style="background:var(--navy3);border-bottom:1px solid var(--border);padding:8px 4px;text-align:center;font-size:11px;color:var(--muted);"></div>' +
+    days.map(function(d,i){
+      var isToday = d.iso === todayStr();
+      return '<div style="background:var(--navy3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:8px 4px;text-align:center;font-family:Space Mono;font-size:10px;'+
+        (isToday?'color:var(--lime);font-weight:700;':'color:var(--muted);')+'">' + d.label + '</div>';
     }).join('');
 
-    var blockRows = blocks.map(function (bl) {
-      return `<tr style="background:rgba(239,68,68,.05);">
-        <td style="font-family:'Space Mono';font-size:11px;">${fmtTime(bl.startsAt)}–${fmtTime(bl.endsAt)}</td>
-        <td colspan="4" style="color:#fca5a5;">⛔ ${esc(bl.reason)}${bl.recurringDow != null ? ' (weekly)' : ''}</td>
-        <td><button class="btn-icon" onclick="removeBlock('${bl.id}')">Remove</button></td>
-      </tr>`;
+  var bodyHtml = CAL_SLOTS.map(function(slot) {
+    var timeCell = '<div style="border-bottom:1px solid rgba(196,239,63,.06);padding:6px 4px;text-align:center;font-family:Space Mono;font-size:10px;color:var(--muted);line-height:1.3;">' + slot + '</div>';
+    var dayCells = days.map(function(d) {
+      var slotBookings = (_cal.bookings||[]).filter(function(b){
+        return isoDateStr(b.startsAt) === d.iso && isoToLocalSlot(b.startsAt) === slot;
+      });
+      var slotBlocks = (_cal.blocks||[]).filter(function(b){
+        return isoDateStr(b.startsAt) === d.iso && isoToLocalSlot(b.startsAt) === slot;
+      });
+      var cards = '';
+      slotBookings.forEach(function(b){
+        cards += '<div onclick="showBookingDetail(\''+b.id+'\')" style="background:rgba(196,239,63,.12);border:1px solid rgba(196,239,63,.3);border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;">' +
+          '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(b.paymentStatus==='PAID'?'✓ ':'') + esc(b.mode) + '</div>' +
+          (b.status==='CANCELLED'?'<div style="color:#fca5a5;font-size:10px;">CANCELLED</div>':'') +
+          '</div>';
+      });
+      slotBlocks.forEach(function(bl){
+        cards += '<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:4px 6px;margin:2px;font-size:10px;color:#fca5a5;">⛔ '+esc(bl.reason)+'</div>';
+      });
+      var isEmpty = !slotBookings.length && !slotBlocks.length;
+      return '<div onclick="'+(isEmpty?"calClickSlot('"+d.iso+"','"+slot+"',null)":'')+'" style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:52px;padding:2px;'+(isEmpty?'cursor:pointer;':'')+'transition:background .12s;" '+
+        (isEmpty?'onmouseover="this.style.background=\'rgba(196,239,63,.04)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
     }).join('');
-
-    var body = (rows + blockRows) ||
-      '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No bookings or blocks.</td></tr>';
-
-    return `<div class="card" style="margin-bottom:18px;">
-      <div class="card-header"><div><div class="kicker">${esc(court.activity)}</div><h3>${esc(court.name)}</h3></div>
-        <span style="color:var(--muted);font-size:12px;">${bookings.filter(function(b){return b.status==='CONFIRMED';}).length} booking(s)</span></div>
-      <table>
-        <thead><tr><th>TIME</th><th>MODE</th><th>PRICE</th><th>PAYMENT</th><th>STATUS</th><th></th></tr></thead>
-        <tbody>${body}</tbody>
-      </table>
-    </div>`;
+    return timeCell + dayCells;
   }).join('');
-  wrap.innerHTML = html;
+
+  wrap.innerHTML = '<div style="'+gridStyle+'">'+headerHtml+bodyHtml+'</div>' +
+    '<div style="margin-top:12px;display:flex;gap:12px;font-size:11px;color:var(--muted);">' +
+    '<span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:rgba(196,239,63,.2);display:inline-block;"></span>Booking</span>' +
+    '<span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,.15);display:inline-block;"></span>Blocked</span>' +
+    '<span>Click empty slot to book</span></div>';
+}
+
+function renderCalendarDay(wrap, courts) {
+  var colCount = courts.length + 1;
+  var gridStyle = 'display:grid;grid-template-columns:54px repeat('+courts.length+',1fr);border:1px solid var(--border);border-radius:12px;overflow:hidden;';
+  var headerHtml = '<div style="background:var(--navy3);border-bottom:1px solid var(--border);padding:8px 4px;text-align:center;font-size:11px;color:var(--muted);">' +
+    new Date(_calDate+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'</div>' +
+    courts.map(function(c){
+      return '<div style="background:var(--navy3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:8px 4px;text-align:center;font-family:Space Mono;font-size:10px;color:var(--muted);">'+esc(c.name)+'</div>';
+    }).join('');
+
+  var bodyHtml = CAL_SLOTS.map(function(slot) {
+    var timeCell = '<div style="border-bottom:1px solid rgba(196,239,63,.06);padding:6px 4px;text-align:center;font-family:Space Mono;font-size:10px;color:var(--muted);">'+slot+'</div>';
+    var courtCells = courts.map(function(c) {
+      var bks = (_cal.bookings||[]).filter(function(b){ return b.courtId===c.id && isoDateStr(b.startsAt)===_calDate && isoToLocalSlot(b.startsAt)===slot; });
+      var bls = (_cal.blocks||[]).filter(function(b){ return b.courtId===c.id && isoDateStr(b.startsAt)===_calDate && isoToLocalSlot(b.startsAt)===slot; });
+      var cards = '';
+      bks.forEach(function(b){
+        cards += '<div onclick="showBookingDetail(\''+b.id+'\')" style="background:rgba(196,239,63,.12);border:1px solid rgba(196,239,63,.3);border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;">' +
+          '<div style="font-weight:600;">'+esc(b.mode)+'</div>' +
+          '<div style="font-size:10px;color:var(--muted);">'+esc(b.paymentStatus)+'</div>' +
+          (b.status==='CANCELLED'?'<div style="color:#fca5a5;font-size:10px;">CANCELLED</div>':'') +
+          '<button class="btn-icon danger" onclick="event.stopPropagation();openCancelModal(\''+b.id+'\')" style="margin-top:4px;font-size:10px;padding:2px 6px;">Cancel</button>' +
+          '</div>';
+      });
+      bls.forEach(function(bl){
+        cards += '<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:4px 6px;margin:2px;font-size:10px;color:#fca5a5;">⛔ '+esc(bl.reason)+
+          '<br><button class="btn-icon" onclick="removeBlock(\''+bl.id+'\')" style="margin-top:4px;font-size:10px;padding:2px 6px;">Remove</button></div>';
+      });
+      var isEmpty = !bks.length && !bls.length;
+      return '<div onclick="'+(isEmpty?"calClickSlot('"+_calDate+"','"+slot+"','"+c.id+"')":'')+'" '+
+        'style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:64px;padding:2px;'+(isEmpty?'cursor:pointer;':'')+'transition:background .12s;" '+
+        (isEmpty?'onmouseover="this.style.background=\'rgba(196,239,63,.04)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
+    }).join('');
+    return timeCell + courtCells;
+  }).join('');
+
+  wrap.innerHTML = '<div style="'+gridStyle+'">'+headerHtml+bodyHtml+'</div>';
+}
+
+function showBookingDetail(bookingId) {
+  var b = (_cal.bookings||[]).find(function(x){ return x.id===bookingId; });
+  if (!b) return;
+  var court = (_cal.courts||[]).find(function(c){ return c.id===b.courtId; });
+  var courtName = court ? court.name : '?';
+  var body = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
+    '<div><div class="kicker">COURT</div><div>'+esc(courtName)+'</div></div>' +
+    '<div><div class="kicker">TIME</div><div>'+fmtTime(b.startsAt)+' – '+fmtTime(b.endsAt)+'</div></div>' +
+    '<div><div class="kicker">MODE</div><div>'+esc(b.mode)+'</div></div>' +
+    '<div><div class="kicker">PRICE</div><div>'+Number(b.priceDt).toFixed(0)+' DT</div></div>' +
+    '<div><div class="kicker">PAYMENT</div><div>'+esc(b.paymentStatus)+'</div></div>' +
+    '<div><div class="kicker">STATUS</div><div>'+bookingStatusBadge(b.status)+'</div></div>' +
+    '</div>' +
+    (b.status==='CONFIRMED' ? '<button class="btn-sm btn-danger" onclick="openCancelModal(\''+b.id+'\');closeGenModal()">Cancel this booking</button>' : '');
+  openGenModal('Booking detail', body, null, null, 420);
 }
 
 function fillCourtSelect(selectId) {
@@ -1480,20 +1653,20 @@ function fillCourtSelect(selectId) {
 }
 
 // ── Book on behalf ──
-function openBookModal() {
+function openBookModal(dateStr, slotTime, courtId) {
   if (!_cal) { toast('Calendar still loading…', 'error'); return; }
   fillCourtSelect('book-court');
-  document.getElementById('book-date').value = _calDate;
+  document.getElementById('book-date').value = dateStr || _calDate;
   document.getElementById('book-mode').value = 'FULL';
   document.getElementById('book-price').value = '80';
-  document.getElementById('book-start').value = '18:00';
-  document.getElementById('book-end').value = '19:30';
+  document.getElementById('book-start').value = slotTime || '18:00';
   document.getElementById('book-user-search').value = '';
   document.getElementById('book-user-results').innerHTML = '';
   document.getElementById('book-user-selected').textContent = '';
   document.getElementById('book-ghost-name').value = '';
   document.getElementById('book-ghost-phone').value = '';
   document.getElementById('book-payment').value = 'PENDING';
+  if (courtId) document.getElementById('book-court').value = courtId;
   _bookSelectedUserId = null;
   document.getElementById('book-modal').style.display = 'flex';
 }
@@ -1526,10 +1699,12 @@ function pickBookUser(id, label) {
   document.getElementById('book-user-selected').textContent = '✓ Selected: ' + label;
 }
 async function saveBooking() {
+  var startsAt = localToIso(document.getElementById('book-date').value, document.getElementById('book-start').value);
+  var endsAtMs = new Date(startsAt).getTime() + 90 * 60 * 1000;
   var dto = {
     courtId: document.getElementById('book-court').value,
-    startsAt: localToIso(document.getElementById('book-date').value, document.getElementById('book-start').value),
-    endsAt: localToIso(document.getElementById('book-date').value, document.getElementById('book-end').value),
+    startsAt: startsAt,
+    endsAt: new Date(endsAtMs).toISOString(),
     mode: document.getElementById('book-mode').value,
     priceDt: parseFloat(document.getElementById('book-price').value) || 0,
     paymentStatus: document.getElementById('book-payment').value,
@@ -1939,44 +2114,81 @@ function apPick(id, label) { _apUserId=id; document.getElementById('ap-search').
 // ════════════════════════════════════════════════════════════════════════════
 // PILATES CLASSES (Epic E)
 // ════════════════════════════════════════════════════════════════════════════
-var _classTypes = [], _classDate = null;
+var _classTypes = [], _classDate = null, _classSessions = [];
 async function renderClasses() {
   var content = document.getElementById('page-content');
   if (!_classDate) _classDate = todayStr();
   try { _classTypes = await window.adminApi.classes.listTypes() || []; } catch(_) { _classTypes = []; }
+  try { _coaches = await window.adminApi.coaches.list() || []; } catch(_) {}
+  var inp = 'padding:10px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);font-size:13px;';
   content.innerHTML =
-    '<div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">' +
-    '<button class="btn-sm btn-ghost" onclick="shiftClassDate(-1)">‹ Prev</button>' +
-    '<input id="cls-date" type="date" value="'+_classDate+'" onchange="_classDate=this.value;loadSessions()" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);">' +
-    '<button class="btn-sm btn-ghost" onclick="shiftClassDate(1)">Next ›</button>' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">' +
+    '<button class="btn-sm btn-ghost" onclick="shiftClassDate(-7)">‹</button>' +
+    '<input id="cls-date" type="date" value="'+_classDate+'" onchange="_classDate=this.value;loadSessions()" style="'+inp+'">' +
+    '<button class="btn-sm btn-ghost" onclick="shiftClassDate(7)">›</button>' +
+    '<button class="btn-sm btn-ghost" onclick="_classDate=todayStr();var el=document.getElementById(\'cls-date\');if(el)el.value=_classDate;loadSessions()">Today</button>' +
     '<div style="flex:1;"></div>' +
     '<button class="btn-sm btn-ghost" onclick="classTypeForm()">+ Class type</button>' +
-    '<button class="btn-sm btn-lime" onclick="sessionForm()">+ Schedule session</button></div>' +
+    '<button class="btn-sm btn-lime" onclick="sessionForm(null,null)">+ Schedule session</button></div>' +
     '<div id="sessions-wrap"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
   loadSessions();
 }
 function shiftClassDate(d){ var x=new Date(_classDate+'T00:00:00'); x.setDate(x.getDate()+d); _classDate=x.toISOString().slice(0,10); var el=document.getElementById('cls-date'); if(el)el.value=_classDate; loadSessions(); }
 function classTypeName(id){ var t=_classTypes.filter(function(x){return x.id===id;})[0]; return t?t.name:'—'; }
+function classTypeLevel(id){ var t=_classTypes.filter(function(x){return x.id===id;})[0]; return t?t.level:null; }
+function coachName(id){ if(!id) return null; var c=_coaches.filter(function(x){return x.id===id;})[0]; return c?c.firstName+' '+c.lastName:null; }
+
 async function loadSessions() {
-  var w = dayWindow(_classDate);
+  var ww = weekWindow(_classDate);
+  var days = [];
+  for (var i = 0; i < 7; i++) {
+    var dd = new Date(ww.startDate.getTime() + i * 86400000);
+    days.push({ iso: dd.toISOString().slice(0,10), label: dd.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) });
+  }
   try {
-    var list = await window.adminApi.classes.sessions(w.from, w.to) || [];
-    var rows = list.map(function (sd) {
-      var s = sd.session;
-      return '<tr><td style="font-family:Space Mono;font-size:11px;">'+fmtTime(s.startsAt)+'</td>' +
-        '<td><strong>'+esc(classTypeName(s.classTypeId))+'</strong></td>' +
-        '<td>'+sd.bookedCount+' / '+s.maxSpots+(sd.waitlistCount?' (+'+sd.waitlistCount+' wait)':'')+'</td>' +
-        '<td>'+Number(s.priceDt).toFixed(0)+' DT</td>' +
-        '<td>'+(s.status==='CANCELLED'?'<span class="badge badge-inactive">CANCELLED</span>':'<span class="badge badge-active">'+esc(s.status)+'</span>')+'</td>' +
-        '<td><div class="row-actions">' +
-          "<button class='btn-icon' onclick=\"openSession('"+s.id+"')\">Roster</button>" +
-          (s.status!=='CANCELLED'?"<button class='btn-icon danger' onclick=\"cancelSession('"+s.id+"')\">Cancel</button>":'') +
-        '</div></td></tr>';
+    var list = (_classSessions = await window.adminApi.classes.sessions(ww.from, ww.to) || []);
+    var HOURS = ['07','08','09','10','11','12','13','14','15','16','17','18','19','20','21'];
+    var gridStyle = 'display:grid;grid-template-columns:54px repeat(7,1fr);border:1px solid var(--border);border-radius:12px;overflow:hidden;';
+    var headerHtml = '<div style="background:var(--navy3);border-bottom:1px solid var(--border);padding:8px 4px;text-align:center;font-size:11px;color:var(--muted);"></div>' +
+      days.map(function(d){
+        var isToday = d.iso === todayStr();
+        return '<div style="background:var(--navy3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:8px 4px;text-align:center;font-family:Space Mono;font-size:10px;'+(isToday?'color:var(--lime);font-weight:700;':'color:var(--muted);')+'">' + d.label + '</div>';
+      }).join('');
+    var bodyHtml = HOURS.map(function(hr) {
+      var timeCell = '<div style="border-bottom:1px solid rgba(196,239,63,.06);padding:6px 4px;text-align:center;font-family:Space Mono;font-size:10px;color:var(--muted);">'+hr+':00</div>';
+      var dayCells = days.map(function(d) {
+        var sessions = list.filter(function(sd){
+          var h = new Date(sd.session.startsAt).getHours().toString().padStart(2,'0');
+          return isoDateStr(sd.session.startsAt)===d.iso && h===hr;
+        });
+        var cards = sessions.map(function(sd){
+          var s = sd.session;
+          var typeName = classTypeName(s.classTypeId);
+          var level = classTypeLevel(s.classTypeId);
+          var coach = coachName(s.instructorId);
+          var spotsLeft = s.maxSpots - sd.bookedCount;
+          var spotsColor = spotsLeft===0?'#fca5a5':(spotsLeft<=2?'#fbbf24':'rgba(196,239,63,.7)');
+          var cancelled = s.status==='CANCELLED';
+          return '<div onclick="openSession(\''+s.id+'\')" style="background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.18);border-left:3px solid var(--lime);border-radius:6px;padding:5px 7px;margin:2px;cursor:pointer;font-size:11px;'+(cancelled?'opacity:.5;':'')+'transition:background .12s;" onmouseover="this.style.background=\'rgba(196,239,63,.12)\'" onmouseout="this.style.background=\'rgba(196,239,63,.07)\'">' +
+            '<div style="font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(typeName)+'</div>' +
+            (coach?'<div style="color:var(--lime);font-size:10px;">'+esc(coach)+'</div>':'') +
+            (level?'<div style="color:var(--muted);font-size:10px;">'+esc(level)+'</div>':'') +
+            '<div style="color:'+spotsColor+';font-size:10px;">'+sd.bookedCount+'/'+s.maxSpots+' spots</div>' +
+            (cancelled?'<div style="color:#fca5a5;font-size:10px;">CANCELLED</div>':'') +
+            '</div>';
+        }).join('');
+        var isEmpty = !sessions.length;
+        var preTime = d.iso+'T'+hr+':00:00';
+        return '<div onclick="'+(isEmpty?"sessionForm(null,'"+preTime+"')":'')+'" style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:60px;padding:2px;'+(isEmpty?'cursor:pointer;':'')+'transition:background .12s;" '+(isEmpty?'onmouseover="this.style.background=\'rgba(196,239,63,.03)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
+      }).join('');
+      return timeCell + dayCells;
     }).join('');
+
+    var wLabel = days[0].label + ' – ' + days[6].label;
     document.getElementById('sessions-wrap').innerHTML =
-      '<div class="card"><div class="card-header"><div><div class="kicker">SESSIONS</div><h3>'+new Date(_classDate+'T00:00:00').toLocaleDateString()+'</h3></div></div>' +
-      '<table><thead><tr><th>TIME</th><th>CLASS</th><th>SPOTS</th><th>PRICE</th><th>STATUS</th><th></th></tr></thead><tbody>' +
-      (rows || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No sessions this day.</td></tr>') + '</tbody></table></div>';
+      '<div class="card" style="margin-bottom:4px;"><div class="card-header"><div><div class="kicker">WEEK</div><h3>'+esc(wLabel)+'</h3></div><span style="color:var(--muted);font-size:12px;">'+list.length+' session(s)</span></div></div>' +
+      '<div style="overflow-x:auto;"><div style="'+gridStyle+'min-width:540px;">'+headerHtml+bodyHtml+'</div></div>' +
+      '<div style="margin-top:8px;font-size:11px;color:var(--muted);">Click empty cell to schedule a session</div>';
   } catch (e) { document.getElementById('sessions-wrap').innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
 }
 function classTypeForm(t) {
@@ -1991,17 +2203,24 @@ function classTypeForm(t) {
       toast('Saved.','success'); closeGenModal(); renderClasses(); } catch(e){ toast(e.message||'Failed.','error'); }
   });
 }
-function sessionForm() {
+function sessionForm(existingSession, prefilledIso) {
   if (!_classTypes.length) { toast('Create a class type first.','error'); return; }
   var typeOpts = _classTypes.map(function(t){ return {v:t.id, t:t.name}; });
+  var coachOpts = [{v:'',t:'None (no coach)'}].concat((_coaches||[]).map(function(c){ return {v:c.id, t:c.firstName+' '+c.lastName}; }));
+  var defaultDt = prefilledIso ? dtLocal(new Date(prefilledIso).toISOString()) : dtLocal(new Date(_classDate+'T18:00:00').toISOString());
+  var s = existingSession;
   var body =
-    '<div class="form-row">'+sel('CLASS TYPE','se-type',typeOpts,'')+fld('MAX SPOTS','se-spots','number',8)+'</div>' +
-    '<div class="form-row">'+fld('DATE/TIME','se-dt','datetime-local',dtLocal(new Date(_classDate+'T18:00:00').toISOString()))+fld('PRICE (DT)','se-price','number',35)+'</div>' +
-    '<div class="form-row">'+fld('DURATION (min)','se-dur','number',50)+'</div>';
-  openGenModal('Schedule session', body, 'Create', async function () {
-    var dto = { classTypeId:gv('se-type'), startsAt:isoFromLocal('se-dt'), maxSpots:gint('se-spots')||8, priceDt:gnum('se-price')||35, durationMin:gint('se-dur')||50 };
+    '<div class="form-row">'+sel('CLASS TYPE','se-type',typeOpts,s?s.classTypeId:'')+fld('MAX SPOTS','se-spots','number',s?s.maxSpots:8)+'</div>' +
+    '<div class="form-row">'+fld('DATE/TIME','se-dt','datetime-local',s?dtLocal(s.startsAt):defaultDt)+fld('PRICE (DT)','se-price','number',s?s.priceDt:35)+'</div>' +
+    '<div class="form-row">'+fld('DURATION (min)','se-dur','number',s?s.durationMin:50)+sel('COACH','se-coach',coachOpts,s?s.instructorId:'')+'</div>';
+  openGenModal(s?'Edit session':'Schedule session', body, s?'Update':'Create', async function () {
+    var dto = { classTypeId:gv('se-type'), startsAt:isoFromLocal('se-dt'), maxSpots:gint('se-spots')||8, priceDt:gnum('se-price')||35, durationMin:gint('se-dur')||50, instructorId:gv('se-coach')||null };
     if(!dto.startsAt){ toast('Pick a date/time.','error'); return; }
-    try { await window.adminApi.classes.createSession(dto); toast('Session scheduled.','success'); closeGenModal(); loadSessions(); } catch(e){ toast(e.message||'Failed.','error'); }
+    try {
+      if(s) await window.adminApi.classes.updateSession(s.id, dto);
+      else await window.adminApi.classes.createSession(dto);
+      toast('Saved.','success'); closeGenModal(); loadSessions();
+    } catch(e){ toast(e.message||'Failed.','error'); }
   });
 }
 function cancelSession(id) {
@@ -2012,16 +2231,29 @@ function cancelSession(id) {
 async function openSession(id) {
   try {
     var sd = await window.adminApi.classes.sessionDetail(id);
+    var s = sd.session;
+    var cname = coachName(s.instructorId);
     var rows = (sd.bookings||[]).map(function(b){
       var act = b.status==='WAITLIST' ? "<button class='btn-icon' onclick=\"clsPromote('"+b.id+"','"+id+"')\">Promote</button>" : '';
       var att = (b.status==='BOOKED') ? "<button class='btn-icon' onclick=\"clsAttend('"+b.id+"','"+id+"','ATTENDED')\">Present</button>" : '';
       return '<tr><td style="font-family:Space Mono;font-size:11px;">'+esc((b.userId||'').slice(0,8))+'</td><td>'+esc(b.status)+'</td><td><div class="row-actions">'+att+act+
         "<button class='btn-icon danger' onclick=\"clsRemove('"+b.id+"','"+id+"')\">Remove</button></div></td></tr>";
     }).join('');
-    var body = '<p style="color:var(--muted);margin-bottom:14px;">'+esc(classTypeName(sd.session.classTypeId))+' · '+new Date(sd.session.startsAt).toLocaleString()+' · '+sd.bookedCount+'/'+sd.session.maxSpots+' booked</p>' +
-      '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn-sm btn-lime" onclick="addStudentForm(\''+id+'\')">+ Add student</button></div>' +
+    var body =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">' +
+        '<div><div class="kicker">CLASS</div><div>'+esc(classTypeName(s.classTypeId))+'</div></div>' +
+        '<div><div class="kicker">LEVEL</div><div>'+esc(classTypeLevel(s.classTypeId)||'All levels')+'</div></div>' +
+        '<div><div class="kicker">TIME</div><div>'+new Date(s.startsAt).toLocaleString()+'</div></div>' +
+        '<div><div class="kicker">COACH</div><div style="color:var(--lime);">'+esc(cname||'—')+'</div></div>' +
+        '<div><div class="kicker">SPOTS</div><div>'+sd.bookedCount+'/'+s.maxSpots+(sd.waitlistCount?' (+'+sd.waitlistCount+' wait)':'')+'</div></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px;">' +
+        (s.status!=='CANCELLED'?'<button class="btn-sm btn-ghost" onclick="closeGenModal();sessionForm('+JSON.stringify(s)+')">Edit session</button>':'') +
+        '<button class="btn-sm btn-lime" onclick="addStudentForm(\''+id+'\')">+ Add student</button>' +
+        (s.status!=='CANCELLED'?'<button class="btn-sm btn-danger" onclick="closeGenModal();cancelSession(\''+id+'\')">Cancel session</button>':'') +
+      '</div>' +
       '<table><thead><tr><th>USER</th><th>STATUS</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px;">No students yet.</td></tr>')+'</tbody></table>';
-    openGenModal('Session roster', body, null, null, 560);
+    openGenModal('Session roster', body, null, null, 580);
   } catch(e){ toast(e.message||'Failed.','error'); }
 }
 function addStudentForm(sessionId) {
