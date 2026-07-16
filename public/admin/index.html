@@ -604,6 +604,7 @@ var _userSearchTimer = null;
 var _cal = null;              // current court calendar payload
 var _calDate = null;          // 'YYYY-MM-DD' currently shown
 var _calView = 'week';        // 'week' | 'day'
+var _calCourt = null;         // courtId to filter, null = all
 var _bookSelectedUserId = null;
 var _bookSearchTimer = null;
 
@@ -1443,7 +1444,7 @@ function dayWindow(dateStr) {
 function localToIso(dateStr, timeStr) { return new Date(dateStr + 'T' + timeStr + ':00').toISOString(); }
 function fmtTime(iso) { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 
-var CAL_SLOTS = ['07:00','08:30','10:00','11:30','13:00','14:30','16:00','17:30','19:00','20:30'];
+var CAL_SLOTS = ['07:00','08:30','10:00','11:30','13:00','14:30','16:00','17:30','19:00','20:30','22:00','23:00'];
 function renderCourts() {
   var content = document.getElementById('page-content');
   if (!window.adminApi || !window.adminApi.isOnline()) {
@@ -1511,6 +1512,8 @@ function bookingStatusBadge(s) {
   return '<span class="badge" style="background:rgba(255,255,255,.07);color:var(--muted);">' + esc(s) + '</span>';
 }
 
+function setCalCourt(id) { _calCourt = id; renderCalendar(); }
+
 function renderCalendar() {
   var wrap = document.getElementById('cal-wrap');
   if (!_cal) return;
@@ -1519,8 +1522,20 @@ function renderCalendar() {
     wrap.innerHTML = '<div class="card"><div class="empty-state"><div class="icon">▦</div><p>No courts configured.</p></div></div>';
     return;
   }
-  if (_calView === 'week') renderCalendarWeek(wrap, courts);
-  else renderCalendarDay(wrap, courts);
+  // Court selector (week view only — day view already shows courts as columns)
+  var courtBar = '';
+  if (_calView === 'week') {
+    var btnStyle = function(active){ return 'padding:5px 14px;border-radius:999px;font-family:Space Mono;font-size:11px;letter-spacing:.08em;cursor:pointer;border:1px solid '+(active?'var(--lime);background:rgba(196,239,63,.15);color:var(--lime)':'var(--border);background:none;color:var(--muted)')+';transition:all .15s;margin-right:4px;'; };
+    courtBar = '<div style="margin-bottom:10px;display:flex;align-items:center;gap:0;">' +
+      '<button style="'+btnStyle(_calCourt===null)+'" onclick="setCalCourt(null)">All courts</button>' +
+      courts.map(function(c){ return '<button style="'+btnStyle(_calCourt===c.id)+'" onclick="setCalCourt(\''+c.id+'\')">'+esc(c.name)+'</button>'; }).join('') +
+      '</div>';
+  }
+  var filteredCourts = (_calView === 'day' && _calCourt) ? courts.filter(function(c){ return c.id===_calCourt; }) : courts;
+  wrap.innerHTML = courtBar + '<div id="cal-grid"></div>';
+  var gridWrap = document.getElementById('cal-grid');
+  if (_calView === 'week') renderCalendarWeek(gridWrap, filteredCourts);
+  else renderCalendarDay(gridWrap, filteredCourts);
 }
 
 function slotToMinutes(slot) {
@@ -1556,18 +1571,27 @@ function renderCalendarWeek(wrap, courts) {
         (isToday?'color:var(--lime);font-weight:700;':'color:var(--muted);')+'">' + d.label + '</div>';
     }).join('');
 
+  // courtMap for name lookup when showing all courts
+  var courtMap = {};
+  (_cal.courts||[]).forEach(function(c){ courtMap[c.id]=c.name; });
+  var filterCourtId = _calCourt;
+
   var bodyHtml = CAL_SLOTS.map(function(slot) {
     var timeCell = '<div style="border-bottom:1px solid rgba(196,239,63,.06);padding:6px 4px;text-align:center;font-family:Space Mono;font-size:10px;color:var(--muted);line-height:1.3;">' + slot + '</div>';
     var dayCells = days.map(function(d) {
       var slotBookings = (_cal.bookings||[]).filter(function(b){
-        return isoDateStr(b.startsAt) === d.iso && isoToLocalSlot(b.startsAt) === slot;
+        return isoDateStr(b.startsAt) === d.iso && isoToLocalSlot(b.startsAt) === slot &&
+          (!filterCourtId || b.courtId === filterCourtId);
       });
       var slotBlocks = (_cal.blocks||[]).filter(function(b){
-        return isoDateStr(b.startsAt) === d.iso && isoToLocalSlot(b.startsAt) === slot;
+        return isoDateStr(b.startsAt) === d.iso && isoToLocalSlot(b.startsAt) === slot &&
+          (!filterCourtId || b.courtId === filterCourtId);
       });
       var cards = '';
       slotBookings.forEach(function(b){
+        var cName = !filterCourtId ? ('<div style="font-size:9px;color:var(--muted);margin-bottom:2px;">'+esc(courtMap[b.courtId]||'')+'</div>') : '';
         cards += '<div onclick="showBookingDetail(\''+b.id+'\')" style="background:rgba(196,239,63,.12);border:1px solid rgba(196,239,63,.3);border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;">' +
+          cName +
           '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(b.paymentStatus==='PAID'?'✓ ':'') + esc(b.mode) + '</div>' +
           (b.status==='CANCELLED'?'<div style="color:#fca5a5;font-size:10px;">CANCELLED</div>':'') +
           '</div>';
@@ -1576,7 +1600,7 @@ function renderCalendarWeek(wrap, courts) {
         cards += '<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:4px 6px;margin:2px;font-size:10px;color:#fca5a5;">⛔ '+esc(bl.reason)+'</div>';
       });
       var isEmpty = !slotBookings.length && !slotBlocks.length;
-      return '<div onclick="'+(isEmpty?"calClickSlot('"+d.iso+"','"+slot+"',null)":'')+'" style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:52px;padding:2px;'+(isEmpty?'cursor:pointer;':'')+'transition:background .12s;" '+
+      return '<div onclick="'+(isEmpty?"calClickSlot('"+d.iso+"','"+slot+"',"+(filterCourtId?"'"+filterCourtId+"'":"null")+")":'')+'" style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:52px;padding:2px;'+(isEmpty?'cursor:pointer;':'')+'transition:background .12s;" '+
         (isEmpty?'onmouseover="this.style.background=\'rgba(196,239,63,.04)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
     }).join('');
     return timeCell + dayCells;
