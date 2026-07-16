@@ -145,10 +145,10 @@
 
     <!-- Week nav -->
     <div class="pr-week-nav" style="margin-bottom:28px;">
-      <button class="pr-week-btn" id="pr-prev-week">‹ Prev week</button>
+      <button class="pr-week-btn" onclick="prPrevWeek()">‹ Prev week</button>
       <span class="pr-week-label" id="pr-week-label">Loading…</span>
-      <button class="pr-week-btn" id="pr-next-week">Next week ›</button>
-      <button class="pr-today-btn" id="pr-today-btn">Today</button>
+      <button class="pr-week-btn" onclick="prNextWeek()">Next week ›</button>
+      <button class="pr-today-btn" onclick="prToday()">Today</button>
     </div>
 
     <!-- Court tabs -->
@@ -205,9 +205,9 @@
 <div class="pr-toast" id="pr-toast"></div>
 
 <!-- ░ OTP MODAL ░ -->
-<div class="pr-otp-overlay" id="pr-otp-overlay" style="display:none;">
+<div class="pr-otp-overlay" id="pr-otp-overlay" style="display:none;" onclick="if(event.target===this)prCloseOtp()">
   <div class="pr-otp-panel">
-    <button class="pr-otp-close" id="pr-otp-close">✕ close</button>
+    <button class="pr-otp-close" onclick="prCloseOtp()">✕ close</button>
     <div class="pr-otp-title" id="pr-otp-kicker">SIGN IN</div>
     <h2 class="pr-otp-h2" id="pr-otp-heading">Enter your phone number</h2>
     <div id="pr-otp-err" class="pr-otp-err" style="display:none;"></div>
@@ -217,14 +217,14 @@
       <label class="pr-otp-label">PHONE</label>
       <input class="pr-otp-input" id="pr-otp-phone" type="tel" placeholder="+216 XX XXX XXX" autocomplete="tel">
       <div class="pr-otp-info">We'll send a one-time code via SMS.</div>
-      <button class="pr-otp-btn" id="pr-otp-send">Send code →</button>
+      <button class="pr-otp-btn" id="pr-otp-send" onclick="prSendOtp()">Send code →</button>
     </div>
 
     <!-- Step 2: name (new users only) -->
     <div id="pr-otp-step-name" style="display:none;">
       <label class="pr-otp-label">YOUR NAME</label>
       <input class="pr-otp-input" id="pr-otp-name" type="text" placeholder="First name" autocomplete="given-name">
-      <button class="pr-otp-btn" id="pr-otp-name-next">Continue →</button>
+      <button class="pr-otp-btn" id="pr-otp-name-next" onclick="prOtpNameNext()">Continue →</button>
     </div>
 
     <!-- Step 3: code -->
@@ -232,23 +232,23 @@
       <label class="pr-otp-label">VERIFICATION CODE</label>
       <input class="pr-otp-input" id="pr-otp-code" type="text" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
       <div class="pr-otp-info" id="pr-otp-phone-hint"></div>
-      <button class="pr-otp-btn" id="pr-otp-verify">Verify →</button>
+      <button class="pr-otp-btn" id="pr-otp-verify" onclick="prOtpVerify()">Verify →</button>
     </div>
   </div>
 </div>
 
 <!-- ░ BOOKING MODE MODAL ░ -->
-<div class="pr-otp-overlay" id="pr-mode-overlay" style="display:none;">
+<div class="pr-otp-overlay" id="pr-mode-overlay" style="display:none;" onclick="if(event.target===this)prCloseModeModal()">
   <div class="pr-otp-panel tk-booking-panel">
-    <button class="pr-otp-close" id="pr-mode-close">✕ close</button>
+    <button class="pr-otp-close" onclick="prCloseModeModal()">✕ close</button>
     <div class="pr-otp-title">CHOOSE YOUR BOOKING</div>
     <h2 class="pr-otp-h2" id="pr-mode-heading">Select booking type</h2>
     <div id="pr-mode-slot-info" style="font-family:'Space Mono';font-size:11px;letter-spacing:.08em;color:rgba(244,245,238,.5);margin-bottom:24px;line-height:1.8;"></div>
     <div style="display:flex;flex-direction:column;gap:12px;">
-      <button class="pr-otp-btn" id="pr-mode-share" style="background:#c4ef3f;color:#0a1733;">
+      <button class="pr-otp-btn" id="pr-mode-share" onclick="prDoBook('SHARE')" style="background:#c4ef3f;color:#0a1733;">
         Share — 20 DT <span style="opacity:.6;font-size:10px;">Split court with another player</span>
       </button>
-      <button class="pr-otp-btn" id="pr-mode-full" style="background:transparent;border:1px solid #c4ef3f;color:#c4ef3f;">
+      <button class="pr-otp-btn" id="pr-mode-full" onclick="prDoBook('FULL')" style="background:transparent;border:1px solid #c4ef3f;color:#c4ef3f;">
         Full court — 80 DT <span style="opacity:.6;font-size:10px;">Exclusive access for 90 min</span>
       </button>
     </div>
@@ -393,14 +393,13 @@
     _otpCallback = null;
   }
 
-  document.getElementById('pr-otp-close').onclick = closeOtp;
-  document.getElementById('pr-otp-overlay').onclick = function(e){ if(e.target===this) closeOtp(); };
+  window.prCloseOtp = closeOtp;
 
-  document.getElementById('pr-otp-send').onclick = function(){
+  window.prSendOtp = function(){
     var phone = document.getElementById('pr-otp-phone').value.trim();
     if(!phone){ showErr('Please enter your phone number.'); return; }
     _otpPhone = phone;
-    var btn = this;
+    var btn = document.getElementById('pr-otp-send');
     btn.disabled = true; btn.textContent = 'Sending…';
     showErr('');
     var api = window.takeOffApi;
@@ -408,7 +407,6 @@
       api.auth.sendOtp(phone).then(function(){
         btn.disabled = false; btn.textContent = 'Send code →';
         document.getElementById('pr-otp-step1').style.display = 'none';
-        // Check if new user — show name step first
         document.getElementById('pr-otp-step-name').style.display = 'block';
         document.getElementById('pr-otp-heading').textContent = 'What\'s your name?';
       }).catch(function(e){
@@ -416,7 +414,6 @@
         showErr(e && e.message ? e.message : 'Failed to send code. Try again.');
       });
     } else {
-      // Fallback for dev mode without API
       btn.disabled = false; btn.textContent = 'Send code →';
       document.getElementById('pr-otp-step1').style.display = 'none';
       document.getElementById('pr-otp-step-name').style.display = 'block';
@@ -424,7 +421,7 @@
     }
   };
 
-  document.getElementById('pr-otp-name-next').onclick = function(){
+  window.prOtpNameNext = function(){
     _otpName = document.getElementById('pr-otp-name').value.trim();
     document.getElementById('pr-otp-step-name').style.display = 'none';
     document.getElementById('pr-otp-step2').style.display = 'block';
@@ -432,10 +429,10 @@
     document.getElementById('pr-otp-heading').textContent = 'Enter your code';
   };
 
-  document.getElementById('pr-otp-verify').onclick = function(){
+  window.prOtpVerify = function(){
     var code = document.getElementById('pr-otp-code').value.trim();
     if(!code){ showErr('Please enter the verification code.'); return; }
-    var btn = this;
+    var btn = document.getElementById('pr-otp-verify');
     btn.disabled = true; btn.textContent = 'Verifying…';
     showErr('');
     var api = window.takeOffApi;
@@ -449,7 +446,6 @@
         showErr(e && e.message ? e.message : 'Invalid code. Please try again.');
       });
     } else {
-      // Dev fallback
       btn.disabled = false; btn.textContent = 'Verify →';
       closeOtp();
       if(_otpCallback) _otpCallback();
@@ -472,8 +468,7 @@
     renderGrid();
   }
 
-  document.getElementById('pr-mode-close').onclick = closeModeModal;
-  document.getElementById('pr-mode-overlay').onclick = function(e){ if(e.target===this) closeModeModal(); };
+  window.prCloseModeModal = closeModeModal;
 
   function doBook(mode){
     if(!_choosing) return;
@@ -515,8 +510,7 @@
     }
   }
 
-  document.getElementById('pr-mode-share').onclick = function(){ doBook('SHARE'); };
-  document.getElementById('pr-mode-full').onclick = function(){ doBook('FULL'); };
+  window.prDoBook = doBook;
 
   /* ── LOAD SLOTS ────────────────────────────────────────────────── */
   // Tunisia is UTC+1 year-round (no DST)
@@ -569,17 +563,9 @@
     loadSlots();
   }
 
-  document.getElementById('pr-prev-week').onclick = function(){
-    var ws = new Date(_weekStart); ws.setDate(ws.getDate()-7);
-    setWeek(ws);
-  };
-  document.getElementById('pr-next-week').onclick = function(){
-    var ws = new Date(_weekStart); ws.setDate(ws.getDate()+7);
-    setWeek(ws);
-  };
-  document.getElementById('pr-today-btn').onclick = function(){
-    setWeek(getWeekStart(new Date()));
-  };
+  window.prPrevWeek = function(){ var ws = new Date(_weekStart); ws.setDate(ws.getDate()-7); setWeek(ws); };
+  window.prNextWeek = function(){ var ws = new Date(_weekStart); ws.setDate(ws.getDate()+7); setWeek(ws); };
+  window.prToday    = function(){ setWeek(getWeekStart(new Date())); };
 
   /* ── COURT TABS ─────────────────────────────────────────────────── */
   function renderCourtTabs(){

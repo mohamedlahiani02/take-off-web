@@ -148,10 +148,10 @@
 
     <!-- Week nav -->
     <div class="pc-week-nav">
-      <button class="pc-week-btn" id="pc-prev-week">‹ Semaine préc.</button>
+      <button class="pc-week-btn" onclick="pcPrevWeek()">‹ Semaine préc.</button>
       <span class="pc-week-label" id="pc-week-label">Chargement…</span>
-      <button class="pc-week-btn" id="pc-next-week">Semaine suiv. ›</button>
-      <button class="pc-today-btn" id="pc-today-btn">Aujourd'hui</button>
+      <button class="pc-week-btn" onclick="pcNextWeek()">Semaine suiv. ›</button>
+      <button class="pc-today-btn" onclick="pcToday()">Aujourd'hui</button>
     </div>
 
     <!-- Grid -->
@@ -182,9 +182,9 @@
 <div class="pc-toast" id="pc-toast"></div>
 
 <!-- ░ BOOKING DRAWER ░ -->
-<div class="pc-drawer-overlay" id="pc-drawer-overlay" style="display:none;">
+<div class="pc-drawer-overlay" id="pc-drawer-overlay" style="display:none;" onclick="if(event.target===this)pcCloseDrawer()">
   <div class="pc-drawer tk-booking-panel">
-    <button class="pc-drawer-close" id="pc-drawer-close">✕ fermer</button>
+    <button class="pc-drawer-close" onclick="pcCloseDrawer()">✕ fermer</button>
     <div class="pc-drawer-tag" id="pc-drawer-tag">COURS</div>
     <h2 class="pc-drawer-title" id="pc-drawer-title"></h2>
     <div class="pc-drawer-meta" id="pc-drawer-meta"></div>
@@ -201,13 +201,13 @@
         <input class="pc-otp-input" id="pc-otp-phone" type="tel" placeholder="+216 XX XXX XXX" autocomplete="tel">
         <div class="pc-otp-info">Nous enverrons un code par SMS.</div>
         <div class="pc-otp-err" id="pc-otp-err" style="display:none;"></div>
-        <button class="pc-drawer-btn" id="pc-otp-send">Envoyer le code →</button>
+        <button class="pc-drawer-btn" id="pc-otp-send" onclick="pcSendOtp()">Envoyer le code →</button>
       </div>
       <!-- Step 2: name -->
       <div id="pc-otp-step-name" style="display:none;">
         <label class="pc-otp-label">VOTRE PRÉNOM</label>
         <input class="pc-otp-input" id="pc-otp-name" type="text" placeholder="Prénom" autocomplete="given-name">
-        <button class="pc-drawer-btn" id="pc-otp-name-next" style="margin-top:8px;">Continuer →</button>
+        <button class="pc-drawer-btn" id="pc-otp-name-next" onclick="pcOtpNameNext()" style="margin-top:8px;">Continuer →</button>
       </div>
       <!-- Step 3: code -->
       <div id="pc-otp-step2" style="display:none;">
@@ -215,13 +215,13 @@
         <input class="pc-otp-input" id="pc-otp-code" type="text" placeholder="Code à 6 chiffres" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
         <div class="pc-otp-info" id="pc-otp-phone-hint"></div>
         <div class="pc-otp-err" id="pc-otp-err2" style="display:none;"></div>
-        <button class="pc-drawer-btn" id="pc-otp-verify">Vérifier →</button>
+        <button class="pc-drawer-btn" id="pc-otp-verify" onclick="pcOtpVerify()">Vérifier →</button>
       </div>
     </div>
 
     <!-- Book button (shown if logged in) -->
     <div id="pc-book-section" style="display:none;">
-      <button class="pc-drawer-btn" id="pc-book-btn">Réserver ma place →</button>
+      <button class="pc-drawer-btn" id="pc-book-btn" onclick="pcBookSession()">Réserver ma place →</button>
     </div>
   </div>
 </div>
@@ -457,15 +457,13 @@
     _selectedSession = null;
   }
 
-  document.getElementById('pc-drawer-close').onclick = closeDrawer;
-  document.getElementById('pc-drawer-overlay').onclick = function(e){ if(e.target===this) closeDrawer(); };
+  window.pcCloseDrawer = closeDrawer;
 
-  /* OTP steps */
-  document.getElementById('pc-otp-send').onclick = function(){
+  window.pcSendOtp = function(){
     var phone = document.getElementById('pc-otp-phone').value.trim();
     if(!phone){ showOtpErr('Veuillez entrer votre numéro.'); return; }
     _otpPhone = phone;
-    var btn = this; btn.disabled=true; btn.textContent='Envoi…';
+    var btn = document.getElementById('pc-otp-send'); btn.disabled=true; btn.textContent='Envoi…';
     showOtpErr('');
     var api = window.takeOffApi;
     var doNext = function(){
@@ -480,16 +478,16 @@
     } else { doNext(); }
   };
 
-  document.getElementById('pc-otp-name-next').onclick = function(){
+  window.pcOtpNameNext = function(){
     _otpName = document.getElementById('pc-otp-name').value.trim();
     showOtpStep(2);
     document.getElementById('pc-otp-phone-hint').textContent = 'Code envoyé au '+_otpPhone;
   };
 
-  document.getElementById('pc-otp-verify').onclick = function(){
+  window.pcOtpVerify = function(){
     var code = document.getElementById('pc-otp-code').value.trim();
     if(!code){ showOtpErr('Veuillez entrer le code.'); return; }
-    var btn = this; btn.disabled=true; btn.textContent='Vérification…';
+    var btn = document.getElementById('pc-otp-verify'); btn.disabled=true; btn.textContent='Vérification…';
     showOtpErr('');
     var api = window.takeOffApi;
     var doNext = function(){
@@ -505,11 +503,10 @@
     } else { doNext(); }
   };
 
-  /* Book button */
-  document.getElementById('pc-book-btn').onclick = function(){
+  window.pcBookSession = function(){
     if(!_selectedSession) return;
     var id = _selectedSession.id;
-    var btn = this; btn.disabled=true; btn.textContent='Réservation…';
+    var btn = document.getElementById('pc-book-btn'); btn.disabled=true; btn.textContent='Réservation…';
     var api = window.takeOffApi;
     var doSuccess = function(){
       btn.disabled=false; btn.textContent='Réserver ma place →';
@@ -522,9 +519,7 @@
         btn.disabled=false; btn.textContent='Réserver ma place →';
         showToast((e&&e.message)?e.message:'Échec de réservation.', 3500);
       });
-    } else {
-      doSuccess();
-    }
+    } else { doSuccess(); }
   };
 
   /* ── LOAD SCHEDULE ──────────────────────────────────────────────── */
@@ -568,15 +563,9 @@
     loadSchedule();
   }
 
-  document.getElementById('pc-prev-week').onclick = function(){
-    var ws = new Date(_weekStart); ws.setDate(ws.getDate()-7); setWeek(ws);
-  };
-  document.getElementById('pc-next-week').onclick = function(){
-    var ws = new Date(_weekStart); ws.setDate(ws.getDate()+7); setWeek(ws);
-  };
-  document.getElementById('pc-today-btn').onclick = function(){
-    setWeek(getWeekStart(new Date()));
-  };
+  window.pcPrevWeek = function(){ var ws = new Date(_weekStart); ws.setDate(ws.getDate()-7); setWeek(ws); };
+  window.pcNextWeek = function(){ var ws = new Date(_weekStart); ws.setDate(ws.getDate()+7); setWeek(ws); };
+  window.pcToday    = function(){ setWeek(getWeekStart(new Date())); };
 
   /* ── INIT ────────────────────────────────────────────────────────── */
   function init(){
