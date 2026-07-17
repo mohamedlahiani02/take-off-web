@@ -246,16 +246,13 @@
 
   function getWeekStart(date){
     var d = new Date(date);
-    var dow = d.getDay();
-    var diff = dow === 0 ? -6 : 1 - dow;
-    d.setDate(d.getDate() + diff);
     d.setHours(0,0,0,0);
     return d;
   }
 
   function weekLabel(ws){
     var we = new Date(ws); we.setDate(we.getDate()+6);
-    return 'Lun '+ws.getDate()+' – Dim '+we.getDate()+' '+MONTHS_SHORT[we.getMonth()];
+    return DAYS_SHORT[ws.getDay()]+' '+ws.getDate()+' – '+DAYS_SHORT[we.getDay()]+' '+we.getDate()+' '+MONTHS_SHORT[we.getMonth()];
   }
 
   function showToast(msg, ms){
