@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   },
   description:
     'Take Off Club — two courts, one studio. Book padel slots, reserve pilates classes, and shop the pro store in Tunis.',
-  metadataBase: new URL(process.env['NEXT_PUBLIC_API_URL'] ?? 'https://takeoff.tn'),
+  metadataBase: new URL(process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://takeoff.tn'),
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
