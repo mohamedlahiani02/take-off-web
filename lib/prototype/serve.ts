@@ -31,7 +31,7 @@ export async function prototypeHtml(fileName: keyof typeof htmlRoutes) {
   let html = await fs.readFile(filePath, 'utf8')
 
   // Inject API base URL before all other scripts
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://take-off-api.onrender.com'
   const apiScript = `<script>window.TAKEOFF_API_URL="${apiUrl}";</script>`
   html = html.replace('<script src="./support.js"></script>', apiScript + '\n<script src="./support.js"></script>')
 
