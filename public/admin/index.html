@@ -2328,7 +2328,7 @@ async function loadSessions() {
       '<div class="card" style="margin-bottom:4px;"><div class="card-header"><div><div class="kicker">WEEK</div><h3>'+esc(wLabel)+'</h3></div><span style="color:var(--muted);font-size:12px;">'+list.length+' session(s)</span></div></div>' +
       '<div style="overflow-x:auto;"><div style="'+gridStyle+'min-width:540px;">'+headerHtml+bodyHtml+'</div></div>' +
       '<div style="margin-top:8px;font-size:11px;color:var(--muted);">Click empty cell to schedule a session</div>';
-  } catch (e) { document.getElementById('sessions-wrap').innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
+  } catch (e) { var sw=document.getElementById('sessions-wrap'); if(sw) sw.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
 }
 function classTypeForm(t) {
   var body = '<input type="hidden" id="ct-id" value="'+(t?t.id:'')+'">' +
