@@ -17,7 +17,8 @@ export async function POST() {
 
   cookieStore.delete(cookieName)
 
-  return NextResponse.redirect(new URL('/', process.env['NEXT_PUBLIC_API_URL'] ?? '/'), {
+  const base = process.env['NEXT_PUBLIC_SITE_URL'] || process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:3000'
+  return NextResponse.redirect(new URL('/', base), {
     status: 302,
   })
 }
