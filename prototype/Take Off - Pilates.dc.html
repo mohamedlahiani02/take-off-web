@@ -481,7 +481,7 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   loaderRef = React.createRef();
-  state = { dayIdx: 0, reserved: {}, quoteIdx: 0, openFaq: 0, openInstructor: null, _authTick: 0, _cartTick: 0, _instructors: null, _cms: null, _sessionTypes: {}, _pilatesFormDone: false, _liveSchedule: null, _liveProducts: null, _packTypes: null };
+  state = { dayIdx: (new Date().getDay() + 6) % 7, reserved: {}, quoteIdx: 0, openFaq: 0, openInstructor: null, _authTick: 0, _cartTick: 0, _instructors: null, _cms: null, _sessionTypes: {}, _pilatesFormDone: false, _liveSchedule: null, _liveProducts: null, _packTypes: null };
 
   componentDidMount() {
     setTimeout(() => { const l = this.loaderRef.current; if (l) { l.style.opacity = '0'; l.style.visibility = 'hidden'; } }, 1500);
@@ -517,7 +517,7 @@ class Component extends DCLogic {
         try {
           // Fetch the current week (Mon–Sun) of live sessions
           const now = new Date();
-          const dow = now.getDay(); // 0=Sun...6=Sat
+          const dow = now.getDay();
           const daysToMon = (dow === 0 ? -6 : 1 - dow);
           const mon = new Date(now); mon.setDate(now.getDate() + daysToMon); mon.setHours(0, 0, 0, 0);
           const sun = new Date(mon); sun.setDate(mon.getDate() + 7);
