@@ -115,6 +115,11 @@
         return request('GET', '/api/v1/admin/courts/calendar?from=' + encodeURIComponent(fromIso) + '&to=' + encodeURIComponent(toIso));
       },
       book: function (dto) { return request('POST', '/api/v1/admin/courts/bookings', dto); },
+      bookingDetail: function (id) { return request('GET', '/api/v1/admin/courts/bookings/' + id); },
+      addParticipant: function (id, dto) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/participants', dto); },
+      updateParticipant: function (id, pid, dto) { return request('PATCH', '/api/v1/admin/courts/bookings/' + id + '/participants/' + pid, dto); },
+      removeParticipant: function (id, pid) { return request('DELETE', '/api/v1/admin/courts/bookings/' + id + '/participants/' + pid); },
+      coverAll: function (id) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/cover-all'); },
       updatePayment: function (id, dto) { return request('PATCH', '/api/v1/admin/courts/bookings/' + id + '/payment', dto); },
       cancel: function (id, dto) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/cancel', dto); },
       reschedule: function (id, dto) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/reschedule', dto); },
