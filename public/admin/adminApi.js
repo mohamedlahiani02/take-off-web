@@ -120,6 +120,7 @@
       updateParticipant: function (id, pid, dto) { return request('PATCH', '/api/v1/admin/courts/bookings/' + id + '/participants/' + pid, dto); },
       removeParticipant: function (id, pid) { return request('DELETE', '/api/v1/admin/courts/bookings/' + id + '/participants/' + pid); },
       coverAll: function (id) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/cover-all'); },
+      receivables: function () { return request('GET', '/api/v1/admin/courts/receivables'); },
       updatePayment: function (id, dto) { return request('PATCH', '/api/v1/admin/courts/bookings/' + id + '/payment', dto); },
       cancel: function (id, dto) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/cancel', dto); },
       reschedule: function (id, dto) { return request('POST', '/api/v1/admin/courts/bookings/' + id + '/reschedule', dto); },

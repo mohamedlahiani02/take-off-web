@@ -431,15 +431,19 @@
 
   // ── Account Drawer ────────────────────────────────────────────────────────
 
-  var drawerRoot = null, drawerTab = 'bookings';
+  var drawerRoot = null, drawerTab = 'padel';
   var _drData = { orders: null, courtBookings: null, classBookings: null, packs: null };
 
   function showDrawer(tab) {
     if (!auth.user) { showModal('login'); return; }
-    drawerTab = (['bookings', 'packs', 'orders', 'profile'].indexOf(tab) >= 0) ? tab : 'bookings';
+    // Legacy names map onto the split tabs (US-4.1: padel and pilates are separate worlds).
+    if (tab === 'bookings') tab = 'padel';
+    if (tab === 'packs') tab = 'pilates';
+    drawerTab = (['padel', 'pilates', 'orders', 'profile'].indexOf(tab) >= 0) ? tab : 'padel';
     _drData.orders = null;
     _drData.courtBookings = null;
     _drData.classBookings = null;
+    _drData.packs = null;
     if (!drawerRoot) { drawerRoot = document.createElement('div'); document.body.appendChild(drawerRoot); }
     renderDrawer();
     document.addEventListener('keydown', onEscDrawer);
@@ -468,19 +472,20 @@
     if (tab === 'orders' && !_drData.orders) {
       try { var or = await client.orders.list(); _drData.orders = or && or.content ? or.content : (or || []); renderBody(); } catch (e) {}
     }
-    if (tab === 'bookings' && !_drData.courtBookings && !_drData.classBookings) {
+    if (tab === 'padel' && !_drData.courtBookings) {
       try {
         var cb = await client.courts.myBookings();
         _drData.courtBookings = cb || [];
       } catch (e) { _drData.courtBookings = []; }
+      renderBody();
+    }
+    if (tab === 'pilates' && (!_drData.classBookings || !_drData.packs)) {
       try {
         var cls = await client.classes.myBookings();
         _drData.classBookings = cls || [];
       } catch (e) { _drData.classBookings = []; }
+      try { var pk = await client.classes.myPacks(); _drData.packs = pk || []; } catch (e) { _drData.packs = []; }
       renderBody();
-    }
-    if (tab === 'packs' && !_drData.packs) {
-      try { var pk = await client.classes.myPacks(); _drData.packs = pk || []; renderBody(); } catch (e) { _drData.packs = []; renderBody(); }
     }
   }
 
@@ -505,7 +510,7 @@
           '</div>' +
         '</div>' +
         '<div class="tk-tabs">' +
-          ['bookings','packs','orders','profile'].map(function (t) {
+          ['padel','pilates','orders','profile'].map(function (t) {
             return '<button class="tk-tab' + (drawerTab === t ? ' active' : '') + '" data-tab="' + t + '">' + esc(t).toUpperCase() + '</button>';
           }).join('') +
         '</div>' +
@@ -543,133 +548,143 @@
   }
 
   function bodyHTML() {
-    if (drawerTab === 'bookings') return bookingsHTML();
-    if (drawerTab === 'packs') return packsHTML();
+    if (drawerTab === 'padel') return padelHTML();
+    if (drawerTab === 'pilates') return pilatesHTML();
     if (drawerTab === 'orders') return ordersHTML();
     return profileHTML();
   }
 
-  // ── Tab: Bookings ────────────────────────────────────────────────────────
+  // ── Tab: Padel (US-4.2) ──────────────────────────────────────────────────
 
-  function bookingsHTML() {
-    var statusColors = { CONFIRMED: '#c4ef3f', PENDING: '#f5c518', CANCELLED: '#f4a0a0', COMPLETED: 'rgba(244,245,238,.4)', PAST: 'rgba(244,245,238,.4)' };
+  var STATUS_COLORS = { CONFIRMED: '#c4ef3f', PENDING: '#f5c518', BOOKED: '#c4ef3f', CANCELLED: '#f4a0a0', COMPLETED: 'rgba(244,245,238,.4)', ATTENDED: '#4dce7a', ABSENT: '#f4a0a0', NO_SHOW: '#f4a0a0', WAITLIST: '#f5c518' };
 
-    var courts = _drData.courtBookings;
-    var classes = _drData.classBookings;
-
-    if (courts === null || classes === null) {
-      return '<div class="tk-empty" style="text-align:center;margin-top:30px;"><div style="margin-bottom:10px;">⏳</div>Loading bookings…</div>';
-    }
-
-    var allBookings = [];
-
-    (courts || []).forEach(function (b) {
-      allBookings.push({
-        name: b.courtName || 'Court',
-        sub: (b.date || '') + (b.startTime ? ' · ' + b.startTime + (b.endTime ? '–' + b.endTime : '') : ''),
-        status: b.status || 'CONFIRMED',
-        price: b.totalDt ? b.totalDt + ' DT' : '',
-        type: 'court',
-        sortKey: b.date || '',
-      });
-    });
-
-    (classes || []).forEach(function (b) {
-      allBookings.push({
-        name: b.sessionName || b.className || 'Class',
-        sub: (b.instructorName ? b.instructorName + ' · ' : '') + (b.date || '') + (b.startTime ? ' · ' + b.startTime : ''),
-        status: b.status || 'CONFIRMED',
-        price: '',
-        type: 'class',
-        sortKey: b.date || '',
-      });
-    });
-
-    // If the API returned no class bookings, include locally-recorded ones
-    // (bookings made from the schedule before sessions are seeded in the DB)
-    if ((classes || []).length === 0) {
-      var localBookings = (auth.user && auth.user.bookings) || [];
-      localBookings.forEach(function (b) {
-        allBookings.push({
-          name: b.name || 'Class',
-          sub: b.sub || '',
-          status: 'PENDING',
-          price: b.price || '',
-          type: 'class',
-          sortKey: b.recordedAt || '',
-        });
-      });
-    }
-
-    if (!allBookings.length) {
-      return '<div class="tk-empty">No bookings yet.<br>Book a court or class to see them here.</div>';
-    }
-
-    allBookings.sort(function (a, b) { return b.sortKey > a.sortKey ? 1 : -1; });
-
-    return allBookings.map(function (b) {
-      var statusColor = statusColors[b.status] || 'rgba(244,245,238,.5)';
-      var typeTag = b.type === 'court' ? 'COURT' : 'CLASS';
-      return '<div class="tk-card-row">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
-          '<div><div style="font-weight:600;font-size:14px;color:#fff;">' + esc(b.name) + '</div>' +
-          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:3px;">' + esc(b.sub) + '</div></div>' +
-          '<div style="display:flex;align-items:center;gap:8px;flex-direction:column;align-items:flex-end;">' +
-            '<span style="padding:3px 9px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:9px;background:rgba(196,239,63,.1);color:' + statusColor + ';">' + esc(b.status) + '</span>' +
-            '<span style="font-family:\'Space Mono\',monospace;font-size:9px;color:rgba(244,245,238,.35);">' + typeTag + '</span>' +
-            (b.price ? '<div style="font-family:Anton,sans-serif;font-size:16px;color:#c4ef3f;">' + esc(b.price) + '</div>' : '') +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    }).join('');
+  function fmtWhen(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' }) +
+      ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  // ── Tab: Packs ───────────────────────────────────────────────────────────
+  function sectionLabel(txt) {
+    return '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;color:rgba(244,245,238,.35);margin:14px 0 8px;">' + txt + '</div>';
+  }
 
-  function packsHTML() {
-    var apiPacks = _drData.packs;
-
-    if (apiPacks === null) {
-      var localPacks = (auth.user && auth.user.packs) || [];
-      if (!localPacks.length) return '<div class="tk-empty" style="text-align:center;margin-top:30px;"><div style="margin-bottom:10px;">⏳</div>Loading packs…</div>';
-      apiPacks = localPacks.map(function (p) { return { packTypeName: p.name, remaining: p.remaining, total: p.total, expiresAt: p.expiresAt }; });
+  function padelHTML() {
+    var courts = _drData.courtBookings;
+    if (courts === null) {
+      return '<div class="tk-empty" style="text-align:center;margin-top:30px;"><div style="margin-bottom:10px;">⏳</div>Chargement…</div>';
+    }
+    if (!(courts || []).length) {
+      return '<div class="tk-empty">Aucun match pour l\'instant.</div>' +
+        '<div style="margin-top:16px;text-align:center;"><a href="/padel/reserve" style="color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.12em;">Réserver un terrain →</a></div>';
     }
 
     var now = new Date();
-    var active = (apiPacks || []).filter(function (p) { return (p.remaining === undefined || p.remaining > 0) && (!p.expiresAt || new Date(p.expiresAt) > now); });
-    var expired = (apiPacks || []).filter(function (p) { return p.remaining === 0 || (p.expiresAt && new Date(p.expiresAt) <= now); });
+    // Balance due for padel (US-4.4): my pending tranches on matches already played.
+    var due = 0;
+    (courts || []).forEach(function (b) {
+      if (b.status !== 'CANCELLED' && b.mySharePaymentStatus === 'PENDING' && new Date(b.startsAt) < now) {
+        due += Number(b.myShareDt || b.priceDt || 0);
+      }
+    });
 
-    if (!active.length && !expired.length) {
-      return '<div class="tk-empty">No packs purchased yet.</div>' +
-        '<div style="margin-top:16px;text-align:center;"><a href="/padel#plans" style="color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.12em;">Get a match pack →</a></div>';
-    }
+    var upcoming = (courts || []).filter(function (b) { return b.status === 'CONFIRMED' && new Date(b.startsAt) >= now; });
+    var history = (courts || []).filter(function (b) { return !(b.status === 'CONFIRMED' && new Date(b.startsAt) >= now); });
 
-    var html = active.map(function (pk) {
-      var total = pk.total || 10;
-      var rem = pk.remaining !== undefined ? pk.remaining : total;
-      var pct = total > 0 ? Math.round((rem / total) * 100) : 0;
-      var exp = pk.expiresAt ? new Date(pk.expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-      return '<div style="padding:14px;border-radius:13px;background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.18);margin-bottom:10px;">' +
-        '<div style="font-weight:600;font-size:14px;color:#fff;margin-bottom:10px;">' + esc(pk.packTypeName || pk.name || 'Pack') + '</div>' +
-        '<div style="height:5px;border-radius:999px;background:rgba(244,245,238,.1);margin-bottom:8px;">' +
-          '<div style="height:5px;border-radius:999px;background:#c4ef3f;width:' + pct + '%;transition:width .4s;"></div>' +
-        '</div>' +
-        '<div style="display:flex;justify-content:space-between;font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.55);">' +
-          '<span>' + rem + ' / ' + total + ' sessions remaining</span>' + (exp ? '<span>Expires ' + exp + '</span>' : '') +
+    function courtRow(b, withCancel) {
+      var statusColor = STATUS_COLORS[b.status] || 'rgba(244,245,238,.5)';
+      var share = b.myShareDt !== undefined && b.myShareDt !== null ? Number(b.myShareDt) : Number(b.priceDt || 0);
+      var shareState = b.mySharePaymentStatus === 'PAID' ? '✓ payé'
+        : (b.mySharePaymentStatus === 'COVERED' ? 'offert' : 'à régler au club');
+      var canCancel = withCancel && (new Date(b.startsAt).getTime() - now.getTime()) > 24 * 3600 * 1000;
+      return '<div class="tk-card-row">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+          '<div><div style="font-weight:600;font-size:14px;color:#fff;">' + esc(b.courtName || 'Court') +
+            (b.mode === 'SHARE' ? ' <span style="font-family:\'Space Mono\',monospace;font-size:9px;color:rgba(244,245,238,.4);">PARTAGÉ</span>' : '') +
+            (b.isOrganizer === false ? ' <span style="font-family:\'Space Mono\',monospace;font-size:9px;color:rgba(244,245,238,.4);">INVITÉ</span>' : '') + '</div>' +
+          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:3px;">' + fmtWhen(b.startsAt) + '</div>' +
+          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:' + (b.mySharePaymentStatus === 'PAID' ? '#4dce7a' : '#f5c518') + ';margin-top:2px;">Ma part : ' + share.toFixed(0) + ' DT — ' + shareState + '</div></div>' +
+          '<div style="display:flex;gap:6px;flex-direction:column;align-items:flex-end;">' +
+            '<span style="padding:3px 9px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:9px;background:rgba(196,239,63,.1);color:' + statusColor + ';">' + esc(b.status) + '</span>' +
+            (canCancel ? '<button class="tk-cancel-court" data-id="' + b.bookingId + '" style="background:none;border:1px solid rgba(244,160,160,.35);color:#f4a0a0;border-radius:999px;padding:3px 10px;font-family:\'Space Mono\',monospace;font-size:9px;cursor:pointer;">Annuler</button>' : '') +
+          '</div>' +
         '</div>' +
       '</div>';
-    }).join('');
+    }
 
-    if (expired.length) {
-      html += '<div style="font-family:\'Space Mono\',monospace;font-size:10px;letter-spacing:.14em;color:rgba(244,245,238,.35);margin:16px 0 8px;">EXPIRED</div>';
-      html += expired.map(function (pk) {
-        return '<div style="padding:10px 14px;border-radius:11px;background:rgba(244,245,238,.03);border:1px solid rgba(244,245,238,.08);margin-bottom:8px;opacity:.6;">' +
-          '<div style="font-size:13px;color:rgba(244,245,238,.55);">' + esc(pk.packTypeName || pk.name || 'Pack') + ' — 0 remaining</div>' +
+    var html = '';
+    if (due > 0) {
+      html += '<div style="padding:10px 14px;border-radius:11px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);margin-bottom:8px;font-size:12px;color:#f4a0a0;">' +
+        'Solde à régler au club : <b>' + due.toFixed(0) + ' DT</b></div>';
+    }
+    if (upcoming.length) html += sectionLabel('À VENIR') + upcoming.map(function (b) { return courtRow(b, true); }).join('');
+    if (history.length) html += sectionLabel('HISTORIQUE DES MATCHS') + history.map(function (b) { return courtRow(b, false); }).join('');
+    html += '<div style="margin-top:16px;text-align:center;"><a href="/padel/reserve" style="color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.12em;">Réserver un terrain →</a></div>';
+    return html;
+  }
+
+  // ── Tab: Pilates (US-4.3) ────────────────────────────────────────────────
+
+  function pilatesHTML() {
+    var classes = _drData.classBookings;
+    if (classes === null) {
+      return '<div class="tk-empty" style="text-align:center;margin-top:30px;"><div style="margin-bottom:10px;">⏳</div>Chargement…</div>';
+    }
+
+    var html = '';
+
+    // Pack credits first — the thing a pilates member checks most.
+    var packs = _drData.packs || [];
+    var nowD = new Date();
+    var activePacks = packs.filter(function (p) { return (p.remaining === undefined || p.remaining > 0) && (!p.expiresAt || new Date(p.expiresAt) > nowD); });
+    if (activePacks.length) {
+      html += sectionLabel('MON PACK') + activePacks.map(function (pk) {
+        var total = pk.total || 10;
+        var rem = pk.remaining !== undefined ? pk.remaining : total;
+        var pct = total > 0 ? Math.round((rem / total) * 100) : 0;
+        var exp = pk.expiresAt ? new Date(pk.expiresAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+        return '<div style="padding:14px;border-radius:13px;background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.18);margin-bottom:10px;">' +
+          '<div style="font-weight:600;font-size:14px;color:#fff;margin-bottom:10px;">' + esc(pk.packTypeName || pk.name || 'Pack') + '</div>' +
+          '<div style="height:5px;border-radius:999px;background:rgba(244,245,238,.1);margin-bottom:8px;">' +
+            '<div style="height:5px;border-radius:999px;background:#c4ef3f;width:' + pct + '%;transition:width .4s;"></div>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.55);">' +
+            '<span>' + rem + ' / ' + total + ' séances restantes</span>' + (exp ? '<span>Expire ' + exp + '</span>' : '') +
+          '</div>' +
         '</div>';
       }).join('');
     }
 
-    html += '<div style="margin-top:16px;text-align:center;"><a href="/padel#plans" style="color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.12em;">Get more packs →</a></div>';
+    var now = new Date();
+    function whenOf(b) { return b.session && b.session.startsAt ? new Date(b.session.startsAt) : new Date(b.createdAt || 0); }
+    var upcoming = (classes || []).filter(function (b) { return (b.status === 'BOOKED' || b.status === 'WAITLIST') && whenOf(b) >= now; });
+    var history = (classes || []).filter(function (b) { return !((b.status === 'BOOKED' || b.status === 'WAITLIST') && whenOf(b) >= now); });
+
+    function classRow(b, withCancel) {
+      var s = b.session || {};
+      var statusColor = STATUS_COLORS[b.status] || 'rgba(244,245,238,.5)';
+      var canCancel = withCancel && (whenOf(b).getTime() - now.getTime()) > 24 * 3600 * 1000;
+      return '<div class="tk-card-row">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+          '<div><div style="font-weight:600;font-size:14px;color:#fff;">' + esc(s.className || 'Séance') + '</div>' +
+          '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.5);margin-top:3px;">' + fmtWhen(s.startsAt) + (s.durationMin ? ' · ' + s.durationMin + ' min' : '') + '</div>' +
+          (b.paidWith ? '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:rgba(244,245,238,.4);margin-top:2px;">' + esc(b.paidWith === 'PACK' ? 'Pack' : (b.paidWith === 'SINGLE' ? (Number(b.priceDt || 0).toFixed(0) + ' DT') : b.paidWith)) + '</div>' : '') + '</div>' +
+          '<div style="display:flex;gap:6px;flex-direction:column;align-items:flex-end;">' +
+            '<span style="padding:3px 9px;border-radius:999px;font-family:\'Space Mono\',monospace;font-size:9px;background:rgba(196,239,63,.1);color:' + statusColor + ';">' + esc(b.status) + '</span>' +
+            (canCancel ? '<button class="tk-cancel-class" data-id="' + b.bookingId + '" style="background:none;border:1px solid rgba(244,160,160,.35);color:#f4a0a0;border-radius:999px;padding:3px 10px;font-family:\'Space Mono\',monospace;font-size:9px;cursor:pointer;">Annuler</button>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    if (upcoming.length) html += sectionLabel('À VENIR') + upcoming.map(function (b) { return classRow(b, true); }).join('');
+    if (history.length) html += sectionLabel('HISTORIQUE DES SÉANCES') + history.map(function (b) { return classRow(b, false); }).join('');
+
+    if (!html) {
+      return '<div class="tk-empty">Aucune séance pour l\'instant.</div>' +
+        '<div style="margin-top:16px;text-align:center;"><a href="/pilates/classes" style="color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.12em;">Voir le planning →</a></div>';
+    }
+    html += '<div style="margin-top:16px;text-align:center;"><a href="/pilates/classes" style="color:#c4ef3f;font-family:\'Space Mono\',monospace;font-size:11px;letter-spacing:.12em;">Voir le planning →</a></div>';
     return html;
   }
 
@@ -830,6 +845,35 @@
   }
 
   function wireBodyEvents() {
+    // ── Cancel my court booking / my share (US-2.5) ────────────────────────
+    document.querySelectorAll('.tk-cancel-court').forEach(function (btn) {
+      btn.onclick = async function () {
+        if (!confirm('Annuler cette réservation ? Le créneau sera libéré.')) return;
+        var client = api();
+        if (!client || !client.isOnline()) return;
+        try {
+          await client.courts.cancelBooking(btn.getAttribute('data-id'));
+          toast('Réservation annulée.', 2000);
+          _drData.courtBookings = null;
+          fetchTabData('padel');
+        } catch (e) { toast(e.message || 'Annulation impossible.', 2500); }
+      };
+    });
+    document.querySelectorAll('.tk-cancel-class').forEach(function (btn) {
+      btn.onclick = async function () {
+        if (!confirm('Annuler cette séance ?')) return;
+        var client = api();
+        if (!client || !client.isOnline()) return;
+        try {
+          await client.classes.cancelBooking(btn.getAttribute('data-id'));
+          toast('Séance annulée.', 2000);
+          _drData.classBookings = null;
+          _drData.packs = null;
+          fetchTabData('pilates');
+        } catch (e) { toast(e.message || 'Annulation impossible.', 2500); }
+      };
+    });
+
     // ── Contact info edit ──────────────────────────────────────────────────
     var editNameBtn = document.getElementById('tk-edit-name');
     if (editNameBtn) editNameBtn.onclick = function () {

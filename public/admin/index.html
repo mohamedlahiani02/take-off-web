@@ -1470,6 +1470,7 @@ function renderCourts() {
       '<button class="btn-sm btn-ghost" onclick="shiftCalDate(1)">›</button>' +
       '<button class="btn-sm btn-ghost" onclick="changeCalDate(todayStr())">Today</button>' +
       '<div style="flex:1;"></div>' +
+      '<button class="btn-sm btn-ghost" onclick="showReceivables()">Impayés</button>' +
       '<button id="cal-show-cancelled" class="btn-sm btn-ghost" onclick="toggleShowCancelled()">Show cancelled</button>' +
       '<button class="btn-sm btn-ghost" onclick="openBlockModal()">+ Block slot</button>' +
       '<button class="btn-sm btn-lime" onclick="openBookModal()">+ Book court</button>' +
@@ -1557,6 +1558,26 @@ function isoDateStr(iso) { return new Date(iso).toISOString().slice(0,10); }
 
 function calClickSlot(dateStr, slotTime, courtId) {
   openBookModal(dateStr, slotTime, courtId);
+}
+
+// ── Receivables (US-3.4): who owes unpaid tranches on played matches ──
+async function showReceivables() {
+  try {
+    var list = await window.adminApi.courts.receivables() || [];
+    var rows = list.map(function(r){
+      return '<tr style="cursor:pointer;" onclick="closeGenModal();openProfile(\''+r.userId+'\')">' +
+        '<td>'+esc(r.userName||'—')+'<div style="font-family:Space Mono;font-size:10px;color:var(--muted);">'+esc(r.phone||'')+'</div></td>' +
+        '<td style="color:#f87171;font-weight:700;">'+Number(r.totalDueDt).toFixed(0)+' DT</td>' +
+        '<td>'+r.unpaidCount+'</td>' +
+        '<td style="font-size:11px;color:var(--muted);">'+(r.oldestDue?new Date(r.oldestDue).toLocaleDateString():'—')+'</td>' +
+        '<td>'+(r.noShowCount?'<span style="color:#f87171;">'+r.noShowCount+'</span>':'0')+'</td></tr>';
+    }).join('');
+    var body = list.length
+      ? '<table><thead><tr><th>MEMBRE</th><th>DÛ</th><th>TRANCHES</th><th>PLUS ANCIEN</th><th>NO-SHOW</th></tr></thead><tbody>'+rows+'</tbody></table>' +
+        '<div style="margin-top:8px;font-size:11px;color:var(--muted);">Cliquez un membre pour ouvrir son profil.</div>'
+      : '<div class="empty-state"><div class="icon">✓</div><p>Aucun impayé — tout le monde est à jour.</p></div>';
+    openGenModal('Impayés terrain', body, null, null, 560);
+  } catch(e) { toast(e.message||'Failed.','error'); }
 }
 
 // ── Cancelled overlay (US-2.1/2.2): cancelled bookings never occupy the live grid ──
