@@ -173,7 +173,7 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
 
 <!-- ── API URL config ── -->
 <script>window.TAKEOFF_API_URL = 'https://take-off-api.onrender.com';</script>
-<script src="/admin/adminApi.js"></script>
+<script src="/admin/adminApi.js?v=2"></script>
 
 <div id="toast"></div>
 
@@ -1177,7 +1177,7 @@ function renderUsers() {
       <select id="user-status-filter" onchange="loadUsersList()" style="padding:11px 12px;border-radius:10px;border:1px solid rgba(196,239,63,.22);background:var(--navy2);color:var(--cream);">
         <option value="">All active</option>
         <option value="ACTIVE">Active</option>
-        <option value="GHOST">Guests</option>
+        <option value="GHOST">Created at club</option>
         <option value="BLOCKED">Blocked</option>
       </select>
       <button class="btn-sm btn-lime" onclick="openUserModal()">+ Create user</button>
@@ -1213,7 +1213,7 @@ function onUserSearch() {
 
 function userStatusBadge(s) {
   if (s === 'ACTIVE') return '<span class="badge badge-active">ACTIVE</span>';
-  if (s === 'GHOST') return '<span class="badge" style="background:rgba(234,179,8,.18);color:#fde047;">GUEST</span>';
+  if (s === 'GHOST') return '<span class="badge" style="background:rgba(234,179,8,.18);color:#fde047;">CLUB</span>';
   if (s === 'BLOCKED') return '<span class="badge badge-inactive">BLOCKED</span>';
   return '<span class="badge" style="background:rgba(255,255,255,.07);color:var(--muted);">' + esc(s) + '</span>';
 }
@@ -1470,6 +1470,7 @@ function renderCourts() {
       '<button class="btn-sm btn-ghost" onclick="shiftCalDate(1)">›</button>' +
       '<button class="btn-sm btn-ghost" onclick="changeCalDate(todayStr())">Today</button>' +
       '<div style="flex:1;"></div>' +
+      '<button id="cal-show-cancelled" class="btn-sm btn-ghost" onclick="toggleShowCancelled()">Show cancelled</button>' +
       '<button class="btn-sm btn-ghost" onclick="openBlockModal()">+ Block slot</button>' +
       '<button class="btn-sm btn-lime" onclick="openBookModal()">+ Book court</button>' +
     '</div>' +
@@ -1558,6 +1559,44 @@ function calClickSlot(dateStr, slotTime, courtId) {
   openBookModal(dateStr, slotTime, courtId);
 }
 
+// ── Cancelled overlay (US-2.1/2.2): cancelled bookings never occupy the live grid ──
+var _showCancelled = false;
+function toggleShowCancelled() {
+  _showCancelled = !_showCancelled;
+  var btn = document.getElementById('cal-show-cancelled');
+  if (btn) {
+    btn.style.background = _showCancelled ? 'rgba(252,165,165,.15)' : '';
+    btn.style.color = _showCancelled ? '#fca5a5' : '';
+  }
+  renderCalendar();
+}
+
+// ── Payment-state colors (US-1.4): green = paid, amber = partial, red = unpaid ──
+var PAY_STATE_STYLES = {
+  PAID:    { bg: 'rgba(77,206,122,.14)', bd: 'rgba(77,206,122,.4)',  fg: '#4dce7a' },
+  PARTIAL: { bg: 'rgba(245,197,24,.12)', bd: 'rgba(245,197,24,.4)',  fg: '#f5c518' },
+  UNPAID:  { bg: 'rgba(239,68,68,.10)',  bd: 'rgba(239,68,68,.35)',  fg: '#f87171' },
+};
+function bookingCardHtml(b, courtLabel) {
+  if (b.status === 'CANCELLED') {
+    return '<div onclick="event.stopPropagation();showBookingDetail(\''+b.id+'\')" ' +
+      'style="background:rgba(255,255,255,.04);border:1px dashed rgba(252,165,165,.35);border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;opacity:.55;">' +
+      (courtLabel||'') +
+      '<div style="font-weight:600;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (b.userName ? esc(b.userName) : esc(b.mode)) + '</div>' +
+      '<div style="color:#fca5a5;font-size:10px;">CANCELLED</div></div>';
+  }
+  var st = PAY_STATE_STYLES[b.paymentState] || PAY_STATE_STYLES.UNPAID;
+  var chip = (b.totalSlots > 1)
+    ? '<span style="font-family:Space Mono;font-size:9px;background:'+st.bg+';border:1px solid '+st.bd+';color:'+st.fg+';border-radius:999px;padding:1px 6px;margin-left:4px;">'+b.paidCount+'/'+b.totalSlots+'</span>'
+    : '';
+  return '<div onclick="event.stopPropagation();showBookingDetail(\''+b.id+'\')" ' +
+    'style="background:'+st.bg+';border:1px solid '+st.bd+';border-left:3px solid '+st.fg+';border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;">' +
+    (courtLabel||'') +
+    '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (b.userName ? esc(b.userName) : esc(b.mode)) + chip + '</div>' +
+    '<div style="font-size:10px;color:'+st.fg+';">'+(b.paymentState==='PAID'?'PAID':(b.paymentState==='PARTIAL'?'PARTIAL':'UNPAID'))+'</div>' +
+    '</div>';
+}
+
 function renderCalendarWeek(wrap, courts) {
   var ww = weekWindow(_calDate);
   var days = [];
@@ -1585,7 +1624,8 @@ function renderCalendarWeek(wrap, courts) {
     var dayCells = days.map(function(d) {
       var slotBookings = (_cal.bookings||[]).filter(function(b){
         return isoDateStr(b.startsAt) === d.iso && isoToLocalSlot(b.startsAt) === slot &&
-          (!filterCourtId || b.courtId === filterCourtId);
+          (!filterCourtId || b.courtId === filterCourtId) &&
+          (b.status !== 'CANCELLED' || _showCancelled);
       });
       var slotBlocks = (_cal.blocks||[]).filter(function(b){
         return isoDateStr(b.startsAt) === d.iso && isoToLocalSlot(b.startsAt) === slot &&
@@ -1594,28 +1634,26 @@ function renderCalendarWeek(wrap, courts) {
       var cards = '';
       slotBookings.forEach(function(b){
         var cName = !filterCourtId ? ('<div style="font-size:9px;color:var(--muted);margin-bottom:2px;">'+esc(courtMap[b.courtId]||'')+'</div>') : '';
-        cards += '<div onclick="showBookingDetail(\''+b.id+'\')" style="background:rgba(196,239,63,.12);border:1px solid rgba(196,239,63,.3);border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;">' +
-          cName +
-          '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (b.userName ? esc(b.userName) : esc(b.mode)) + '</div>' +
-          '<div style="font-size:10px;color:'+(b.paymentStatus==='PAID'?'var(--lime)':'var(--muted)')+';">'+esc(b.paymentStatus)+'</div>' +
-          (b.status==='CANCELLED'?'<div style="color:#fca5a5;font-size:10px;">CANCELLED</div>':'') +
-          '</div>';
+        cards += bookingCardHtml(b, cName);
       });
       slotBlocks.forEach(function(bl){
         cards += '<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:4px 6px;margin:2px;font-size:10px;color:#fca5a5;">⛔ '+esc(bl.reason)+'</div>';
       });
-      var isEmpty = !slotBookings.length && !slotBlocks.length;
-      return '<div onclick="'+(isEmpty?"calClickSlot('"+d.iso+"','"+slot+"',"+(filterCourtId?"'"+filterCourtId+"'":"null")+")":'')+'" style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:52px;padding:2px;'+(isEmpty?'cursor:pointer;':'')+'transition:background .12s;" '+
-        (isEmpty?'onmouseover="this.style.background=\'rgba(196,239,63,.04)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
+      // The slot is bookable when nothing LIVE occupies it — cancelled cards never block (US-2.1).
+      var isFree = !slotBookings.some(function(b){ return b.status !== 'CANCELLED'; }) && !slotBlocks.length;
+      return '<div onclick="'+(isFree?"calClickSlot('"+d.iso+"','"+slot+"',"+(filterCourtId?"'"+filterCourtId+"'":"null")+")":'')+'" style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:52px;padding:2px;'+(isFree?'cursor:pointer;':'')+'transition:background .12s;" '+
+        (isFree?'onmouseover="this.style.background=\'rgba(196,239,63,.04)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
     }).join('');
     return timeCell + dayCells;
   }).join('');
 
   wrap.innerHTML = '<div style="'+gridStyle+'">'+headerHtml+bodyHtml+'</div>' +
-    '<div style="margin-top:12px;display:flex;gap:12px;font-size:11px;color:var(--muted);">' +
-    '<span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:rgba(196,239,63,.2);display:inline-block;"></span>Booking</span>' +
-    '<span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,.15);display:inline-block;"></span>Blocked</span>' +
-    '<span>Click empty slot to book</span></div>';
+    '<div style="margin-top:12px;display:flex;gap:12px;font-size:11px;color:var(--muted);flex-wrap:wrap;">' +
+    '<span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:rgba(77,206,122,.35);display:inline-block;"></span>Paid</span>' +
+    '<span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:rgba(245,197,24,.35);display:inline-block;"></span>Partially paid</span>' +
+    '<span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,.3);display:inline-block;"></span>Unpaid</span>' +
+    '<span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);display:inline-block;"></span>Blocked</span>' +
+    '<span>Click a free slot to book</span></div>';
 }
 
 function renderCalendarDay(wrap, courts) {
@@ -1630,25 +1668,21 @@ function renderCalendarDay(wrap, courts) {
   var bodyHtml = CAL_SLOTS.map(function(slot) {
     var timeCell = '<div style="border-bottom:1px solid rgba(196,239,63,.06);padding:6px 4px;text-align:center;font-family:Space Mono;font-size:10px;color:var(--muted);">'+slot+'</div>';
     var courtCells = courts.map(function(c) {
-      var bks = (_cal.bookings||[]).filter(function(b){ return b.courtId===c.id && isoDateStr(b.startsAt)===_calDate && isoToLocalSlot(b.startsAt)===slot; });
+      var bks = (_cal.bookings||[]).filter(function(b){
+        return b.courtId===c.id && isoDateStr(b.startsAt)===_calDate && isoToLocalSlot(b.startsAt)===slot &&
+          (b.status !== 'CANCELLED' || _showCancelled);
+      });
       var bls = (_cal.blocks||[]).filter(function(b){ return b.courtId===c.id && isoDateStr(b.startsAt)===_calDate && isoToLocalSlot(b.startsAt)===slot; });
       var cards = '';
-      bks.forEach(function(b){
-        cards += '<div onclick="showBookingDetail(\''+b.id+'\')" style="background:rgba(196,239,63,.12);border:1px solid rgba(196,239,63,.3);border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;">' +
-          '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (b.userName ? esc(b.userName) : esc(b.mode)) + '</div>' +
-          '<div style="font-size:10px;color:'+(b.paymentStatus==='PAID'?'var(--lime)':'var(--muted)')+';">'+esc(b.paymentStatus)+'</div>' +
-          (b.status==='CANCELLED'?'<div style="color:#fca5a5;font-size:10px;">CANCELLED</div>':'') +
-          '<button class="btn-icon danger" onclick="event.stopPropagation();openCancelModal(\''+b.id+'\')" style="margin-top:4px;font-size:10px;padding:2px 6px;">Cancel</button>' +
-          '</div>';
-      });
+      bks.forEach(function(b){ cards += bookingCardHtml(b, ''); });
       bls.forEach(function(bl){
         cards += '<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:4px 6px;margin:2px;font-size:10px;color:#fca5a5;">⛔ '+esc(bl.reason)+
           '<br><button class="btn-icon" onclick="removeBlock(\''+bl.id+'\')" style="margin-top:4px;font-size:10px;padding:2px 6px;">Remove</button></div>';
       });
-      var isEmpty = !bks.length && !bls.length;
-      return '<div onclick="'+(isEmpty?"calClickSlot('"+_calDate+"','"+slot+"','"+c.id+"')":'')+'" '+
-        'style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:64px;padding:2px;'+(isEmpty?'cursor:pointer;':'')+'transition:background .12s;" '+
-        (isEmpty?'onmouseover="this.style.background=\'rgba(196,239,63,.04)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
+      var isFree = !bks.some(function(b){ return b.status !== 'CANCELLED'; }) && !bls.length;
+      return '<div onclick="'+(isFree?"calClickSlot('"+_calDate+"','"+slot+"','"+c.id+"')":'')+'" '+
+        'style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:64px;padding:2px;'+(isFree?'cursor:pointer;':'')+'transition:background .12s;" '+
+        (isFree?'onmouseover="this.style.background=\'rgba(196,239,63,.04)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
     }).join('');
     return timeCell + courtCells;
   }).join('');
@@ -1656,56 +1690,170 @@ function renderCalendarDay(wrap, courts) {
   wrap.innerHTML = '<div style="'+gridStyle+'">'+headerHtml+bodyHtml+'</div>';
 }
 
-function showBookingDetail(bookingId) {
-  var b = (_cal.bookings||[]).find(function(x){ return x.id===bookingId; });
+async function showBookingDetail(bookingId) {
+  var b;
+  try { b = await window.adminApi.courts.bookingDetail(bookingId); }
+  catch(e) { b = (_cal.bookings||[]).find(function(x){ return x.id===bookingId; }); }
   if (!b) return;
-  var court = (_cal.courts||[]).find(function(c){ return c.id===b.courtId; });
-  var courtName = court ? court.name : '?';
+  renderBookingDetail(b);
+}
 
-  var payOpts = ['PENDING','PAID','PAY_AT_CLUB','REFUNDED'].map(function(v){
-    return '<option value="'+v+'"'+(b.paymentStatus===v?' selected':'')+'>'+v.replace('_',' ')+'</option>';
-  }).join('');
+function participantBadge(s) {
+  var m = {
+    PAID:    ['#4dce7a','rgba(77,206,122,.15)','PAID'],
+    PENDING: ['#f5c518','rgba(245,197,24,.13)','TO PAY'],
+    COVERED: ['#4fa3f7','rgba(79,163,247,.15)','COVERED'],
+    WAIVED:  ['#9ca3af','rgba(255,255,255,.08)','WAIVED'],
+  }[s] || ['#9ca3af','rgba(255,255,255,.08)', s];
+  return '<span class="badge" style="background:'+m[1]+';color:'+m[0]+';">'+m[2]+'</span>';
+}
+
+function renderBookingDetail(b) {
+  var court = (_cal && _cal.courts||[]).find(function(c){ return c.id===b.courtId; });
+  var courtName = court ? court.name : '?';
+  var live = b.status === 'CONFIRMED';
+  var parts = b.participants || [];
+  var slots = b.totalSlots || (b.mode === 'SHARE' ? 4 : 1);
+  var st = PAY_STATE_STYLES[b.paymentState] || PAY_STATE_STYLES.UNPAID;
 
   var body = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
     '<div><div class="kicker">COURT</div><div>'+esc(courtName)+'</div></div>' +
     '<div><div class="kicker">TIME</div><div>'+fmtTime(b.startsAt)+' – '+fmtTime(b.endsAt)+'</div></div>' +
-    '<div><div class="kicker">PLAYER</div><div>'+(b.userName ? esc(b.userName) : '<span style="color:var(--muted)">—</span>')+'</div></div>' +
-    '<div><div class="kicker">MODE</div><div>'+esc(b.mode)+' — '+Number(b.priceDt).toFixed(0)+' DT</div></div>' +
-    '<div style="grid-column:1/-1"><div class="kicker">PAYMENT STATUS</div>' +
-    '<div style="display:flex;gap:8px;align-items:center;margin-top:4px;">' +
-    '<select id="detail-pay-status" style="flex:1;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">'+payOpts+'</select>' +
-    '<button class="btn-sm btn-lime" onclick="savePaymentStatus(\''+b.id+'\')">Save</button>' +
-    '</div></div>' +
+    '<div><div class="kicker">ORGANIZER</div><div>'+(b.userName ? esc(b.userName) : '<span style="color:var(--muted)">—</span>')+'</div></div>' +
+    '<div><div class="kicker">MODE</div><div>'+esc(b.mode)+' — '+Number(b.priceDt).toFixed(0)+' DT'+(b.mode==='SHARE'?'/joueur':'')+'</div></div>' +
+    '<div><div class="kicker">PAYMENT</div><div style="color:'+st.fg+';font-weight:700;">'+b.paymentState+(slots>1?' ('+b.paidCount+'/'+slots+')':'')+'</div></div>' +
     '<div><div class="kicker">BOOKING STATUS</div><div>'+bookingStatusBadge(b.status)+'</div></div>' +
     '</div>';
 
-  // Co-player panel for SHARE bookings
-  if (b.mode === 'SHARE') {
-    var coPlayers = (_cal.bookings||[]).filter(function(x){
-      return x.courtId===b.courtId && x.startsAt===b.startsAt && x.id!==b.id && x.status==='CONFIRMED';
-    });
-    body += '<hr style="border:none;border-top:1px solid var(--border);margin:4px 0 12px;">';
-    body += '<div class="kicker" style="margin-bottom:8px;">CO-PLAYERS IN THIS SLOT ('+coPlayers.length+'/3)</div>';
-    if (coPlayers.length === 0) {
-      body += '<div style="color:var(--muted);font-size:13px;margin-bottom:10px;">No other players yet.</div>';
-    } else {
-      coPlayers.forEach(function(cp){
-        body += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
-          '<span>'+(cp.userName ? esc(cp.userName) : '<span style="color:var(--muted)">Unknown</span>')+'</span>' +
-          '<span style="color:var(--muted);">'+esc(cp.paymentStatus)+'</span></div>';
-      });
+  // ── Participant slots (US-1.2) ──
+  body += '<hr style="border:none;border-top:1px solid var(--border);margin:4px 0 12px;">';
+  body += '<div class="kicker" style="margin-bottom:8px;">PLAYERS ('+parts.length+'/'+slots+')</div>';
+  parts.forEach(function(p){
+    var isOrganizer = p.userId === b.userId;
+    var actions = '';
+    if (live) {
+      if (p.paymentStatus === 'PENDING') {
+        actions += '<select id="pm-'+p.id+'" style="padding:3px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">' +
+          ['CASH','WALLET','CARD','D17'].map(function(m){ return '<option value="'+m+'">'+m+'</option>'; }).join('') + '</select> ' +
+          '<button class="btn-icon" style="font-size:11px;" onclick="setParticipant(\''+b.id+'\',\''+p.id+'\',{paymentStatus:\'PAID\',paymentMethod:document.getElementById(\'pm-'+p.id+'\').value})">Mark paid</button>';
+      } else if (p.paymentStatus === 'PAID') {
+        actions += '<button class="btn-icon" style="font-size:11px;" onclick="setParticipant(\''+b.id+'\',\''+p.id+'\',{paymentStatus:\'PENDING\'})">Undo</button>';
+      }
+      actions += ' <button class="btn-icon'+(p.noShow?' danger':'')+'" style="font-size:11px;" onclick="setParticipant(\''+b.id+'\',\''+p.id+'\',{noShow:'+(!p.noShow)+'})">'+(p.noShow?'No-show ✓':'No-show')+'</button>';
+      if (!isOrganizer) {
+        actions += ' <button class="btn-icon danger" style="font-size:11px;" onclick="removeParticipant(\''+b.id+'\',\''+p.id+'\')">✕</button>';
+      }
     }
-    body += '<div style="margin-top:10px;">' +
-      '<input id="coplayer-search" placeholder="Search member to add…" oninput="searchCoPlayer(this.value,\''+esc(b.courtId)+'\',\''+b.startsAt+'\',\''+b.endsAt+'\')" autocomplete="off" ' +
-      'style="width:100%;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);box-sizing:border-box;margin-bottom:6px;">' +
-      '<div id="coplayer-results" style="margin-bottom:6px;"></div>' +
-      '<div id="coplayer-selected" style="font-size:13px;color:var(--lime);margin-bottom:8px;"></div>' +
-      '<button class="btn-sm btn-lime" onclick="addCoPlayer(\''+esc(b.courtId)+'\',\''+b.startsAt+'\',\''+b.endsAt+'\')">Add to slot</button>' +
+    body += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;flex-wrap:wrap;">' +
+      '<span style="min-width:120px;">'+(p.userName ? esc(p.userName) : '<span style="color:var(--muted)">Membre</span>')+
+        (isOrganizer?' <span style="font-size:10px;color:var(--muted);">(org.)</span>':'')+
+        (p.noShow?' <span style="font-size:10px;color:#f87171;">NO-SHOW</span>':'')+'</span>' +
+      '<span style="font-family:Space Mono;font-size:11px;color:var(--muted);">'+Number(p.shareDt).toFixed(0)+' DT</span>' +
+      participantBadge(p.paymentStatus) +
+      '<span style="display:flex;gap:4px;align-items:center;">'+actions+'</span>' +
       '</div>';
+  });
+  for (var i = parts.length; i < slots; i++) {
+    body += '<div style="padding:7px 0;border-bottom:1px dashed var(--border);font-size:12px;color:var(--muted);">Place libre</div>';
   }
 
-  body += (b.status==='CONFIRMED' ? '<div style="margin-top:14px;"><button class="btn-sm btn-danger" onclick="openCancelModal(\''+b.id+'\');closeGenModal()">Cancel this booking</button></div>' : '');
-  openGenModal('Booking detail', body, null, null, 460);
+  // Add participant (US-1.3): search member or create a new one — never a "guest".
+  if (live && parts.length < slots) {
+    body += '<div style="margin-top:10px;">' +
+      '<input id="part-search" placeholder="Chercher un membre (nom / téléphone)…" oninput="searchParticipant(this.value)" autocomplete="off" ' +
+      'style="width:100%;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);box-sizing:border-box;margin-bottom:6px;">' +
+      '<div id="part-results" style="margin-bottom:6px;"></div>' +
+      '<div id="part-selected" style="font-size:13px;color:var(--lime);margin-bottom:8px;"></div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<button class="btn-sm btn-lime" onclick="addParticipant(\''+b.id+'\')">Ajouter au match</button>' +
+      '<button class="btn-sm btn-ghost" onclick="togglePartNewMember()">+ Nouveau membre</button>' +
+      '</div>' +
+      '<div id="part-new-member" style="display:none;margin-top:8px;">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+        '<input id="part-nm-name" placeholder="Nom" style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">' +
+        '<input id="part-nm-phone" placeholder="Téléphone" style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">' +
+        '</div>' +
+        '<button class="btn-sm btn-lime" style="margin-top:8px;" onclick="addParticipantNewMember(\''+b.id+'\')">Créer le membre + ajouter</button>' +
+      '</div></div>';
+  }
+
+  if (live) {
+    var hasPending = parts.some(function(p){ return p.paymentStatus === 'PENDING' && p.userId !== b.userId; });
+    body += '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">';
+    if (b.mode === 'SHARE' && b.paymentState !== 'PAID') {
+      body += '<button class="btn-sm btn-ghost" onclick="coverAllParticipants(\''+b.id+'\')">L\'organisateur paie tout</button>';
+    }
+    body += '<button class="btn-sm btn-danger" onclick="openCancelModal(\''+b.id+'\');closeGenModal()">Cancel this booking</button></div>';
+  }
+  openGenModal('Booking detail', body, null, null, 520);
+}
+
+// ── Participant actions (Epic 1) ──
+var _partSelectedUserId = null;
+function searchParticipant(q) {
+  _partSelectedUserId = null;
+  document.getElementById('part-selected').textContent = '';
+  if (!q || q.length < 2) { document.getElementById('part-results').innerHTML = ''; return; }
+  clearTimeout(window._partTimer);
+  window._partTimer = setTimeout(async function() {
+    try {
+      var results = await window.adminApi.users.search(q);
+      document.getElementById('part-results').innerHTML = (results || []).slice(0, 5).map(function(u) {
+        return '<div onclick="selectParticipant(\''+u.id+'\',\''+esc(u.name)+'\')" ' +
+          'style="padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px;border:1px solid var(--border);margin-top:3px;background:var(--navy);" ' +
+          'onmouseover="this.style.background=\'rgba(196,239,63,.08)\'" onmouseout="this.style.background=\'var(--navy)\'">' +
+          esc(u.name) + ' <span style="color:var(--muted);font-size:11px;">'+esc(u.phone)+'</span></div>';
+      }).join('') || '<div style="color:var(--muted);font-size:12px;margin-top:4px;">Aucun résultat — créez un nouveau membre.</div>';
+    } catch(_) {}
+  }, 250);
+}
+function selectParticipant(id, name) {
+  _partSelectedUserId = id;
+  document.getElementById('part-results').innerHTML = '';
+  document.getElementById('part-selected').textContent = '✓ ' + name;
+}
+function togglePartNewMember() {
+  var el = document.getElementById('part-new-member');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+async function addParticipant(bookingId) {
+  if (!_partSelectedUserId) { toast('Sélectionnez un membre d\'abord.', 'error'); return; }
+  try {
+    var b = await window.adminApi.courts.addParticipant(bookingId, { userId: _partSelectedUserId });
+    _partSelectedUserId = null;
+    toast('Joueur ajouté.', 'success');
+    renderBookingDetail(b); loadCalendar();
+  } catch(e) { toast(e.message || 'Échec.', 'error'); }
+}
+async function addParticipantNewMember(bookingId) {
+  var name = (document.getElementById('part-nm-name').value || '').trim();
+  var phone = (document.getElementById('part-nm-phone').value || '').trim();
+  if (!name || !phone) { toast('Nom et téléphone requis.', 'error'); return; }
+  try {
+    var b = await window.adminApi.courts.addParticipant(bookingId, { newMemberName: name, newMemberPhone: phone });
+    toast('Membre créé et ajouté au match.', 'success');
+    renderBookingDetail(b); loadCalendar();
+  } catch(e) { toast(e.message || 'Échec.', 'error'); }
+}
+async function setParticipant(bookingId, participantId, dto) {
+  try {
+    var b = await window.adminApi.courts.updateParticipant(bookingId, participantId, dto);
+    renderBookingDetail(b); loadCalendar();
+  } catch(e) { toast(e.message || 'Échec.', 'error'); }
+}
+async function removeParticipant(bookingId, participantId) {
+  try {
+    var b = await window.adminApi.courts.removeParticipant(bookingId, participantId);
+    toast('Joueur retiré.', 'success');
+    renderBookingDetail(b); loadCalendar();
+  } catch(e) { toast(e.message || 'Échec.', 'error'); }
+}
+async function coverAllParticipants(bookingId) {
+  try {
+    var b = await window.adminApi.courts.coverAll(bookingId);
+    toast('Terrain entièrement payé par l\'organisateur.', 'success');
+    renderBookingDetail(b); loadCalendar();
+  } catch(e) { toast(e.message || 'Échec.', 'error'); }
 }
 
 function fillCourtSelect(selectId) {
@@ -1791,17 +1939,6 @@ async function saveBooking() {
   btn.disabled = false; btn.textContent = 'Create booking';
 }
 
-// ── Payment status update ──
-async function savePaymentStatus(bookingId) {
-  var status = document.getElementById('detail-pay-status').value;
-  try {
-    await window.adminApi.courts.updatePayment(bookingId, { paymentStatus: status });
-    toast('Payment status updated to ' + status + '.', 'success');
-    closeGenModal();
-    loadCalendar();
-  } catch(e) { toast(e.message || 'Update failed.', 'error'); }
-}
-
 // ── New member inline creation (from book modal) ──
 function toggleNewMemberForm() {
   var el = document.getElementById('book-new-member');
@@ -1822,49 +1959,6 @@ async function createAndSelectMember() {
     document.getElementById('book-nm-email').value = '';
     toast('Member created and selected.', 'success');
   } catch(e) { toast(e.message || 'Could not create member.', 'error'); }
-}
-
-// ── Co-player assignment (from SHARE booking detail) ──
-var _coPlayerSelectedId = null;
-function searchCoPlayer(q, courtId, startsAt, endsAt) {
-  _coPlayerSelectedId = null;
-  document.getElementById('coplayer-selected').textContent = '';
-  if (!q || q.length < 2) { document.getElementById('coplayer-results').innerHTML = ''; return; }
-  clearTimeout(window._coPlayerTimer);
-  window._coPlayerTimer = setTimeout(async function() {
-    try {
-      var results = await window.adminApi.users.search(q);
-      document.getElementById('coplayer-results').innerHTML = (results || []).slice(0, 5).map(function(u) {
-        return '<div onclick="selectCoPlayer(\''+u.id+'\',\''+esc(u.name)+'\')" ' +
-          'style="padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px;border:1px solid var(--border);margin-top:3px;background:var(--navy);" ' +
-          'onmouseover="this.style.background=\'rgba(196,239,63,.08)\'" onmouseout="this.style.background=\'var(--navy)\'">' +
-          esc(u.name) + ' <span style="color:var(--muted);font-size:11px;">'+esc(u.phone)+'</span></div>';
-      }).join('') || '<div style="color:var(--muted);font-size:12px;margin-top:4px;">No match.</div>';
-    } catch(_) {}
-  }, 250);
-}
-function selectCoPlayer(id, name) {
-  _coPlayerSelectedId = id;
-  document.getElementById('coplayer-results').innerHTML = '';
-  document.getElementById('coplayer-selected').textContent = '✓ ' + name;
-}
-async function addCoPlayer(courtId, startsAt, endsAt) {
-  if (!_coPlayerSelectedId) { toast('Select a member first.', 'error'); return; }
-  try {
-    await window.adminApi.courts.book({
-      courtId: courtId,
-      startsAt: startsAt,
-      endsAt: endsAt,
-      mode: 'SHARE',
-      priceDt: 20,
-      userId: _coPlayerSelectedId,
-      paymentStatus: 'PENDING',
-    });
-    _coPlayerSelectedId = null;
-    toast('Co-player added.', 'success');
-    closeGenModal();
-    loadCalendar();
-  } catch(e) { toast(e.message || 'Failed to add co-player.', 'error'); }
 }
 
 // ── Cancel booking ──
@@ -2253,7 +2347,7 @@ function apPick(id, label) { _apUserId=id; document.getElementById('ap-search').
 // ════════════════════════════════════════════════════════════════════════════
 // PILATES CLASSES (Epic E)
 // ════════════════════════════════════════════════════════════════════════════
-var _classTypes = [], _classDate = null, _classSessions = [];
+var _classTypes = [], _classDate = null, _classSessions = [], _showCancelledSessions = false;
 async function renderClasses() {
   var content = document.getElementById('page-content');
   if (!_classDate) _classDate = todayStr();
@@ -2296,9 +2390,11 @@ async function loadSessions() {
     var bodyHtml = HOURS.map(function(hr) {
       var timeCell = '<div style="border-bottom:1px solid rgba(196,239,63,.06);padding:6px 4px;text-align:center;font-family:Space Mono;font-size:10px;color:var(--muted);">'+hr+':00</div>';
       var dayCells = days.map(function(d) {
+        // Cancelled sessions never occupy the live grid (US-2.3) — visible only via the toggle.
         var sessions = list.filter(function(sd){
           var h = new Date(sd.session.startsAt).getHours().toString().padStart(2,'0');
-          return isoDateStr(sd.session.startsAt)===d.iso && h===hr;
+          return isoDateStr(sd.session.startsAt)===d.iso && h===hr &&
+            (sd.session.status !== 'CANCELLED' || _showCancelledSessions);
         });
         var cards = sessions.map(function(sd){
           var s = sd.session;
@@ -2308,24 +2404,32 @@ async function loadSessions() {
           var spotsLeft = s.maxSpots - sd.bookedCount;
           var spotsColor = spotsLeft===0?'#fca5a5':(spotsLeft<=2?'#fbbf24':'rgba(196,239,63,.7)');
           var cancelled = s.status==='CANCELLED';
-          return '<div onclick="openSession(\''+s.id+'\')" style="background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.18);border-left:3px solid var(--lime);border-radius:6px;padding:5px 7px;margin:2px;cursor:pointer;font-size:11px;'+(cancelled?'opacity:.5;':'')+'transition:background .12s;" onmouseover="this.style.background=\'rgba(196,239,63,.12)\'" onmouseout="this.style.background=\'rgba(196,239,63,.07)\'">' +
+          if (cancelled) {
+            return '<div onclick="event.stopPropagation();openSession(\''+s.id+'\')" style="background:rgba(255,255,255,.04);border:1px dashed rgba(252,165,165,.35);border-radius:6px;padding:5px 7px;margin:2px;cursor:pointer;font-size:11px;opacity:.55;">' +
+              '<div style="font-weight:700;font-size:11px;text-decoration:line-through;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(typeName)+'</div>' +
+              '<div style="color:#fca5a5;font-size:10px;">CANCELLED</div></div>';
+          }
+          return '<div onclick="event.stopPropagation();openSession(\''+s.id+'\')" style="background:rgba(196,239,63,.07);border:1px solid rgba(196,239,63,.18);border-left:3px solid var(--lime);border-radius:6px;padding:5px 7px;margin:2px;cursor:pointer;font-size:11px;transition:background .12s;" onmouseover="this.style.background=\'rgba(196,239,63,.12)\'" onmouseout="this.style.background=\'rgba(196,239,63,.07)\'">' +
             '<div style="font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(typeName)+'</div>' +
             (coach?'<div style="color:var(--lime);font-size:10px;">'+esc(coach)+'</div>':'') +
             (level?'<div style="color:var(--muted);font-size:10px;">'+esc(level)+'</div>':'') +
             '<div style="color:'+spotsColor+';font-size:10px;">'+sd.bookedCount+'/'+s.maxSpots+' spots</div>' +
-            (cancelled?'<div style="color:#fca5a5;font-size:10px;">CANCELLED</div>':'') +
             '</div>';
         }).join('');
-        var isEmpty = !sessions.length;
+        // A cell with only cancelled sessions stays clickable to schedule a replacement.
+        var isFree = !sessions.some(function(sd){ return sd.session.status !== 'CANCELLED'; });
         var preTime = d.iso+'T'+hr+':00:00';
-        return '<div onclick="'+(isEmpty?"sessionForm(null,'"+preTime+"')":'')+'" style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:60px;padding:2px;'+(isEmpty?'cursor:pointer;':'')+'transition:background .12s;" '+(isEmpty?'onmouseover="this.style.background=\'rgba(196,239,63,.03)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
+        return '<div onclick="'+(isFree?"sessionForm(null,'"+preTime+"')":'')+'" style="border-bottom:1px solid rgba(196,239,63,.06);border-left:1px solid rgba(196,239,63,.06);min-height:60px;padding:2px;'+(isFree?'cursor:pointer;':'')+'transition:background .12s;" '+(isFree?'onmouseover="this.style.background=\'rgba(196,239,63,.03)\'" onmouseout="this.style.background=\'\'"':'')+'>'+cards+'</div>';
       }).join('');
       return timeCell + dayCells;
     }).join('');
 
     var wLabel = days[0].label + ' – ' + days[6].label;
     document.getElementById('sessions-wrap').innerHTML =
-      '<div class="card" style="margin-bottom:4px;"><div class="card-header"><div><div class="kicker">WEEK</div><h3>'+esc(wLabel)+'</h3></div><span style="color:var(--muted);font-size:12px;">'+list.length+' session(s)</span></div></div>' +
+      '<div class="card" style="margin-bottom:4px;"><div class="card-header"><div><div class="kicker">WEEK</div><h3>'+esc(wLabel)+'</h3></div>' +
+      '<div style="display:flex;gap:10px;align-items:center;">' +
+      '<button class="btn-sm btn-ghost" style="'+(_showCancelledSessions?'background:rgba(252,165,165,.15);color:#fca5a5;':'')+'" onclick="_showCancelledSessions=!_showCancelledSessions;loadSessions()">Show cancelled</button>' +
+      '<span style="color:var(--muted);font-size:12px;">'+list.length+' session(s)</span></div></div></div>' +
       '<div style="overflow-x:auto;"><div style="'+gridStyle+'min-width:540px;">'+headerHtml+bodyHtml+'</div></div>' +
       '<div style="margin-top:8px;font-size:11px;color:var(--muted);">Click empty cell to schedule a session</div>';
   } catch (e) { var sw=document.getElementById('sessions-wrap'); if(sw) sw.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>'+esc(e.message||'Failed.')+'</p></div>'; }
@@ -2397,13 +2501,13 @@ async function openSession(id) {
 }
 function addStudentForm(sessionId) {
   var body = '<div class="form-row full"><div class="form-group"><label>MEMBER — search</label><input id="as-search" type="text" oninput="asSearch()" autocomplete="off"><div id="as-results" style="margin-top:4px;"></div><div class="form-hint" id="as-selected"></div></div></div>' +
-    '<div class="form-hint" style="margin:6px 0;">Or add a guest:</div>' +
-    '<div class="form-row">'+fld('GUEST NAME','as-gname','text','')+fld('GUEST PHONE','as-gphone','text','')+'</div>';
+    '<div class="form-hint" style="margin:6px 0;">Not found? Create a new member (real account, claimable later):</div>' +
+    '<div class="form-row">'+fld('NEW MEMBER NAME','as-gname','text','')+fld('NEW MEMBER PHONE','as-gphone','text','')+'</div>';
   _asUserId = null;
   openGenModal('Add student', body, 'Add', async function () {
     var dto = {};
     if (_asUserId) dto.userId = _asUserId;
-    else { var n=gv('as-gname'), p=gv('as-gphone'); if(!n||!p){ toast('Pick a member or enter guest name+phone.','error'); return; } dto.ghostName=n; dto.ghostPhone=p; }
+    else { var n=gv('as-gname'), p=gv('as-gphone'); if(!n||!p){ toast('Pick a member or enter a new member name + phone.','error'); return; } dto.ghostName=n; dto.ghostPhone=p; }
     try { await window.adminApi.classes.addStudent(sessionId, dto); toast('Added.','success'); closeGenModal(); openSession(sessionId); } catch(e){ toast(e.message||'Failed.','error'); }
   });
 }
@@ -2516,7 +2620,7 @@ function addFieldForm(tid){
 async function delField(fid,tid){ try{ await window.adminApi.tournaments.deleteField(fid); toast('Removed.','success'); openTournament(tid); }catch(e){ toast(e.message||'Failed.','error'); } }
 function manualRegForm(tid){
   var body = '<div class="form-row full"><div class="form-group"><label>MEMBER — search</label><input id="mr-search" type="text" oninput="mrSearch()" autocomplete="off"><div id="mr-results" style="margin-top:4px;"></div><div class="form-hint" id="mr-selected"></div></div></div>' +
-    '<div class="form-hint" style="margin:6px 0;">Or guest:</div><div class="form-row">'+fld('GUEST NAME','mr-gname','text','')+fld('GUEST PHONE','mr-gphone','text','')+'</div>' +
+    '<div class="form-hint" style="margin:6px 0;">Not found? Create a new member:</div><div class="form-row">'+fld('NEW MEMBER NAME','mr-gname','text','')+fld('NEW MEMBER PHONE','mr-gphone','text','')+'</div>' +
     '<div class="form-row full">'+fld('CATEGORY LABEL','mr-cat','text','','Adult / Junior')+'</div>';
   _mrUserId=null;
   openGenModal('Register member', body, 'Register', async function(){
