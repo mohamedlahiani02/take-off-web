@@ -242,7 +242,7 @@
   // ── Modal (OTP phone auth) ────────────────────────────────────────────────
 
   var modalRoot = null;
-  var _otpPhone = '', _otpIsNew = false, _otpTimer = null;
+  var _otpPhone = '', _otpIsNew = false, _otpGhostClaim = false, _otpTimer = null;
 
   function modalHTML() {
     return '<div class="tk-ov" id="tk-modal-ov">' +
@@ -265,6 +265,7 @@
           '<p class="tk-sub" style="text-align:center;opacity:.6;font-size:13px;margin-bottom:16px;">Sent to <span id="tk-otp-ph-lbl" style="color:#c4ef3f;"></span></p>' +
           '<div id="tk-otp-e2" class="tk-err" style="display:none;color:#e74c3c;font-size:13px;margin-bottom:8px;"></div>' +
           '<input class="tk-inp" id="tk-otp-code" type="tel" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" style="font-size:2rem;letter-spacing:.5em;text-align:center;font-weight:700;">' +
+          '<div id="tk-otp-claim-note" style="display:none;background:rgba(196,239,63,.08);border:1px solid rgba(196,239,63,.2);border-radius:10px;padding:10px 12px;font-size:12px;color:#c4ef3f;margin-bottom:10px;text-align:center;">We found your club account — confirm your name to activate it. Your bookings and balance are already here.</div>' +
           '<div id="tk-otp-name-row" style="display:none;">' +
             '<label class="tk-lbl">YOUR NAME</label>' +
             '<input class="tk-inp" id="tk-otp-name" type="text" placeholder="Full name" autocomplete="name">' +
@@ -307,7 +308,7 @@
     }
     try {
       var res = await client.auth.sendOtp(phone);
-      return { ok: true, isNewUser: res.isNewUser };
+      return { ok: true, isNewUser: res.isNewUser, isGhostClaim: res.isGhostClaim, suggestedName: res.suggestedName };
     } catch (e) {
       return { ok: false, error: e.message || 'Could not send code.' };
     }
@@ -342,9 +343,15 @@
       }
       _otpPhone = phone;
       _otpIsNew = !!result.isNewUser;
+      _otpGhostClaim = !!result.isGhostClaim;
       document.getElementById('tk-otp-ph-lbl').textContent = phone;
+      // New signups AND club-account claims both let the user set their name (US-3.2).
       var nameRow = document.getElementById('tk-otp-name-row');
-      if (nameRow) nameRow.style.display = _otpIsNew ? 'block' : 'none';
+      if (nameRow) nameRow.style.display = (_otpIsNew || _otpGhostClaim) ? 'block' : 'none';
+      var nameInp = document.getElementById('tk-otp-name');
+      if (nameInp && _otpGhostClaim && result.suggestedName) nameInp.value = result.suggestedName;
+      var claimNote = document.getElementById('tk-otp-claim-note');
+      if (claimNote) claimNote.style.display = _otpGhostClaim ? 'block' : 'none';
       document.getElementById('tk-otp-s1').style.display = 'none';
       document.getElementById('tk-otp-s2').style.display = 'block';
       var codeEl = document.getElementById('tk-otp-code');
@@ -356,7 +363,7 @@
     // Step 2 — Verify OTP
     document.getElementById('tk-otp-verify').onclick = async function () {
       var code = ((document.getElementById('tk-otp-code') || {}).value || '').trim();
-      var name = _otpIsNew ? (((document.getElementById('tk-otp-name') || {}).value || '').trim()) : undefined;
+      var name = (_otpIsNew || _otpGhostClaim) ? (((document.getElementById('tk-otp-name') || {}).value || '').trim()) : undefined;
       var errEl = document.getElementById('tk-otp-e2');
       errEl.style.display = 'none';
       if (!code || code.length < 4) { errEl.textContent = 'Enter the code sent to your phone'; errEl.style.display = 'block'; return; }
@@ -369,6 +376,7 @@
         storageSet('takeoff_user', res.user);
         notify();
         closeModal();
+        if (res.claimed) { try { toast('Compte du club activé. Vos réservations et votre solde sont là.', 3000); } catch (_) {} }
         if (_pendingCb) { var cb = _pendingCb; _pendingCb = null; setTimeout(cb, 50); }
       } catch (e) {
         errEl.textContent = e.message || 'Invalid code, please try again';
