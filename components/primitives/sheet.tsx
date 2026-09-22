@@ -77,6 +77,8 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
           <button
             onClick={onClose}
             aria-label="Close"
+            disabled={!open}
+            tabIndex={open ? undefined : -1}
             className="text-white/40 hover:text-white transition-colors"
           >
             <X size={22} />
