@@ -13,7 +13,7 @@ export interface CartItem {
 interface CartStore {
   items: CartItem[]
   add: (item: CartItem) => void
-  remove: (id: string) => void
+  remove: (id: string, variant?: string) => void
   clear: () => void
   /** Returns the total price in millimes */
   getTotal: () => number
@@ -26,11 +26,13 @@ export const useCartStore = create<CartStore>()(
 
       add(item) {
         set((state) => {
-          const existing = state.items.find((i) => i.id === item.id)
+          const existing = state.items.find((i) => i.id === item.id && i.variant === item.variant)
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i,
+                i.id === item.id && i.variant === item.variant
+                  ? { ...i, quantity: i.quantity + item.quantity }
+                  : i,
               ),
             }
           }
@@ -38,8 +40,10 @@ export const useCartStore = create<CartStore>()(
         })
       },
 
-      remove(id) {
-        set((state) => ({ items: state.items.filter((i) => i.id !== id) }))
+      remove(id, variant?: string) {
+        set((state) => ({
+          items: state.items.filter((i) => !(i.id === id && i.variant === variant)),
+        }))
       },
 
       clear() {
@@ -51,9 +55,7 @@ export const useCartStore = create<CartStore>()(
       },
     }),
     {
-      name: 'takeoff-cart',
-      // Persist to localStorage; the server cart sync (for authenticated users)
-      // will be layered on top in Sprint 4. See ARCHITECTURE.md §6 State.
+      name: 'takeOffCart',
     },
   ),
 )

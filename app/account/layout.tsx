@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Nav } from '@/components/layout/nav'
+import { requireAuth } from '@/lib/auth/server-guards'
 
 const SIDEBAR_LINKS = [
   { href: '/account', label: 'Overview' },
@@ -10,10 +11,8 @@ const SIDEBAR_LINKS = [
   { href: '/account/profile', label: 'Profile' },
 ] as const
 
-export default function AccountLayout({ children }: { children: React.ReactNode }) {
-  // Auth guard: stub that always renders children.
-  // requireAuth() will be wired here once take-off-api + session exist.
-  // See lib/auth/server-guards.ts for the full pattern.
+export default async function AccountLayout({ children }: { children: React.ReactNode }) {
+  await requireAuth()
 
   return (
     <>
