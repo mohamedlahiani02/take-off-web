@@ -11,7 +11,8 @@
   function notify() { _sub.forEach(function(fn){ try{fn();}catch(e){} }); }
 
   // Items shape: { name, sub, _raw, kind, size, cat, qty }
-  var _items = (storageGet('takeOffCart') || []).map(function(it){ return Object.assign({qty:1}, it); });
+  var _raw_stored = storageGet('takeOffCart');
+  var _items = (Array.isArray(_raw_stored) ? _raw_stored : []).map(function(it){ return Object.assign({qty:1}, it); });
   function persist() { storageSet('takeOffCart', _items); }
 
   // Checkout persistent state
@@ -674,7 +675,8 @@
         // Physical product orders always go through orders.place() so staff have a record to ship.
         // Booking-only + COD (pay_at_club) skips the API — user pays at the studio.
         // Booking-only + wallet/card always calls orders.place() for payment processing.
-        if (client && client.isOnline() && (!bookingOnly || _d.pay !== 'pay_at_club')) {
+        var _nonPackItems = bookingOnly ? its.filter(function(it){ return it.kind !== 'pack'; }) : its.filter(function(it){ return it.kind !== 'pack' && it.kind !== 'booking'; });
+        if (client && client.isOnline() && (!bookingOnly || _d.pay !== 'pay_at_club') && (_nonPackItems.length > 0 || !bookingOnly)) {
           try {
             var payload = {
               // Booking-only carts are services — no delivery, always pickup.
@@ -684,9 +686,7 @@
               deliveryFeeDt: cart.getShipping(),
               discountCode: null,
               contact: { name: _d.name, email: _d.email || '', phone: _d.phone },
-              // Booking-only: send all items (sessions + packs) as service line items.
-              // Mixed carts: send only physical product items.
-              items: (bookingOnly ? its : its.filter(function(it){ return it.kind !== 'pack' && it.kind !== 'booking'; })).map(function(it){
+              items: _nonPackItems.map(function(it){
                 return {
                   productId: it.productId || null,
                   productName: it.name || it.n,
@@ -705,8 +705,12 @@
             // Redirect to Konnect for card payments
             if (_d.pay === 'card' && client.payments && client.isOnline()) {
               try {
-                var intent = await client.payments.initiate('order', (order.id || _orderId).toString(), cart.getTotal(), window.location.origin + '/payment/return.html');
+                var _returnBase = window.location.origin + '/payment/return.html';
+                var intent = await client.payments.initiate('order', (order.id || _orderId).toString(), cart.getTotal(), _returnBase);
                 if (intent && intent.paymentUrl && intent.paymentUrl.indexOf('stub=true') === -1) {
+                  if (intent.id) {
+                    try { sessionStorage.setItem('takeOffPaymentIntentId', String(intent.id)); } catch(e) {}
+                  }
                   clearCheckoutState();
                   window.location.href = intent.paymentUrl;
                   return;

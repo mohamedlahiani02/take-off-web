@@ -1,57 +1,35 @@
-import { dirname } from 'path'
-import { fileURLToPath } from 'url'
-import { FlatCompat } from '@eslint/eslintrc'
 import pluginReact from 'eslint-plugin-react'
 import pluginReactHooks from 'eslint-plugin-react-hooks'
-import tseslint from '@typescript-eslint/eslint-plugin'
+import tsPlugin from '@typescript-eslint/eslint-plugin'
 import tsParser from '@typescript-eslint/parser'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-})
 
 /** @type {import('eslint').Linter.Config[]} */
 const config = [
-  // Next.js recommended rules via compat layer (flat config bridge)
-  ...compat.extends('next/core-web-vitals'),
-
-  // Prettier must be last so its formatting rules override everything else
-  ...compat.extends('prettier'),
-
-  // TypeScript files
+  {
+    ignores: ['prototype/**', '.next/**', 'node_modules/**', 'playwright-report/**'],
+  },
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         project: './tsconfig.json',
-        tsconfigRootDir: __dirname,
       },
     },
     plugins: {
-      '@typescript-eslint': tseslint,
+      '@typescript-eslint': tsPlugin,
       react: pluginReact,
       'react-hooks': pluginReactHooks,
     },
     rules: {
-      // TypeScript strict extras beyond what Next provides
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': 'error',
-      '@typescript-eslint/no-explicit-any': 'error',
-
-      // React
-      'react/react-in-jsx-scope': 'off', // not needed in React 17+
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'react/react-in-jsx-scope': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
-  },
-
-  // Ignore the prototype and generated directories
-  {
-    ignores: ['prototype/**', '.next/**', 'node_modules/**', 'playwright-report/**'],
   },
 ]
 

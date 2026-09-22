@@ -1,19 +1,67 @@
 'use client'
 
-import type { Metadata } from 'next'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/primitives/button'
 
-// Note: metadata exports are ignored in client components — move to a parent
-// server component wrapper if SEO for this page becomes important.
-
 export default function LoginPage() {
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const router = useRouter()
+  const [step, setStep] = useState<'phone' | 'code'>('phone')
+  const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault()
-    const data = new FormData(e.currentTarget)
-    // TODO: wire to POST /api/auth/login once take-off-api exists
-    console.log('login placeholder', Object.fromEntries(data))
+    setError('')
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setError((d as { detail?: string }).detail ?? 'Could not send code. Try again.')
+        return
+      }
+      setStep('code')
+    } catch {
+      setError('Network error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
+
+  async function handleVerify(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, code }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setError((d as { detail?: string }).detail ?? 'Invalid code. Please try again.')
+        return
+      }
+      router.push('/account')
+      router.refresh()
+    } catch {
+      setError('Network error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const inputCls =
+    'w-full px-4 py-3 rounded-card bg-cream-alt border border-navy/15 text-navy placeholder:text-navy/35 focus:outline-none focus:border-navy/40 transition-colors'
 
   return (
     <>
@@ -21,47 +69,64 @@ export default function LoginPage() {
         SIGN IN
       </h1>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="email" className="font-mono text-[11px] tracking-[0.22em] text-navy/60">
-            EMAIL
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            className="w-full px-4 py-3 rounded-card bg-cream-alt border border-navy/15 text-navy placeholder:text-navy/35 focus:outline-none focus:border-navy/40 transition-colors"
-            placeholder="you@example.com"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="password" className="font-mono text-[11px] tracking-[0.22em] text-navy/60">
-            PASSWORD
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="w-full px-4 py-3 rounded-card bg-cream-alt border border-navy/15 text-navy placeholder:text-navy/35 focus:outline-none focus:border-navy/40 transition-colors"
-            placeholder="••••••••"
-          />
-        </div>
-
-        <Button type="submit" variant="primary" size="lg" className="w-full mt-2">
-          Sign in
-        </Button>
-      </form>
+      {step === 'phone' ? (
+        <form onSubmit={handleSendOtp} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="phone" className="font-mono text-[11px] tracking-[0.22em] text-navy/60">
+              PHONE NUMBER
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              required
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={inputCls}
+              placeholder="+216 XX XXX XXX"
+            />
+          </div>
+          {error && <p className="text-red-600 text-sm">{error}</p>}
+          <Button type="submit" variant="primary" size="lg" className="w-full mt-2" disabled={loading}>
+            {loading ? 'Sending…' : 'Send code'}
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerify} className="flex flex-col gap-5">
+          <p className="text-sm text-navy/60">
+            A code was sent to <strong>{phone}</strong>.{' '}
+            <button type="button" onClick={() => setStep('phone')} className="underline">
+              Change
+            </button>
+          </p>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="code" className="font-mono text-[11px] tracking-[0.22em] text-navy/60">
+              VERIFICATION CODE
+            </label>
+            <input
+              id="code"
+              name="code"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              required
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className={inputCls}
+              placeholder="000000"
+            />
+          </div>
+          {error && <p className="text-red-600 text-sm">{error}</p>}
+          <Button type="submit" variant="primary" size="lg" className="w-full mt-2" disabled={loading}>
+            {loading ? 'Verifying…' : 'Sign in'}
+          </Button>
+        </form>
+      )}
 
       <div className="mt-8 flex flex-col items-center gap-3 font-mono text-[11px] tracking-[0.18em]">
-        <Link href="/forgot" className="text-navy/50 hover:text-navy transition-colors">
-          FORGOT PASSWORD
-        </Link>
-        <span className="text-navy/25">&middot;</span>
         <Link href="/register" className="text-navy/50 hover:text-navy transition-colors">
           CREATE AN ACCOUNT
         </Link>

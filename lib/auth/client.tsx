@@ -1,17 +1,6 @@
 'use client'
 
-/**
- * Client-side auth context.
- *
- * Exposes the current user shape (or null) to React components. The session
- * is derived from a server-side cookie — the client context is hydrated from
- * a data-fetching call to GET /api/me (not yet implemented) or from props
- * passed down from a Server Component.
- *
- * For now the context always returns null (unauthenticated). When the API
- * exists, replace the TODO with a useQuery call to /api/me.
- */
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { User } from '@/lib/api/types'
 
 interface AuthContextValue {
@@ -25,11 +14,19 @@ const AuthContext = createContext<AuthContextValue>({
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // TODO: replace with useQuery(() => apiFetch('/v1/me')) once take-off-api exists
-  const [user] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u: User | null) => setUser(u))
+      .catch(() => setUser(null))
+      .finally(() => setIsLoading(false))
+  }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading: false }}>
+    <AuthContext.Provider value={{ user, isLoading }}>
       {children}
     </AuthContext.Provider>
   )

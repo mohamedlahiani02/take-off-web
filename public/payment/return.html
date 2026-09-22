@@ -234,7 +234,8 @@
   var POLL_MS   = 2000;
 
   var params    = new URLSearchParams(location.search);
-  var intentId  = params.get('intentId');
+  var intentId  = params.get('intentId') || (function(){ try { return sessionStorage.getItem('takeOffPaymentIntentId'); } catch(e) { return null; } }());
+  if (intentId) { try { sessionStorage.removeItem('takeOffPaymentIntentId'); } catch(e) {} }
   var token     = localStorage.getItem('takeoff_access') || null;
   var pollCount = 0;
   var timer     = null;

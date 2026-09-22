@@ -13,9 +13,10 @@ export const runtime = 'nodejs'
  */
 export async function POST() {
   const cookieStore = await cookies()
-  const cookieName = process.env['SESSION_COOKIE_NAME'] ?? 'takeoff_session'
 
-  cookieStore.delete(cookieName)
+  cookieStore.delete('takeoff_session')
+  cookieStore.delete('takeoff_refresh')
+  cookieStore.delete('takeoff_user')
 
   const base = process.env['NEXT_PUBLIC_SITE_URL'] || process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:3000'
   return NextResponse.redirect(new URL('/', base), {
