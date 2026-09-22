@@ -101,10 +101,7 @@
           return;
         } catch (e) {}
       }
-      // offline fallback
-      auth.user.walletDt = (auth.user.walletDt || 0) + n;
-      storageSet('takeoff_user', auth.user);
-      notify();
+      // offline: do not fabricate balance; caller must retry when online
     },
 
     // Bookings are still local (courts/bookings backend module is TODO)

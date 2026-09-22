@@ -7,7 +7,7 @@
  * ported in a later sprint.
  */
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -126,15 +126,25 @@ export function MegaMenu({ open, onClose }: MegaMenuProps) {
   const [activeKey, setActiveKey] = useState('padel')
   const active = MENU.find((c) => c.key === activeKey) ?? MENU[0]!
 
-  if (!open) return null
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [open, onClose])
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Site navigation"
-      className="fixed inset-0 z-50 bg-navy-alt"
-      style={{ animation: 'fade-in 0.2s ease' }}
+      aria-hidden={!open}
+      {...(!open ? { inert: '' } : {})}
+      className={cn(
+        'fixed inset-0 z-50 bg-navy-alt',
+        open ? 'pointer-events-auto' : 'pointer-events-none invisible',
+      )}
+      style={open ? { animation: 'fade-in 0.2s ease' } : { display: 'none' }}
     >
       {/* Top bar */}
       <div className="flex items-center justify-between px-[8vw] h-20 border-b border-white/8">

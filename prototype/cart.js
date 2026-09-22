@@ -707,20 +707,31 @@
               try {
                 var _returnBase = window.location.origin + '/payment/return.html';
                 var intent = await client.payments.initiate('order', (order.id || _orderId).toString(), cart.getTotal(), _returnBase);
-                if (intent && intent.paymentUrl && intent.paymentUrl.indexOf('stub=true') === -1) {
+                if (intent && intent.paymentUrl) {
                   if (intent.id) {
                     try { sessionStorage.setItem('takeOffPaymentIntentId', String(intent.id)); } catch(e) {}
                   }
                   clearCheckoutState();
-                  window.location.href = intent.paymentUrl;
+                  if (intent.paymentUrl.indexOf('stub=true') !== -1) {
+                    // Stub mode: go to return page so the flow is exercised (no real charge)
+                    window.location.href = window.location.origin + '/payment/return.html?intentId=' + encodeURIComponent(String(intent.id || ''));
+                  } else {
+                    window.location.href = intent.paymentUrl;
+                  }
                   return;
                 }
-              } catch(e) { /* fall through — show success in stub/offline mode */ }
+              } catch(e) { /* fall through */ }
             }
           } catch (e) {
             if (btn) { btn.disabled = false; btn.textContent = ctaLabel; }
             var errEl = document.getElementById('tk-order-err');
-            if (errEl) { errEl.textContent = 'Couldn\'t place order — please try again.'; errEl.style.display = 'block'; }
+            if (errEl) {
+              var msg = (e && (e.status === 401 || (e.message && e.message.indexOf('401') !== -1)))
+                ? 'Please <a href="/auth/login.html" style="color:inherit;text-decoration:underline">sign in</a> to complete your order.'
+                : 'Couldn\'t place order — please try again.';
+              errEl.innerHTML = msg;
+              errEl.style.display = 'block';
+            }
             return;
           }
         } else {
