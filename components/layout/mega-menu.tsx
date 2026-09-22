@@ -139,7 +139,7 @@ export function MegaMenu({ open, onClose }: MegaMenuProps) {
       aria-modal="true"
       aria-label="Site navigation"
       aria-hidden={!open}
-      {...(!open ? { inert: '' } : {})}
+      inert={!open || undefined}
       className={cn(
         'fixed inset-0 z-50 bg-navy-alt',
         open ? 'pointer-events-auto' : 'pointer-events-none invisible',

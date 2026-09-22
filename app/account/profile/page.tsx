@@ -27,17 +27,17 @@ export default function ProfilePage() {
               <p className="text-white">{user.phone}</p>
             </div>
           )}
-          {(user as Record<string, unknown>).email && (
+          {user.email && (
             <div>
               <p className="font-mono text-[10px] tracking-[0.26em] text-white/30 mb-1">EMAIL</p>
-              <p className="text-white">{String((user as Record<string, unknown>).email)}</p>
+              <p className="text-white">{user.email}</p>
             </div>
           )}
           <div>
             <p className="font-mono text-[10px] tracking-[0.26em] text-white/30 mb-1">WALLET</p>
             <p className="text-lime font-mono">
-              {typeof (user as Record<string, unknown>).walletDt === 'number'
-                ? `${Number((user as Record<string, unknown>).walletDt).toFixed(3)} DT`
+              {typeof user.walletDt === 'number'
+                ? `${user.walletDt.toFixed(3)} DT`
                 : '—'}
             </p>
           </div>
