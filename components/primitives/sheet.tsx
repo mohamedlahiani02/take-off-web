@@ -64,7 +64,7 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
         aria-modal="true"
         aria-label={title}
         aria-hidden={!open}
-        {...(!open ? ({ inert: '' } as React.HTMLAttributes<HTMLElement>) : {})}
+        inert={!open || undefined}
         className={cn(
           'fixed top-0 right-0 z-50 h-full w-full max-w-md bg-navy flex flex-col shadow-2xl',
           'transition-transform duration-300',

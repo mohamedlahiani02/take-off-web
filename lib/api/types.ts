@@ -16,14 +16,14 @@ export interface ApiResponse<T> {
 // TODO: generate from OpenAPI spec
 export interface User {
   id: string
-  email: string
+  email?: string
   name: string
   phone?: string
-  tracks: Array<'padel' | 'pilates'>
-  locale: string
-  walletBalanceTND: number
-  emailVerifiedAt?: string
-  createdAt: string
+  role?: string
+  walletDt?: number
+  points?: number
+  tracks?: Array<'padel' | 'pilates'>
+  createdAt?: string
 }
 
 // TODO: generate from OpenAPI spec

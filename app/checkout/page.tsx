@@ -31,8 +31,8 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (user) {
-      setName((user as Record<string, unknown>).name as string ?? '')
-      setPhone((user as Record<string, unknown>).phone as string ?? '')
+      setName(user.name ?? '')
+      setPhone(user.phone ?? '')
     }
   }, [user])
 
