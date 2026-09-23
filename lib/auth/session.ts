@@ -2,9 +2,10 @@ import 'server-only'
 import { cookies } from 'next/headers'
 import type { User } from '@/lib/api/types'
 
-export function apiBase(): string {
-  return (process.env['API_URL'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? '').replace(/\/$/, '')
-}
+// Re-exported so existing imports keep working; the definition lives in
+// lib/api/base.ts, which is also what the prototype server uses.
+import { apiBase } from '@/lib/api/base'
+export { apiBase }
 
 /**
  * Resolves who the caller actually is, by presenting the session token to the API.
