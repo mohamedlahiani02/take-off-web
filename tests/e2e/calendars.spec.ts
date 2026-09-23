@@ -23,6 +23,10 @@ interface ApiOptions {
   verifyOtpStatus?: number
   bookStatus?: number
   slotDelayMs?: (url: URL) => number
+  /** Marks one padel slot as a joinable shared match (SHARE_OPEN). */
+  shareOpen?: boolean
+  /** Decorates fixture sessions with status / own-booking / waitlist state. */
+  sessionState?: 'cancelled' | 'booked' | 'waitlisted' | 'full-with-waitlist'
 }
 
 interface Recorded {
@@ -64,11 +68,14 @@ async function installApi(page: Page, opts: ApiOptions = {}): Promise<Recorded> 
       const base = clubMidnight(date) + 7 * 60 * 60 * 1000
       const slots = Array.from({ length: 10 }, (_, i) => {
         const start = base + i * 5400000
+        // i=1 taken; i=2 is a joinable shared match when requested.
+        const shared = opts.shareOpen && i === 2
         return {
           startsAt: new Date(start).toISOString(),
           endsAt: new Date(start + 5400000).toISOString(),
           available: i !== 1,
-          reason: i === 1 ? 'BOOKED' : null,
+          reason: i === 1 ? 'BOOKED' : shared ? 'SHARE_OPEN' : null,
+          openShareSlots: shared ? 2 : 0,
         }
       })
       if (opts.slotDelayMs) await new Promise((r) => setTimeout(r, opts.slotDelayMs!(url)))
@@ -91,6 +98,20 @@ async function installApi(page: Page, opts: ApiOptions = {}): Promise<Recorded> 
         bookedSpots: 2,
         priceDt: 35,
       })).filter((s) => Date.parse(s.startsAt) >= from && Date.parse(s.startsAt) < to)
+        .map((s) => {
+          switch (opts.sessionState) {
+            case 'cancelled':
+              return { ...s, status: 'CANCELLED' }
+            case 'booked':
+              return { ...s, status: 'SCHEDULED', myBookingId: 'bk-1', myStatus: 'BOOKED' }
+            case 'waitlisted':
+              return { ...s, status: 'SCHEDULED', myBookingId: 'bk-2', myStatus: 'WAITLIST' }
+            case 'full-with-waitlist':
+              return { ...s, status: 'SCHEDULED', bookedSpots: 10, waitlistCount: 3 }
+            default:
+              return { ...s, status: 'SCHEDULED' }
+          }
+        })
       return json(sessions)
     }
 
@@ -308,6 +329,31 @@ for (const [label, viewport] of [
       await expect(page.locator('#pr-mode-overlay')).toBeHidden()
     })
 
+    test('a joinable shared match is distinguished from a free court', async ({ page }) => {
+      await installApi(page, { shareOpen: true })
+      await gotoCalendar(page, 'pr')
+
+      const share = page.locator('.pr-slot-share-open').first()
+      await expect(share).toBeVisible()
+      // It advertises the remaining tranches rather than looking like an empty court.
+      await expect(share).toContainText('JOIN')
+      await expect(share).toHaveAttribute('title', /2 place/)
+
+      // Opening it offers joining the share, not taking the whole court.
+      await share.click()
+      const otp = page.locator('#pr-otp-overlay')
+      if (await otp.isVisible()) {
+        await page.locator('#pr-otp-phone').fill('+21622000000')
+        await page.getByRole('button', { name: /Send code/ }).click()
+        await page.locator('#pr-otp-code').fill('123456')
+        await page.getByRole('button', { name: /Verify/ }).click()
+      }
+      await expect(page.locator('#pr-mode-overlay')).toBeVisible()
+      await expect(page.locator('#pr-mode-heading')).toHaveText('Join this match')
+      await expect(page.locator('#pr-mode-full')).toBeHidden()
+      await expect(page.locator('#pr-mode-share')).toBeVisible()
+    })
+
     test('an availability outage shows no bookable slots', async ({ page }) => {
       await installApi(page, { failSlots: true })
       await page.goto('/padel/reserve', { waitUntil: 'domcontentloaded' })
@@ -466,6 +512,52 @@ for (const [label, viewport] of [
 
       await page.locator('.pc-filter-btn[data-filter="ALL"]').click()
       await expect(page.locator('#pc-grid')).toContainText('Pilates fixture')
+    })
+
+    test('a cancelled session is not offered as bookable', async ({ page }) => {
+      await installApi(page, { sessionState: 'cancelled' })
+      await gotoCalendar(page, 'pc')
+
+      const card = page.locator('.pc-session-card').first()
+      await expect(card).toHaveClass(/pc-session-cancelled/)
+      await expect(card).toContainText('Annule')
+      await expect(card).toHaveAttribute('aria-disabled', 'true')
+
+      await card.click()
+      await expect(page.locator('#pc-drawer-notice')).toContainText('annulee')
+      await expect(page.locator('#pc-book-section')).toBeHidden()
+      await expect(page.locator('#pc-auth-gate')).toBeHidden()
+    })
+
+    test('an existing booking is shown instead of another booking offer', async ({ page }) => {
+      await installApi(page, { sessionState: 'booked' })
+      await gotoCalendar(page, 'pc')
+
+      const card = page.locator('.pc-session-card').first()
+      await expect(card).toContainText('Inscrit')
+      await card.click()
+      await expect(page.locator('#pc-drawer-notice')).toContainText('deja inscrit')
+      await expect(page.locator('#pc-book-section')).toBeHidden()
+    })
+
+    test('a waitlisted booking is shown as such', async ({ page }) => {
+      await installApi(page, { sessionState: 'waitlisted' })
+      await gotoCalendar(page, 'pc')
+
+      await expect(page.locator('.pc-session-card').first()).toContainText('Liste attente')
+      await page.locator('.pc-session-card').first().click()
+      await expect(page.locator('#pc-drawer-notice')).toContainText('liste attente')
+    })
+
+    test('a full session surfaces the waitlist length', async ({ page }) => {
+      await installApi(page, { sessionState: 'full-with-waitlist' })
+      await gotoCalendar(page, 'pc')
+
+      const card = page.locator('.pc-session-card').first()
+      await expect(card).toContainText('Complet')
+      await expect(card).toContainText('3 en attente')
+      await card.click()
+      await expect(page.locator('#pc-drawer-meta')).toContainText('3 en liste attente')
     })
 
     test('a schedule outage is reported, not shown as an empty week', async ({ page }) => {

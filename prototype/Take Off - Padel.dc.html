@@ -286,6 +286,9 @@
             <div>
               <h3 class="anton" style="margin:0 0 6px; font-size:26px; color:#fff;">{{ t.title }}</h3>
               <div style="font-family:'Space Mono'; font-size:10px; letter-spacing:.14em; color:rgba(244,245,238,.5);">{{ t.format }}</div>
+              <sc-if value="{{ t.hasDetail }}" hint-placeholder-val="">
+                <a href="{{ t.detailHref }}" style="display:inline-block; margin-top:9px; font-family:'Space Mono'; font-size:10px; letter-spacing:.16em; color:#c4ef3f; text-decoration:underline; text-underline-offset:3px;">VOIR LE TOURNOI &rarr;</a>
+              </sc-if>
             </div>
             <div style="font-size:13px; color:rgba(244,245,238,.7);"><span style="color:#c4ef3f;">Prize:</span> {{ t.prize }}</div>
             <div>
@@ -759,6 +762,13 @@ class Component extends DCLogic {
     this.setState({ coachFormDone: true });
   }
 
+  /** `label--uuid` path segment, matching lib/slug.ts used by the React pages. */
+  _segment(label, id) {
+    const prefix = String(label || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+    return prefix ? prefix + '--' + id : String(id);
+  }
+
   renderVals() {
     const dates = this._dates();
     const di = this.state.dateIdx;
@@ -1036,6 +1046,9 @@ class Component extends DCLogic {
         noPhoto: (ci.photoUrl || t.bannerUrl) ? null : true,
         pct: Math.round(t.filled / t.total * 100),
         signup: () => this._signupTournament(t),
+        // Only API-backed tournaments have an id and therefore a detail page.
+        detailHref: t.id ? '/padel/tournaments/' + this._segment(ci.name || t.title, t.id) : null,
+        hasDetail: t.id ? true : null,
       });
     });
 
