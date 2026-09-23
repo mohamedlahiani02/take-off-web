@@ -57,6 +57,13 @@
   .pc-grid-day-num.today{ color:#c4ef3f; background:#0c2350; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; margin:4px auto 0; }
   .pc-time-cell{ border-right:1px solid rgba(12,35,80,.06); border-bottom:1px solid rgba(12,35,80,.04); padding:0 8px; font-family:'Space Mono'; font-size:9px; letter-spacing:.08em; color:rgba(12,35,80,.4); display:flex; align-items:flex-start; padding-top:8px; min-height:60px; background:#fcfcfa; }
   .pc-grid-cell{ border-right:1px solid rgba(12,35,80,.06); border-bottom:1px solid rgba(12,35,80,.04); min-height:60px; padding:4px; position:relative; background:#fff; }
+  .pc-session-cancelled{ opacity:.55; cursor:not-allowed; text-decoration:line-through; }
+  .pc-session-mine{ outline:1px solid rgba(196,239,63,.8); }
+  .pc-spots-cancelled{ color:#b8123a; font-weight:700; }
+  .pc-spots-mine{ color:#0a7d33; font-weight:700; }
+  .pc-spots-waitlist{ color:#a8690b; font-weight:700; }
+  .pc-drawer-notice{ font-family:'Space Mono'; font-size:.7rem; letter-spacing:.06em; line-height:1.7;
+    color:#0c2350; background:rgba(12,35,80,.07); border-radius:.5rem; padding:.75rem .9rem; margin-top:.5rem; }
   .pc-session-card{ border-radius:8px; padding:7px 9px; cursor:pointer; transition:all .18s; margin-bottom:3px; }
   .pc-session-card:hover{ filter:brightness(.95); transform:translateY(-1px); box-shadow:0 4px 12px rgba(12,35,80,.12); }
   .pc-session-name{ font-size:11px; font-weight:700; letter-spacing:-.01em; line-height:1.2; margin-bottom:2px; }
@@ -216,6 +223,8 @@
         <button class="pc-drawer-btn" id="pc-otp-verify" type="button" onClick="{{ onOtpVerify }}" disabled="{{ otpBusy }}">{{ verifyOtpLabel }}</button>
       </div>
     </div>
+
+    <div id="pc-drawer-notice" class="pc-drawer-notice" style="display:{{ noticeDisplay }};">{{ noticeText }}</div>
 
     <!-- Book button (shown if logged in) -->
     <div id="pc-book-section" style="display:{{ bookSectionDisplay }};">
@@ -420,6 +429,14 @@ class Component extends DCLogic {
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  /** The member's own booking state for a session, or null when not involved. */
+  _myState(s) {
+    if (!s.myStatus) return null;
+    if (s.myStatus === 'BOOKED') return { cls: 'pc-spots-mine', label: 'Inscrit', booked: true };
+    if (s.myStatus === 'WAITLIST') return { cls: 'pc-spots-waitlist', label: 'Liste attente', waitlisted: true };
+    return null;
+  }
+
   _paintFilters() {
     const el = this.filterBarRef.current;
     if (!el) return;
@@ -483,11 +500,28 @@ class Component extends DCLogic {
       days.forEach((ds, di) => {
         html += '<div class="pc-grid-cell">';
         (cellMap[di + '_' + hour] || []).forEach((s) => {
+          const cancelled = s.status === 'CANCELLED';
+          const mine = this._myState(s);
           const max = s.maxSpots || 0;
           const remaining = max - (s.bookedSpots || 0);
-          const cls = remaining <= 0 ? 'pc-spots-full' : remaining <= 2 ? 'pc-spots-low' : 'pc-spots-ok';
-          const label = remaining <= 0 ? 'Complet' : remaining + '/' + max + ' places';
-          html += '<div class="pc-session-card" role="button" tabindex="0" style="background:#0c2350;color:#f4f5ee;"' +
+          const waiting = Number(s.waitlistCount) || 0;
+
+          // A cancelled session must never read as bookable.
+          let cls, label;
+          if (cancelled) { cls = 'pc-spots-cancelled'; label = 'Annule'; }
+          else if (mine) { cls = mine.cls; label = mine.label; }
+          else if (remaining <= 0) {
+            cls = 'pc-spots-full';
+            label = waiting > 0 ? 'Complet - ' + waiting + ' en attente' : 'Complet';
+          } else {
+            cls = remaining <= 2 ? 'pc-spots-low' : 'pc-spots-ok';
+            label = remaining + '/' + max + ' places';
+          }
+
+          html += '<div class="pc-session-card' + (cancelled ? ' pc-session-cancelled' : '') +
+            (mine ? ' pc-session-mine' : '') + '"' +
+            (cancelled ? ' aria-disabled="true"' : ' role="button" tabindex="0"') +
+            ' style="background:#0c2350;color:#f4f5ee;"' +
             ' data-session-id="' + this._esc(s.id) + '">' +
             '<div class="pc-session-name">' + this._esc(s.className || 'Cours') + '</div>' +
             (s.instructorName ? '<div class="pc-session-coach">' + this._esc(s.instructorName) + '</div>' : '') +
@@ -598,6 +632,8 @@ class Component extends DCLogic {
   renderVals() {
     const s = this.state;
     const sess = s.selected;
+    const sessMine = sess ? this._myState(sess) : null;
+    const sessOpen = !!sess && sess.status !== 'CANCELLED' && sess.status !== 'COMPLETED';
     const clock = sess && sess.startsAt ? this._clubClock(sess.startsAt) : null;
     let dateLabel = '';
     if (clock) {
@@ -609,7 +645,9 @@ class Component extends DCLogic {
       ? [sess.instructorName ? 'Coach : ' + sess.instructorName : '',
          sess.level ? 'Niveau : ' + sess.level : '',
          dateLabel,
-         'Places : ' + (sess.bookedSpots || 0) + '/' + (sess.maxSpots || 0)].filter(Boolean).join(' · ')
+         'Places : ' + (sess.bookedSpots || 0) + '/' + (sess.maxSpots || 0),
+         Number(sess.waitlistCount) > 0 ? sess.waitlistCount + ' en liste attente' : ''
+        ].filter(Boolean).join(' · ')
       : '';
 
     return {
@@ -630,8 +668,16 @@ class Component extends DCLogic {
       onCloseDrawer: () => this._closeDrawer(),
       onDrawerBackdrop: (e) => { if (e.target === e.currentTarget) this._closeDrawer(); },
 
-      authGateDisplay: s.drawerOpen && !s.loggedIn ? 'block' : 'none',
-      bookSectionDisplay: s.drawerOpen && s.loggedIn ? 'block' : 'none',
+      // Booking is only offered when the session is open AND the member is not
+      // already on it. Cancelled or already-booked sessions show a notice.
+      authGateDisplay: s.drawerOpen && !s.loggedIn && sessOpen && !sessMine ? 'block' : 'none',
+      bookSectionDisplay: s.drawerOpen && s.loggedIn && sessOpen && !sessMine ? 'block' : 'none',
+      noticeDisplay: s.drawerOpen && (!sessOpen || sessMine) ? 'block' : 'none',
+      noticeText: !sess ? ''
+        : sess.status === 'CANCELLED' ? 'Cette seance a ete annulee par le club.'
+        : sessMine && sessMine.booked ? 'Vous etes deja inscrit a cette seance.'
+        : sessMine && sessMine.waitlisted ? 'Vous etes sur la liste attente pour cette seance.'
+        : sess.status === 'COMPLETED' ? 'Cette seance est terminee.' : '',
       otpStep1Display: s.otpStep === 'phone' ? 'block' : 'none',
       otpStepNameDisplay: s.otpStep === 'name' ? 'block' : 'none',
       otpStep2Display: s.otpStep === 'code' ? 'block' : 'none',

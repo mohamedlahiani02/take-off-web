@@ -55,6 +55,9 @@
   .pr-slot{ min-height:56px; border-bottom:1px solid rgba(196,239,63,.06); border-right:1px solid rgba(196,239,63,.06); display:flex; align-items:center; justify-content:center; padding:4px; position:relative; transition:background .15s; }
   .pr-slot:nth-child(7n){ border-right:none; }
   .pr-slot-inner{ width:100%; height:100%; min-height:44px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:'Space Mono'; font-size:10px; letter-spacing:.05em; transition:all .15s; }
+  .pr-slot-share-open{ border:1px solid rgba(196,239,63,.55); background:rgba(196,239,63,.12); color:#c4ef3f; cursor:pointer; }
+  .pr-slot-share-open:hover{ background:rgba(196,239,63,.22); }
+  .pr-slot-share-note{ font-size:.58rem; letter-spacing:.08em; opacity:.85; }
   .pr-slot-free{ border:1px solid rgba(196,239,63,.5); color:#c4ef3f; cursor:pointer; }
   .pr-slot-free:hover{ background:rgba(196,239,63,.12); border-color:#c4ef3f; }
   .pr-slot-booked{ background:rgba(244,245,238,.05); color:rgba(244,245,238,.25); text-decoration:line-through; cursor:not-allowed; }
@@ -242,13 +245,13 @@
   <div class="pr-otp-panel tk-booking-panel" ref="{{ modePanelRef }}">
     <button class="pr-otp-close" type="button" onClick="{{ onCloseMode }}">✕ close</button>
     <div class="pr-otp-title">CHOOSE YOUR BOOKING</div>
-    <h2 class="pr-otp-h2" id="pr-mode-heading">Select booking type</h2>
+    <h2 class="pr-otp-h2" id="pr-mode-heading">{{ modeHeading }}</h2>
     <div id="pr-mode-slot-info" style="font-family:'Space Mono';font-size:11px;letter-spacing:.08em;color:rgba(244,245,238,.5);margin-bottom:24px;line-height:1.8;">{{ modeSlotInfo }}</div>
     <div style="display:flex;flex-direction:column;gap:12px;">
       <button class="pr-otp-btn" id="pr-mode-share" type="button" onClick="{{ onBookShare }}" disabled="{{ modeBusy }}" style="background:#c4ef3f;color:#0a1733;">
         Share — 20 DT <span style="opacity:.6;font-size:10px;">Split court with another player</span>
       </button>
-      <button class="pr-otp-btn" id="pr-mode-full" type="button" onClick="{{ onBookFull }}" disabled="{{ modeBusy }}" style="background:transparent;border:1px solid #c4ef3f;color:#c4ef3f;">
+      <button class="pr-otp-btn" id="pr-mode-full" type="button" onClick="{{ onBookFull }}" disabled="{{ modeBusy }}" style="display:{{ fullOptionDisplay }};background:transparent;border:1px solid #c4ef3f;color:#c4ef3f;">
         Full court — 80 DT <span style="opacity:.6;font-size:10px;">Exclusive access for 90 min</span>
       </button>
     </div>
@@ -385,7 +388,8 @@ class Component extends DCLogic {
       const cell = e.target.closest('[data-slot-time]');
       if (!cell || !this.gridRef.current || !this.gridRef.current.contains(cell)) return;
       this._slotClick(cell.getAttribute('data-slot-date'), cell.getAttribute('data-slot-time'),
-                      cell.getAttribute('data-slot-startsat') || null);
+                      cell.getAttribute('data-slot-startsat') || null,
+                      cell.getAttribute('data-slot-mode') || 'ANY');
     };
     this._onTabsClick = (e) => {
       const tab = e.target.closest('[data-court-id]');
@@ -494,7 +498,12 @@ class Component extends DCLogic {
         r.slots.forEach((s) => {
           if (!s.startsAt) return;
           const c = this._clubClock(s.startsAt);
-          times[c.timeStr] = { available: !!s.available, reason: s.reason || null, startsAt: s.startsAt };
+          times[c.timeStr] = {
+            available: !!s.available,
+            reason: s.reason || null,
+            startsAt: s.startsAt,
+            openShareSlots: Number(s.openShareSlots) || 0,
+          };
         });
         byDate[r.ds] = { ok: r.ok, times: times };
       });
@@ -578,9 +587,18 @@ class Component extends DCLogic {
           } else if (new Date(slot.startsAt).getTime() <= nowMs) {
             inner = '<div class="pr-slot-inner pr-slot-blocked" title="Past">—</div>';
           } else if (slot.available) {
-            inner = '<div class="pr-slot-inner pr-slot-free" role="button" tabindex="0"' +
+            // SHARE_OPEN means an existing match has free tranches: the member
+            // joins it for a share price rather than taking the whole court.
+            const joinable = slot.reason === 'SHARE_OPEN' && slot.openShareSlots > 0;
+            inner = '<div class="pr-slot-inner ' + (joinable ? 'pr-slot-share-open' : 'pr-slot-free') +
+              '" role="button" tabindex="0"' +
               ' data-slot-date="' + this._esc(ds) + '" data-slot-time="' + this._esc(time) + '"' +
-              ' data-slot-startsat="' + this._esc(slot.startsAt) + '">' + time + '</div>';
+              ' data-slot-mode="' + (joinable ? 'SHARE' : 'ANY') + '"' +
+              ' data-slot-startsat="' + this._esc(slot.startsAt) + '"' +
+              (joinable ? ' title="Join this match — ' + slot.openShareSlots + ' place(s) left"' : '') +
+              '>' + time +
+              (joinable ? '<br><span class="pr-slot-share-note">JOIN &middot; ' + slot.openShareSlots + '</span>' : '') +
+              '</div>';
           } else {
             const label = slot.reason === 'BLOCKED' ? 'BLOCKED' : 'BOOKED';
             inner = '<div class="pr-slot-inner pr-slot-booked">' + time +
@@ -603,9 +621,9 @@ class Component extends DCLogic {
   }
 
   // ── slot selection / OTP ────────────────────────────────────────────────
-  _slotClick(date, time, startsAt) {
+  _slotClick(date, time, startsAt, offer) {
     this._restoreFocusTo = document.activeElement;
-    const choosing = { courtId: this.state.selectedCourtId, date: date, time: time, startsAt: startsAt };
+    const choosing = { courtId: this.state.selectedCourtId, date: date, time: time, startsAt: startsAt, offer: offer || 'ANY' };
     const api = window.takeOffApi;
     const loggedIn = !!(api && api.getToken && api.getToken());
     if (loggedIn) {
@@ -747,6 +765,9 @@ class Component extends DCLogic {
       onOtpVerify: () => this._otpVerify(),
 
       modeDisplay: s.modeOpen ? 'flex' : 'none',
+      // A slot that is only joinable as a share must not offer the full court.
+      fullOptionDisplay: c && c.offer === 'SHARE' ? 'none' : 'block',
+      modeHeading: c && c.offer === 'SHARE' ? 'Join this match' : 'Select booking type',
       modeBusy: s.modeBusy,
       modeSlotInfo: c
         ? 'Court: ' + ((court && court.name) || 'Court') + ' · Date: ' + c.date + ' · Time: ' + c.time + ' — 90 min'
