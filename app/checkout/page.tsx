@@ -50,7 +50,6 @@ export default function CheckoutPage() {
     setSubmitting(true)
     setError('')
     try {
-      const token = localStorage.getItem('takeoff_access')
       const payload = {
         deliveryMethod: delivery,
         deliveryAddress: delivery === 'DELIVER' ? { city, addr: address } : null,
@@ -65,12 +64,10 @@ export default function CheckoutPage() {
           unitPriceDt: it.priceTND / 1000,
         })),
       }
-      const res = await fetch(`${API}/api/v1/orders`, {
+      const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       })
       if (!res.ok) {
@@ -79,6 +76,34 @@ export default function CheckoutPage() {
         return
       }
       const order = await res.json() as Record<string, unknown>
+
+      if (pay === 'CARD') {
+        const orderId = String(order.id ?? '')
+        const intentRes = await fetch('/api/payments/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            refType: 'ORDER',
+            refId: orderId,
+            amountDt: grandTotal,
+            returnUrl: `${window.location.origin}/checkout/confirm`,
+          }),
+        })
+        if (!intentRes.ok) {
+          const errBody = await intentRes.json().catch(() => ({}))
+          setError((errBody as Record<string, unknown>).title as string || 'Could not initiate payment. Please try again.')
+          return
+        }
+        const intent = await intentRes.json() as Record<string, unknown>
+        const payUrl = String(intent.paymentUrl ?? intent.payUrl ?? '')
+        if (payUrl) {
+          clear()
+          window.location.href = payUrl
+          return
+        }
+      }
+
       clear()
       setConfirmation(String(order.orderRef ?? order.id ?? 'Order placed'))
     } catch {
