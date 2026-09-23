@@ -1,30 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@/lib/auth/client'
-
-const API = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '')
+import { useAccountResource } from '@/lib/api/use-account-resource'
+import { ResourceNotice } from '@/components/account/resource-state'
 
 export default function OrdersPage() {
-  const { isLoading } = useAuth()
-  const [orders, setOrders] = useState<Record<string, unknown>[]>([])
-  const [fetching, setFetching] = useState(true)
-
-  useEffect(() => {
-    if (isLoading) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('takeoff_access') : null
-    fetch(`${API}/api/v1/orders?page=0&size=20`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(r => (r.ok ? r.json() : { content: [] }))
-      .then(d => setOrders(Array.isArray(d) ? d : (d?.content ?? [])))
-      .catch(() => setOrders([]))
-      .finally(() => setFetching(false))
-  }, [isLoading])
-
-  if (isLoading || fetching) {
-    return <p className="text-white/40 text-sm">Loading…</p>
-  }
+  const { rows: orders, state } = useAccountResource('/api/orders?page=0&size=20')
 
   return (
     <div>
@@ -32,8 +12,8 @@ export default function OrdersPage() {
       <h1 className="font-display text-[clamp(40px,6vw,88px)] leading-none text-white tracking-tight mb-10">
         ORDERS
       </h1>
-      {orders.length === 0 ? (
-        <p className="text-white/40">No orders yet.</p>
+      {state !== 'ready' || orders.length === 0 ? (
+        <ResourceNotice state={state} emptyMessage="No orders yet." />
       ) : (
         <div className="flex flex-col gap-3">
           {orders.map((o, i) => (

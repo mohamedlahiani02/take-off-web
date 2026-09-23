@@ -659,14 +659,23 @@
         if (btn) { btn.disabled = true; btn.textContent = '...'; }
         var its = cart.getItems();
 
+        var _packPayMap = { pay_at_club: 'PAY_AT_CLUB', wallet: 'WALLET', card: 'CARD' };
+        var _packMethod = _packPayMap[_d.pay] || 'WALLET';
         for (var _packIt of its) {
-          if (_packIt.kind === 'pack') {
-            var _packClient = window.takeOffApi;
-            if (_packIt.packTypeId && _packClient && _packClient.isOnline() && _packClient.classes && _packClient.classes.purchasePack) {
-              try { await _packClient.classes.purchasePack(_packIt.packTypeId); } catch(e) { /* ignore — fall through */ }
-            } else if (_packIt._packMeta && window.takeOffAuth && window.takeOffAuth.purchasePack) {
-              window.takeOffAuth.purchasePack(_packIt._packMeta);
+          if (_packIt.kind !== 'pack') continue;
+          var _packClient = window.takeOffApi;
+          if (_packIt.packTypeId && _packClient && _packClient.isOnline() && _packClient.classes && _packClient.classes.purchasePack) {
+            try {
+              await _packClient.classes.purchasePack(_packIt.packTypeId, _packMethod, _packIt.qty || 1);
+            } catch (e) {
+              // A pack that could not be paid for must never reach the success screen. The cart
+              // is left intact so the member can switch payment method or top up and retry.
+              if (btn) { btn.disabled = false; btn.textContent = ctaLabel; }
+              showOrderError(e, 'Could not buy "' + (_packIt.name || 'pack') + '" — please choose another payment method or top up your wallet.');
+              return;
             }
+          } else if (_packIt._packMeta && window.takeOffAuth && window.takeOffAuth.purchasePack) {
+            window.takeOffAuth.purchasePack(_packIt._packMeta);
           }
         }
 
@@ -706,32 +715,35 @@
             if (_d.pay === 'card' && client.payments && client.isOnline()) {
               try {
                 var _returnBase = window.location.origin + '/payment/return.html';
-                var intent = await client.payments.initiate('order', (order.id || _orderId).toString(), cart.getTotal(), _returnBase);
-                if (intent && intent.paymentUrl) {
-                  if (intent.id) {
-                    try { sessionStorage.setItem('takeOffPaymentIntentId', String(intent.id)); } catch(e) {}
-                  }
+                var intent = await client.payments.initiate('ORDER', (order.id || _orderId).toString(), cart.getTotal(), _returnBase);
+                // The initiation response names the intent `intentId`; `id` was never populated,
+                // so the stored reference and the stub return URL were always empty.
+                var _intentId = intent && (intent.intentId || intent.id);
+                if (intent && intent.paymentUrl && _intentId) {
+                  try { sessionStorage.setItem('takeOffPaymentIntentId', String(_intentId)); } catch(e) {}
                   clearCheckoutState();
                   if (intent.paymentUrl.indexOf('stub=true') !== -1) {
                     // Stub mode: go to return page so the flow is exercised (no real charge)
-                    window.location.href = window.location.origin + '/payment/return.html?intentId=' + encodeURIComponent(String(intent.id || ''));
+                    window.location.href = window.location.origin + '/payment/return.html?intentId=' + encodeURIComponent(String(_intentId));
                   } else {
                     window.location.href = intent.paymentUrl;
                   }
                   return;
                 }
-              } catch(e) { /* fall through */ }
+                // Initiation succeeded but gave us nowhere to pay: report it rather than
+                // dropping through to a success screen for money that never moved.
+                if (btn) { btn.disabled = false; btn.textContent = ctaLabel; }
+                showOrderError(null, 'Card payment could not be started. Your order is saved — please retry from your account.');
+                return;
+              } catch(e) {
+                if (btn) { btn.disabled = false; btn.textContent = ctaLabel; }
+                showOrderError(e, 'Card payment could not be started. Your order is saved — please retry from your account.');
+                return;
+              }
             }
           } catch (e) {
             if (btn) { btn.disabled = false; btn.textContent = ctaLabel; }
-            var errEl = document.getElementById('tk-order-err');
-            if (errEl) {
-              var msg = (e && (e.status === 401 || (e.message && e.message.indexOf('401') !== -1)))
-                ? 'Please <a href="/auth/login.html" style="color:inherit;text-decoration:underline">sign in</a> to complete your order.'
-                : 'Couldn\'t place order — please try again.';
-              errEl.innerHTML = msg;
-              errEl.style.display = 'block';
-            }
+            showOrderError(e, 'Could not place order — please try again.');
             return;
           }
         } else {
@@ -749,6 +761,19 @@
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+  // Renders a checkout failure in the inline error slot. Every failed money operation routes
+  // through here so nothing can silently fall through to the success screen.
+  function showOrderError(e, fallback) {
+    var errEl = document.getElementById('tk-order-err');
+    if (!errEl) return;
+    var unauthorized = e && (e.status === 401 || (e.message && e.message.indexOf('401') !== -1));
+    var detail = e && (e.detail || (e.body && (e.body.detail || e.body.title)));
+    errEl.innerHTML = unauthorized
+      ? 'Please <a href="/auth/login.html" style="color:inherit;text-decoration:underline">sign in</a> to complete your order.'
+      : esc(detail || fallback);
+    errEl.style.display = 'block';
+  }
+
   function saveCheckoutState() {
     try { sessionStorage.setItem('takeOffCheckout', JSON.stringify({ step: _step, d: _d })); } catch(e) {}
   }

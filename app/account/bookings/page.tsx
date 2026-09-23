@@ -1,30 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@/lib/auth/client'
-
-const API = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '')
+import { useAccountResource } from '@/lib/api/use-account-resource'
+import { ResourceNotice } from '@/components/account/resource-state'
 
 export default function BookingsPage() {
-  const { user, isLoading } = useAuth()
-  const [bookings, setBookings] = useState<Record<string, unknown>[]>([])
-  const [fetching, setFetching] = useState(true)
-
-  useEffect(() => {
-    if (isLoading) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('takeoff_access') : null
-    fetch(`${API}/api/v1/courts/bookings/mine`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(r => (r.ok ? r.json() : []))
-      .then(setBookings)
-      .catch(() => setBookings([]))
-      .finally(() => setFetching(false))
-  }, [isLoading])
-
-  if (isLoading || fetching) {
-    return <p className="text-white/40 text-sm">Loading…</p>
-  }
+  const { rows: bookings, state } = useAccountResource('/api/courts/bookings')
 
   return (
     <div>
@@ -32,8 +12,8 @@ export default function BookingsPage() {
       <h1 className="font-display text-[clamp(40px,6vw,88px)] leading-none text-white tracking-tight mb-10">
         BOOKINGS
       </h1>
-      {bookings.length === 0 ? (
-        <p className="text-white/40">No court bookings yet.</p>
+      {state !== 'ready' || bookings.length === 0 ? (
+        <ResourceNotice state={state} emptyMessage="No court bookings yet." />
       ) : (
         <div className="flex flex-col gap-3">
           {bookings.map((b, i) => (
