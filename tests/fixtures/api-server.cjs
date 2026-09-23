@@ -73,8 +73,55 @@ function resolve(pathname) {
   const seg = pathname.split('/').filter(Boolean)
   const [, , kind, id] = seg // api v1 <kind> <id>
 
+  // Editable page copy. Deliberately different from the built-in defaults so a
+  // test can prove the CMS is actually read (the prototype ignored it).
+  if (kind === 'content') {
+    if (id === 'store') {
+      return {
+        status: 200,
+        body: [
+          { sectionKey: 'hero', visible: true, displayOrder: 0,
+            content: { kicker: 'CMS KICKER STORE', headline: 'CMS Headline Store', subtitle: 'CMS subtitle store.' } },
+        ],
+      }
+    }
+    if (id === 'coaches') {
+      return {
+        status: 200,
+        body: [
+          { sectionKey: 'hero', visible: true, displayOrder: 0,
+            content: { kicker: 'CMS KICKER COACHES', headline: 'CMS Headline Coaches', subtitle: 'CMS subtitle coaches.' } },
+          { sectionKey: 'form', visible: true, displayOrder: 1,
+            content: { kicker: 'CMS FORM KICKER', headline: 'CMS Form Headline', subtitle: 'CMS form subtitle.' } },
+          { sectionKey: 'hidden', visible: false, displayOrder: 2, content: { headline: 'SHOULD NOT APPEAR' } },
+        ],
+      }
+    }
+    return { status: 200, body: [] }
+  }
+
+  if (kind === 'coaching') return { status: 200, body: { status: 'ok' } }
+
   if (id === IDS.outage) return { status: 503, body: { message: 'Synthetic outage' } }
   if (id === IDS.missing) return { status: 404, body: { message: 'Not found' } }
+
+  if (kind === 'products' && !id) {
+    return {
+      status: 200,
+      body: {
+        content: [
+          product(IDS.product),
+          product(IDS.productSoldOut, {
+            name: 'Sac Epuise', category: 'ACCESSORIES', stock: 0,
+            // Distinct wording: search also matches descriptions, so sharing the
+            // default text here would make the search assertion meaningless.
+            description: 'Sac de sport compact pour le club.',
+          }),
+          product(IDS.productInactive, { name: 'Produit Retire', isActive: false }),
+        ],
+      },
+    }
+  }
 
   if (kind === 'products' && id) {
     if (id === IDS.productSoldOut) return { status: 200, body: product(id, { stock: 0 }) }

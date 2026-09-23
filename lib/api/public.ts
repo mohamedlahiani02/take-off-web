@@ -89,6 +89,17 @@ export async function listCoaches(activity: 'PADEL' | 'PILATES'): Promise<Public
   return res.kind === 'ok' ? res.data : []
 }
 
+/** Public catalogue, loaded server-side so the grid is in the initial HTML. */
+export async function listProducts(size = 100): Promise<PublicProduct[] | null> {
+  const res = await getJson<{ content?: PublicProduct[] } | PublicProduct[]>(
+    `/api/v1/products?page=0&size=${size}`,
+  )
+  if (res.kind !== 'ok') return null // null means "could not load", not "empty"
+  const data = res.data
+  if (Array.isArray(data)) return data
+  return data.content ?? []
+}
+
 export async function listTournaments(): Promise<PublicTournament[]> {
   const res = await getJson<PublicTournament[]>('/api/v1/tournaments')
   return res.kind === 'ok' ? res.data : []
