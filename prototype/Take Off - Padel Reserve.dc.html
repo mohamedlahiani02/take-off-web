@@ -145,20 +145,20 @@
 
     <!-- Week nav -->
     <div class="pr-week-nav" style="margin-bottom:28px;">
-      <button class="pr-week-btn" onclick="prPrevWeek()">‹ Prev week</button>
-      <span class="pr-week-label" id="pr-week-label">Loading…</span>
-      <button class="pr-week-btn" onclick="prNextWeek()">Next week ›</button>
-      <button class="pr-today-btn" onclick="prToday()">Today</button>
+      <button class="pr-week-btn" type="button" onClick="{{ onPrevWeek }}" aria-label="Previous week">‹ Prev week</button>
+      <span class="pr-week-label" id="pr-week-label" aria-live="polite">{{ weekLabel }}</span>
+      <button class="pr-week-btn" type="button" onClick="{{ onNextWeek }}" aria-label="Next week">Next week ›</button>
+      <button class="pr-today-btn" type="button" onClick="{{ onToday }}">Today</button>
     </div>
 
     <!-- Court tabs -->
-    <div class="pr-court-tabs" id="pr-court-tabs">
+    <div class="pr-court-tabs" id="pr-court-tabs" ref="{{ courtTabsRef }}">
       <div style="font-family:'Space Mono';font-size:11px;letter-spacing:.1em;color:rgba(244,245,238,.4);padding:12px 0;">Loading courts…</div>
     </div>
 
     <!-- Grid -->
     <div class="pr-grid-wrap tk-week-grid-wrap">
-      <div class="pr-grid tk-week-grid" id="pr-grid">
+      <div class="pr-grid tk-week-grid" id="pr-grid" ref="{{ gridRef }}">
         <div style="grid-column:1/-1;padding:40px;text-align:center;">
           <div class="pr-spinner"></div>
         </div>
@@ -202,435 +202,565 @@
 </div><!-- /overflow wrapper -->
 
 <!-- ░ TOAST ░ -->
-<div class="pr-toast" id="pr-toast"></div>
+<div class="pr-toast{{ toastClass }}" id="pr-toast" role="status" aria-live="polite">{{ toast }}</div>
 
 <!-- ░ OTP MODAL ░ -->
-<div class="pr-otp-overlay" id="pr-otp-overlay" style="display:none;" onclick="if(event.target===this)prCloseOtp()">
-  <div class="pr-otp-panel">
-    <button class="pr-otp-close" onclick="prCloseOtp()">✕ close</button>
+<div class="pr-otp-overlay" id="pr-otp-overlay" style="display:{{ otpDisplay }};" onClick="{{ onOtpBackdrop }}" role="dialog" aria-modal="true" aria-label="Sign in">
+  <div class="pr-otp-panel" ref="{{ otpPanelRef }}">
+    <button class="pr-otp-close" type="button" onClick="{{ onCloseOtp }}">✕ close</button>
     <div class="pr-otp-title" id="pr-otp-kicker">SIGN IN</div>
-    <h2 class="pr-otp-h2" id="pr-otp-heading">Enter your phone number</h2>
-    <div id="pr-otp-err" class="pr-otp-err" style="display:none;"></div>
+    <h2 class="pr-otp-h2" id="pr-otp-heading">{{ otpHeading }}</h2>
+    <div id="pr-otp-err" class="pr-otp-err" style="display:{{ otpErrDisplay }};">{{ otpError }}</div>
 
     <!-- Step 1: phone -->
-    <div id="pr-otp-step1">
+    <div id="pr-otp-step1" style="display:{{ otpStep1Display }};">
       <label class="pr-otp-label">PHONE</label>
       <input class="pr-otp-input" id="pr-otp-phone" type="tel" placeholder="+216 XX XXX XXX" autocomplete="tel">
       <div class="pr-otp-info">We'll send a one-time code via SMS.</div>
-      <button class="pr-otp-btn" id="pr-otp-send" onclick="prSendOtp()">Send code →</button>
+      <button class="pr-otp-btn" id="pr-otp-send" type="button" onClick="{{ onSendOtp }}" disabled="{{ otpBusy }}">{{ sendOtpLabel }}</button>
     </div>
 
     <!-- Step 2: name (new users only) -->
-    <div id="pr-otp-step-name" style="display:none;">
+    <div id="pr-otp-step-name" style="display:{{ otpStepNameDisplay }};">
       <label class="pr-otp-label">YOUR NAME</label>
       <input class="pr-otp-input" id="pr-otp-name" type="text" placeholder="First name" autocomplete="given-name">
-      <button class="pr-otp-btn" id="pr-otp-name-next" onclick="prOtpNameNext()">Continue →</button>
+      <button class="pr-otp-btn" id="pr-otp-name-next" type="button" onClick="{{ onOtpNameNext }}">Continue →</button>
     </div>
 
     <!-- Step 3: code -->
-    <div id="pr-otp-step2" style="display:none;">
+    <div id="pr-otp-step2" style="display:{{ otpStep2Display }};">
       <label class="pr-otp-label">VERIFICATION CODE</label>
       <input class="pr-otp-input" id="pr-otp-code" type="text" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
-      <div class="pr-otp-info" id="pr-otp-phone-hint"></div>
-      <button class="pr-otp-btn" id="pr-otp-verify" onclick="prOtpVerify()">Verify →</button>
+      <div class="pr-otp-info" id="pr-otp-phone-hint">{{ otpPhoneHint }}</div>
+      <button class="pr-otp-btn" id="pr-otp-verify" type="button" onClick="{{ onOtpVerify }}" disabled="{{ otpBusy }}">{{ verifyOtpLabel }}</button>
     </div>
   </div>
 </div>
 
 <!-- ░ BOOKING MODE MODAL ░ -->
-<div class="pr-otp-overlay" id="pr-mode-overlay" style="display:none;" onclick="if(event.target===this)prCloseModeModal()">
-  <div class="pr-otp-panel tk-booking-panel">
-    <button class="pr-otp-close" onclick="prCloseModeModal()">✕ close</button>
+<div class="pr-otp-overlay" id="pr-mode-overlay" style="display:{{ modeDisplay }};" onClick="{{ onModeBackdrop }}" role="dialog" aria-modal="true" aria-label="Choose your booking">
+  <div class="pr-otp-panel tk-booking-panel" ref="{{ modePanelRef }}">
+    <button class="pr-otp-close" type="button" onClick="{{ onCloseMode }}">✕ close</button>
     <div class="pr-otp-title">CHOOSE YOUR BOOKING</div>
     <h2 class="pr-otp-h2" id="pr-mode-heading">Select booking type</h2>
-    <div id="pr-mode-slot-info" style="font-family:'Space Mono';font-size:11px;letter-spacing:.08em;color:rgba(244,245,238,.5);margin-bottom:24px;line-height:1.8;"></div>
+    <div id="pr-mode-slot-info" style="font-family:'Space Mono';font-size:11px;letter-spacing:.08em;color:rgba(244,245,238,.5);margin-bottom:24px;line-height:1.8;">{{ modeSlotInfo }}</div>
     <div style="display:flex;flex-direction:column;gap:12px;">
-      <button class="pr-otp-btn" id="pr-mode-share" onclick="prDoBook('SHARE')" style="background:#c4ef3f;color:#0a1733;">
+      <button class="pr-otp-btn" id="pr-mode-share" type="button" onClick="{{ onBookShare }}" disabled="{{ modeBusy }}" style="background:#c4ef3f;color:#0a1733;">
         Share — 20 DT <span style="opacity:.6;font-size:10px;">Split court with another player</span>
       </button>
-      <button class="pr-otp-btn" id="pr-mode-full" onclick="prDoBook('FULL')" style="background:transparent;border:1px solid #c4ef3f;color:#c4ef3f;">
+      <button class="pr-otp-btn" id="pr-mode-full" type="button" onClick="{{ onBookFull }}" disabled="{{ modeBusy }}" style="background:transparent;border:1px solid #c4ef3f;color:#c4ef3f;">
         Full court — 80 DT <span style="opacity:.6;font-size:10px;">Exclusive access for 90 min</span>
       </button>
     </div>
   </div>
 </div>
 
-<script>
-(function() {
-  var CAL_SLOTS = ['07:00','08:30','10:00','11:30','13:00','14:30','16:00','17:30','19:00','20:30'];
-  var DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  /* Refs, not getElementById: the runtime re-renders this template after it
+     re-fetches the page source, so any node captured once goes stale. A ref
+     always points at the node React currently has mounted. */
+  gridRef = React.createRef();
+  courtTabsRef = React.createRef();
+  otpPanelRef = React.createRef();
+  modePanelRef = React.createRef();
 
-  var _courts = [];
-  var _selectedCourt = null;
-  var _weekStart = null;
-  var _slotsData = {}; // courtId -> { 'YYYY-MM-DD' -> { 'HH:MM' -> status } }
-  var _choosing = null; // { courtId, date, time }
+  /* Africa/Tunis is UTC+1 all year (no DST). Calendar days are *club* days,
+     so a member browsing from another timezone sees the club's week. */
+  static CLUB_OFFSET_MIN = 60;
+  static CAL_SLOTS = ['07:00','08:30','10:00','11:30','13:00','14:30','16:00','17:30','19:00','20:30'];
+  static DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  static MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  function pad(n){ return String(n).padStart(2,'0'); }
-  function toDateStr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
-
-  function getWeekStart(date){
-    var d = new Date(date);
-    var dow = d.getDay();
-    var diff = dow === 0 ? -6 : 1 - dow;
-    d.setDate(d.getDate() + diff);
-    d.setHours(0,0,0,0);
-    return d;
-  }
-
-  function weekLabel(ws){
-    var we = new Date(ws); we.setDate(we.getDate()+6);
-    return DAYS_SHORT[ws.getDay()]+' '+ws.getDate()+' – '+DAYS_SHORT[we.getDay()]+' '+we.getDate()+' '+MONTHS_SHORT[we.getMonth()];
-  }
-
-  function showToast(msg, ms){
-    var t = document.getElementById('pr-toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(function(){ t.classList.remove('show'); }, ms || 3500);
-  }
-
-  function showErr(msg){
-    var el = document.getElementById('pr-otp-err');
-    el.textContent = msg;
-    el.style.display = msg ? 'block' : 'none';
-  }
-
-  /* ── GRID RENDER ────────────────────────────────────────────────── */
-  function renderGrid(){
-    var grid = document.getElementById('pr-grid');
-    if(!_weekStart || !_selectedCourt){ return; }
-    var courtId = _selectedCourt.id || _selectedCourt._id;
-    var slots = (_slotsData[courtId] || {});
-    var today = toDateStr(new Date());
-
-    var days = [];
-    for(var i=0;i<7;i++){
-      var d = new Date(_weekStart);
-      d.setDate(d.getDate()+i);
-      days.push(d);
-    }
-
-    var html = '';
-    // Corner
-    html += '<div class="pr-grid-header-cell" style="background:#0a1733;border-right:1px solid rgba(196,239,63,.06);"></div>';
-    // Day headers
-    days.forEach(function(d){
-      var ds = toDateStr(d);
-      var isTod = ds === today;
-      html += '<div class="pr-grid-header-cell'+(isTod?' today':'')+'">';
-      html += '<div>'+DAYS_SHORT[d.getDay()]+'</div>';
-      html += '<div style="font-size:16px;font-weight:700;font-family:\'Space Grotesk\';color:'+(isTod?'#c4ef3f':'#f4f5ee')+';">'+d.getDate()+'</div>';
-      html += '</div>';
-    });
-
-    // Time rows
-    CAL_SLOTS.forEach(function(time){
-      html += '<div class="pr-grid-time">'+time+'</div>';
-      days.forEach(function(d){
-        var ds = toDateStr(d);
-        var entry = slots[ds] && slots[ds][time];
-        var st = entry ? (typeof entry === 'object' ? entry.status : entry) : 'FREE';
-        var slotStartsAt = entry && entry.startsAt ? entry.startsAt : null;
-        var isPast = d < new Date() && toDateStr(d) !== today;
-        if(isPast) st = 'BLOCKED';
-        var inner = '';
-        if(st === 'FREE'){
-          var saArg = slotStartsAt ? ',\''+slotStartsAt+'\'' : '';
-          inner = '<div class="pr-slot-inner pr-slot-free" onclick="prSlotClick(\''+courtId+'\',\''+ds+'\',\''+time+'\''+saArg+')">'+time+'</div>';
-        } else if(st === 'BLOCKED'){
-          inner = '<div class="pr-slot-inner pr-slot-blocked" title="Past">—</div>';
-        } else {
-          // BOOKED, SHARE, FULL
-          var label = st === 'SHARE' ? 'SHARE' : st === 'FULL' ? 'FULL' : 'BOOKED';
-          inner = '<div class="pr-slot-inner pr-slot-booked">'+time+'<br><span style="font-size:9px;opacity:.7;">'+label+'</span></div>';
-        }
-        html += '<div class="pr-slot">'+inner+'</div>';
-      });
-    });
-
-    grid.innerHTML = html;
-  }
-
-  window.prSlotClick = function(courtId, date, time, startsAt){
-    _choosing = { courtId: courtId, date: date, time: time, startsAt: startsAt || null };
-    // Check if logged in
-    var api = window.takeOffApi;
-    var loggedIn = !!(api && api.getToken && api.getToken());
-    if(!loggedIn){
-      // Show OTP flow
-      openOtp(function(){
-        openModeModal();
-      });
-    } else {
-      openModeModal();
-    }
+  state = {
+    weekStart: null,          // 'YYYY-MM-DD', Monday of the displayed club week
+    courts: [],
+    courtsState: 'loading',   // loading | ready | error
+    selectedCourtId: null,
+    slotsByDate: {},          // 'YYYY-MM-DD' -> { ok:true, times:{...} } | { ok:false }
+    slotsState: 'idle',       // idle | loading | ready | error
+    otpOpen: false,
+    otpStep: 'phone',         // phone | name | code
+    otpError: '',
+    otpBusy: false,
+    otpPhone: '',
+    modeOpen: false,
+    modeBusy: false,
+    choosing: null,           // { courtId, date, time, startsAt }
+    toast: '',
   };
 
-  /* ── OTP FLOW ────────────────────────────────────────────────────── */
-  var _otpCallback = null;
-  var _otpPhone = '';
-  var _otpName = '';
+  /* Monotonic token: a reply that arrives after the member has already moved
+     on is dropped instead of painting a stale week over the current one. */
+  _loadToken = 0;
+  _toastTimer = null;
+  _restoreFocusTo = null;
 
-  function openOtp(cb){
-    _otpCallback = cb;
-    _otpPhone = '';
-    _otpName = '';
-    document.getElementById('pr-otp-phone').value = '';
-    document.getElementById('pr-otp-name').value = '';
-    document.getElementById('pr-otp-code').value = '';
-    showErr('');
-    document.getElementById('pr-otp-step1').style.display = 'block';
-    document.getElementById('pr-otp-step-name').style.display = 'none';
-    document.getElementById('pr-otp-step2').style.display = 'none';
-    document.getElementById('pr-otp-heading').textContent = 'Enter your phone number';
-    document.getElementById('pr-otp-overlay').style.display = 'flex';
+  // ── club-time helpers ───────────────────────────────────────────────────
+  _clubParts(instant) {
+    const t = new Date(instant.getTime() + Component.CLUB_OFFSET_MIN * 60000);
+    return { y: t.getUTCFullYear(), m: t.getUTCMonth(), d: t.getUTCDate(), dow: t.getUTCDay() };
   }
-
-  function closeOtp(){
-    document.getElementById('pr-otp-overlay').style.display = 'none';
-    _otpCallback = null;
+  /** UTC instant of midnight at the start of the given club calendar day. */
+  _clubMidnight(y, m, d) {
+    return new Date(Date.UTC(y, m, d, 0, 0, 0) - Component.CLUB_OFFSET_MIN * 60000);
   }
-
-  window.prCloseOtp = closeOtp;
-
-  window.prSendOtp = function(){
-    var phone = document.getElementById('pr-otp-phone').value.trim();
-    if(!phone){ showErr('Please enter your phone number.'); return; }
-    _otpPhone = phone;
-    var btn = document.getElementById('pr-otp-send');
-    btn.disabled = true; btn.textContent = 'Sending…';
-    showErr('');
-    var api = window.takeOffApi;
-    if(api && api.auth && api.auth.sendOtp){
-      api.auth.sendOtp(phone).then(function(){
-        btn.disabled = false; btn.textContent = 'Send code →';
-        document.getElementById('pr-otp-step1').style.display = 'none';
-        document.getElementById('pr-otp-step-name').style.display = 'block';
-        document.getElementById('pr-otp-heading').textContent = 'What\'s your name?';
-      }).catch(function(e){
-        btn.disabled = false; btn.textContent = 'Send code →';
-        showErr(e && e.message ? e.message : 'Failed to send code. Try again.');
-      });
-    } else {
-      btn.disabled = false; btn.textContent = 'Send code →';
-      document.getElementById('pr-otp-step1').style.display = 'none';
-      document.getElementById('pr-otp-step-name').style.display = 'block';
-      document.getElementById('pr-otp-heading').textContent = 'What\'s your name?';
-    }
-  };
-
-  window.prOtpNameNext = function(){
-    _otpName = document.getElementById('pr-otp-name').value.trim();
-    document.getElementById('pr-otp-step-name').style.display = 'none';
-    document.getElementById('pr-otp-step2').style.display = 'block';
-    document.getElementById('pr-otp-phone-hint').textContent = 'Code sent to '+_otpPhone;
-    document.getElementById('pr-otp-heading').textContent = 'Enter your code';
-  };
-
-  window.prOtpVerify = function(){
-    var code = document.getElementById('pr-otp-code').value.trim();
-    if(!code){ showErr('Please enter the verification code.'); return; }
-    var btn = document.getElementById('pr-otp-verify');
-    btn.disabled = true; btn.textContent = 'Verifying…';
-    showErr('');
-    var api = window.takeOffApi;
-    if(api && api.auth && api.auth.verifyOtp){
-      api.auth.verifyOtp(_otpPhone, code, _otpName).then(function(){
-        btn.disabled = false; btn.textContent = 'Verify →';
-        closeOtp();
-        if(_otpCallback) _otpCallback();
-      }).catch(function(e){
-        btn.disabled = false; btn.textContent = 'Verify →';
-        showErr(e && e.message ? e.message : 'Invalid code. Please try again.');
-      });
-    } else {
-      btn.disabled = false; btn.textContent = 'Verify →';
-      closeOtp();
-      if(_otpCallback) _otpCallback();
-    }
-  };
-
-  /* ── MODE MODAL ─────────────────────────────────────────────────── */
-  function openModeModal(){
-    if(!_choosing) return;
-    document.getElementById('pr-mode-slot-info').innerHTML =
-      'Court: <strong>'+(_selectedCourt.name||'Court')+'</strong><br>'+
-      'Date: <strong>'+_choosing.date+'</strong><br>'+
-      'Time: <strong>'+_choosing.time+' — 90 min</strong>';
-    document.getElementById('pr-mode-overlay').style.display = 'flex';
+  _pad(n) { return String(n).padStart(2, '0'); }
+  _key(y, m, d) {
+    const at = this._clubMidnight(y, m, d);
+    const p = this._clubParts(at);
+    return p.y + '-' + this._pad(p.m + 1) + '-' + this._pad(p.d);
   }
-
-  function closeModeModal(){
-    document.getElementById('pr-mode-overlay').style.display = 'none';
-    _choosing = null;
-    renderGrid();
+  _parseKey(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    return { y: y, m: m - 1, d: d };
   }
-
-  window.prCloseModeModal = closeModeModal;
-
-  function doBook(mode){
-    if(!_choosing) return;
-    var btn = mode === 'SHARE' ? document.getElementById('pr-mode-share') : document.getElementById('pr-mode-full');
-    btn.disabled = true;
-    var api = window.takeOffApi;
-    var courtId = _choosing.courtId;
-    // Use UTC ISO from backend; fallback subtracts 1h for Tunisia (UTC+1)
-    var startsAt = _choosing.startsAt;
-    if(!startsAt){
-      var h = parseInt(_choosing.time.slice(0,2)) - 1;
-      startsAt = _choosing.date + 'T' + pad(h < 0 ? 23 : h) + ':' + _choosing.time.slice(3) + ':00Z';
-    }
-    if(api && api.courts && api.courts.book){
-      api.courts.book(courtId, startsAt, mode, 'PAY_AT_CLUB').then(function(){
-        btn.disabled = false;
-        document.getElementById('pr-mode-overlay').style.display = 'none';
-        // Mark slot locally
-        if(!_slotsData[courtId]) _slotsData[courtId] = {};
-        if(!_slotsData[courtId][_choosing.date]) _slotsData[courtId][_choosing.date] = {};
-        _slotsData[courtId][_choosing.date][_choosing.time] = mode;
-        _choosing = null;
-        renderGrid();
-        showToast('🎾 Booked! We\'ll see you on the court!', 4000);
-      }).catch(function(e){
-        btn.disabled = false;
-        showToast((e && e.message) ? e.message : 'Booking failed. Please try again.', 3500);
-      });
-    } else {
-      // Dev fallback
-      btn.disabled = false;
-      if(!_slotsData[courtId]) _slotsData[courtId] = {};
-      if(!_slotsData[courtId][_choosing.date]) _slotsData[courtId][_choosing.date] = {};
-      _slotsData[courtId][_choosing.date][_choosing.time] = mode;
-      _choosing = null;
-      document.getElementById('pr-mode-overlay').style.display = 'none';
-      renderGrid();
-      showToast('🎾 Booked! We\'ll see you on the court!', 4000);
-    }
+  /** Club day key shifted by `delta` days — crosses months and years correctly. */
+  _shiftKey(key, delta) {
+    const p = this._parseKey(key);
+    return this._key(p.y, p.m, p.d + delta);
   }
-
-  window.prDoBook = doBook;
-
-  /* ── LOAD SLOTS ────────────────────────────────────────────────── */
-  // Tunisia is UTC+1 year-round (no DST)
-  function toTunisiaTime(isoStr){
-    var ms = new Date(isoStr).getTime() + 3600000;
-    var t = new Date(ms);
+  _todayKey() {
+    const p = this._clubParts(new Date());
+    return this._key(p.y, p.m, p.d);
+  }
+  /** Monday of the club week containing the given club day. */
+  _weekStartKey(dayKey) {
+    const p = this._parseKey(dayKey);
+    const dow = this._clubParts(this._clubMidnight(p.y, p.m, p.d)).dow;
+    return this._key(p.y, p.m, p.d + (dow === 0 ? -6 : 1 - dow));
+  }
+  _weekDayKeys(weekStart) {
+    const out = [];
+    for (let i = 0; i < 7; i++) out.push(this._shiftKey(weekStart, i));
+    return out;
+  }
+  _weekLabel(weekStart) {
+    if (!weekStart) return 'Loading…';
+    const a = this._parseKey(weekStart);
+    const b = this._parseKey(this._shiftKey(weekStart, 6));
+    const ad = this._clubParts(this._clubMidnight(a.y, a.m, a.d));
+    const bd = this._clubParts(this._clubMidnight(b.y, b.m, b.d));
+    const head = Component.DAYS_SHORT[ad.dow] + ' ' + a.d;
+    const tail = Component.DAYS_SHORT[bd.dow] + ' ' + b.d + ' ' + Component.MONTHS_SHORT[b.m];
+    // Spell out the month on both sides when the week straddles a boundary.
+    return (a.m === b.m && a.y === b.y)
+      ? head + ' – ' + tail
+      : head + ' ' + Component.MONTHS_SHORT[a.m] + ' – ' + tail + (a.y === b.y ? '' : ' ' + b.y);
+  }
+  /** Club wall-clock date + time of an ISO instant. */
+  _clubClock(iso) {
+    const p = this._clubParts(new Date(iso));
+    const t = new Date(new Date(iso).getTime() + Component.CLUB_OFFSET_MIN * 60000);
     return {
-      dateStr: t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate()),
-      timeStr: pad(t.getUTCHours())+':'+pad(t.getUTCMinutes())
+      dateStr: p.y + '-' + this._pad(p.m + 1) + '-' + this._pad(p.d),
+      timeStr: this._pad(t.getUTCHours()) + ':' + this._pad(t.getUTCMinutes()),
     };
   }
 
-  function loadSlots(){
-    if(!_selectedCourt || !_weekStart) return;
-    var courtId = _selectedCourt.id || _selectedCourt._id;
-    var api = window.takeOffApi;
-    if(!api || !api.courts || !api.courts.slots){ renderGrid(); return; }
+  // ── lifecycle ───────────────────────────────────────────────────────────
+  /** Runs `fn` once the API client exists — immediately if it already does. */
+  _whenApiReady(fn) {
+    if (window.takeOffApi) { fn(); return; }
+    this._apiReadyHandler = () => {
+      window.removeEventListener('takeoff:api-ready', this._apiReadyHandler);
+      this._apiReadyHandler = null;
+      fn();
+    };
+    window.addEventListener('takeoff:api-ready', this._apiReadyHandler);
+  }
 
-    // Fetch one day at a time — backend only accepts a single ?date= param
-    var dates = [];
-    for(var i=0;i<7;i++){
-      var d = new Date(_weekStart); d.setDate(d.getDate()+i);
-      dates.push(toDateStr(d));
+  componentDidMount() {
+    this._onKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      if (this.state.modeOpen) this._closeMode();
+      else if (this.state.otpOpen) this._closeOtp();
+    };
+    document.addEventListener('keydown', this._onKeyDown);
+
+    /* Delegated: the grid and the tab strip are painted with innerHTML, so
+       their children come and go. One listener on the stable container keeps
+       working, and carries no function names through markup. */
+    this._onGridClick = (e) => {
+      const cell = e.target.closest('[data-slot-time]');
+      if (!cell || !this.gridRef.current || !this.gridRef.current.contains(cell)) return;
+      this._slotClick(cell.getAttribute('data-slot-date'), cell.getAttribute('data-slot-time'),
+                      cell.getAttribute('data-slot-startsat') || null);
+    };
+    this._onTabsClick = (e) => {
+      const tab = e.target.closest('[data-court-id]');
+      if (!tab || !this.courtTabsRef.current || !this.courtTabsRef.current.contains(tab)) return;
+      const id = tab.getAttribute('data-court-id');
+      if (id === 'retry') { this._loadCourts(); return; }
+      if (id !== this.state.selectedCourtId) {
+        this.setState({ selectedCourtId: id }, () => this._loadSlots());
+      }
+    };
+    if (this.gridRef.current) this.gridRef.current.addEventListener('click', this._onGridClick);
+    if (this.courtTabsRef.current) this.courtTabsRef.current.addEventListener('click', this._onTabsClick);
+
+    if (!this.state.weekStart) {
+      this.setState({ weekStart: this._weekStartKey(this._todayKey()) }, () => this._whenApiReady(() => this._loadCourts()));
+    } else {
+      // Re-mounted (the runtime swapped the template): repaint from state, and
+      // resume a load that the previous mount never finished.
+      this._paint();
+      if (this.state.courtsState !== 'ready' && this.state.courtsState !== 'error')
+        this._whenApiReady(() => this._loadCourts());
     }
-    var promises = dates.map(function(dateStr){
-      return api.courts.slots(courtId, dateStr)
-        .then(function(data){ return { dateStr: dateStr, slots: Array.isArray(data) ? data : [] }; })
-        .catch(function(){ return { dateStr: dateStr, slots: [] }; });
-    });
 
-    Promise.all(promises).then(function(results){
-      var map = {};
-      results.forEach(function(r){
-        r.slots.forEach(function(s){
-          if(!s.startsAt) return;
-          var tt = toTunisiaTime(s.startsAt);
-          if(!map[tt.dateStr]) map[tt.dateStr] = {};
-          map[tt.dateStr][tt.timeStr] = { status: s.available ? 'FREE' : 'BOOKED', startsAt: s.startsAt };
-        });
-      });
-      _slotsData[courtId] = map;
-      renderGrid();
-    });
+    const loader = document.getElementById('pr-loader');
+    if (loader) { loader.style.opacity = '0'; loader.style.visibility = 'hidden'; }
   }
 
-  /* ── WEEK NAVIGATION ────────────────────────────────────────────── */
-  function setWeek(ws){
-    _weekStart = ws;
-    document.getElementById('pr-week-label').textContent = weekLabel(ws);
-    loadSlots();
+  componentDidUpdate() {
+    /* React owns the template; the grid and tabs are imperative children of
+       refs, so they are repainted after every commit — including the commit
+       that follows a re-mount. */
+    this._paint();
+    if (this.state.otpOpen && this.otpPanelRef.current && !this.otpPanelRef.current.contains(document.activeElement)) {
+      const first = this.otpPanelRef.current.querySelector('input:not([disabled]), button:not([disabled])');
+      if (first) first.focus();
+    }
+    if (this.state.modeOpen && this.modePanelRef.current && !this.modePanelRef.current.contains(document.activeElement)) {
+      const first = this.modePanelRef.current.querySelector('button:not([disabled])');
+      if (first) first.focus();
+    }
   }
 
-  window.prPrevWeek = function(){ var ws = new Date(_weekStart); ws.setDate(ws.getDate()-7); setWeek(ws); };
-  window.prNextWeek = function(){ var ws = new Date(_weekStart); ws.setDate(ws.getDate()+7); setWeek(ws); };
-  window.prToday    = function(){ setWeek(getWeekStart(new Date())); };
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this._onKeyDown);
+    if (this.gridRef.current) this.gridRef.current.removeEventListener('click', this._onGridClick);
+    if (this.courtTabsRef.current) this.courtTabsRef.current.removeEventListener('click', this._onTabsClick);
+    if (this._apiReadyHandler) window.removeEventListener('takeoff:api-ready', this._apiReadyHandler);
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._loadToken++; // in-flight replies become stale and are ignored
+  }
 
-  /* ── COURT TABS ─────────────────────────────────────────────────── */
-  function renderCourtTabs(){
-    var tabs = document.getElementById('pr-court-tabs');
-    if(!_courts.length){
-      tabs.innerHTML = '<div style="font-family:\'Space Mono\';font-size:11px;letter-spacing:.1em;color:rgba(244,245,238,.4);padding:12px 0;">No courts found.</div>';
+  // ── data loading ────────────────────────────────────────────────────────
+  _api() {
+    const api = window.takeOffApi;
+    return (api && api.isOnline && api.isOnline()) ? api : null;
+  }
+
+  _loadCourts() {
+    const api = this._api();
+    if (!api || !api.courts || !api.courts.list) {
+      // No backend reachable: say so. Inventing demo courts used to make an
+      // outage look like a bookable week.
+      this.setState({ courtsState: 'error', courts: [], selectedCourtId: null, slotsState: 'idle' });
       return;
     }
-    var selectedId = _selectedCourt ? (_selectedCourt.id || _selectedCourt._id) : null;
-    tabs.innerHTML = _courts.map(function(c){
-      var id = c.id || c._id;
-      var active = id === selectedId ? ' active' : '';
-      return '<button class="pr-court-tab'+active+'" onclick="prSelectCourt(\''+id+'\')">'+c.name+'</button>';
+    this.setState({ courtsState: 'loading' });
+    const token = ++this._loadToken;
+    api.courts.list().then((data) => {
+      if (token !== this._loadToken) return;
+      const courts = (Array.isArray(data) ? data : (data && data.courts) || [])
+        .filter((c) => !c.activity || c.activity === 'PADEL');
+      if (!courts.length) {
+        this.setState({ courtsState: 'empty', courts: [], selectedCourtId: null, slotsState: 'idle' });
+        return;
+      }
+      this.setState(
+        { courts: courts, courtsState: 'ready', selectedCourtId: courts[0].id || courts[0]._id },
+        () => this._loadSlots(),
+      );
+    }).catch(() => {
+      if (token !== this._loadToken) return;
+      this.setState({ courtsState: 'error', courts: [], selectedCourtId: null, slotsState: 'idle' });
+    });
+  }
+
+  _loadSlots() {
+    const { selectedCourtId, weekStart } = this.state;
+    if (!selectedCourtId || !weekStart) return;
+    const api = this._api();
+    if (!api || !api.courts || !api.courts.slots) {
+      this.setState({ slotsState: 'error', slotsByDate: {} });
+      return;
+    }
+    this.setState({ slotsState: 'loading' });
+    const token = ++this._loadToken;
+    const dates = this._weekDayKeys(weekStart);
+    Promise.all(dates.map((ds) =>
+      api.courts.slots(selectedCourtId, ds)
+        .then((data) => ({ ds: ds, ok: true, slots: Array.isArray(data) ? data : [] }))
+        .catch(() => ({ ds: ds, ok: false, slots: [] })),
+    )).then((results) => {
+      if (token !== this._loadToken) return; // a newer week is already loading
+      const byDate = {};
+      results.forEach((r) => {
+        const times = {};
+        r.slots.forEach((s) => {
+          if (!s.startsAt) return;
+          const c = this._clubClock(s.startsAt);
+          times[c.timeStr] = { available: !!s.available, reason: s.reason || null, startsAt: s.startsAt };
+        });
+        byDate[r.ds] = { ok: r.ok, times: times };
+      });
+      const anyOk = results.some((r) => r.ok);
+      this.setState({ slotsByDate: byDate, slotsState: anyOk ? 'ready' : 'error' });
+    });
+  }
+
+  // ── painting (imperative children of refs) ──────────────────────────────
+  _paint() { this._paintTabs(); this._paintGrid(); }
+
+  _esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  _paintTabs() {
+    const el = this.courtTabsRef.current;
+    if (!el) return;
+    const { courtsState, courts, selectedCourtId } = this.state;
+    const note = (txt) => '<div style="font-family:\'Space Mono\';font-size:11px;letter-spacing:.1em;color:rgba(244,245,238,.4);padding:12px 0;">' + txt + '</div>';
+    if (courtsState === 'loading') { el.innerHTML = note('Loading courts…'); return; }
+    if (courtsState === 'empty') { el.innerHTML = note('No courts are open for booking.'); return; }
+    if (courtsState === 'error') {
+      el.innerHTML = note('Courts are unavailable right now.') +
+        '<button class="pr-court-tab" data-court-id="retry" type="button">Retry</button>';
+      return;
+    }
+    el.innerHTML = courts.map((c) => {
+      const id = c.id || c._id;
+      return '<button type="button" class="pr-court-tab' + (id === selectedCourtId ? ' active' : '') +
+        '" data-court-id="' + this._esc(id) + '">' + this._esc(c.name) + '</button>';
     }).join('');
   }
 
-  window.prSelectCourt = function(id){
-    var c = _courts.find(function(x){ return (x.id||x._id)===id; });
-    if(c){ _selectedCourt = c; renderCourtTabs(); loadSlots(); }
-  };
+  _paintGrid() {
+    const el = this.gridRef.current;
+    if (!el) return;
+    const { weekStart, slotsState, slotsByDate, courtsState } = this.state;
 
-  /* ── INIT ───────────────────────────────────────────────────────── */
-  function init(){
-    _weekStart = getWeekStart(new Date());
-    document.getElementById('pr-week-label').textContent = weekLabel(_weekStart);
-
-    var api = window.takeOffApi;
-    if(api && api.courts && api.courts.list){
-      api.courts.list().then(function(data){
-        _courts = Array.isArray(data) ? data : (data && data.courts ? data.courts : []);
-        if(_courts.length){ _selectedCourt = _courts[0]; }
-        renderCourtTabs();
-        loadSlots();
-      }).catch(function(){
-        // Show placeholder courts for dev
-        _courts = [{_id:'c1',name:'Court 1',surface:'Glass'},{_id:'c2',name:'Court 2',surface:'Glass'}];
-        _selectedCourt = _courts[0];
-        renderCourtTabs();
-        renderGrid();
-      });
-    } else {
-      // No API yet — show placeholder
-      _courts = [{_id:'c1',name:'Court 1',surface:'Glass'},{_id:'c2',name:'Court 2',surface:'Glass'}];
-      _selectedCourt = _courts[0];
-      renderCourtTabs();
-      renderGrid();
+    if (courtsState === 'error' || courtsState === 'empty' || slotsState === 'error') {
+      el.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;font-family:\'Space Mono\';font-size:12px;letter-spacing:.08em;color:rgba(244,245,238,.6);line-height:2;">' +
+        'Availability is unavailable right now.<br>No slots can be shown or booked until it loads.' +
+        '<br><button class="pr-court-tab" data-court-id="retry" type="button" style="margin-top:16px;">Retry</button></div>';
+      return;
+    }
+    if (!weekStart || slotsState === 'loading' || slotsState === 'idle') {
+      el.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;"><div class="pr-spinner"></div></div>';
+      return;
     }
 
-    // Hide loader
-    setTimeout(function(){
-      var loader = document.getElementById('pr-loader');
-      if(loader){ loader.style.opacity='0'; loader.style.visibility='hidden'; }
-    }, 600);
-  }
+    const today = this._todayKey();
+    const days = this._weekDayKeys(weekStart);
+    const nowMs = Date.now();
+    let html = '<div class="pr-grid-header-cell" style="background:#0a1733;border-right:1px solid rgba(196,239,63,.06);"></div>';
 
-  // Wait for API to be ready, then init
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', function(){
-      setTimeout(init, 100);
+    days.forEach((ds) => {
+      const p = this._parseKey(ds);
+      const dow = this._clubParts(this._clubMidnight(p.y, p.m, p.d)).dow;
+      const isTod = ds === today;
+      html += '<div class="pr-grid-header-cell' + (isTod ? ' today' : '') + '">' +
+        '<div>' + Component.DAYS_SHORT[dow] + '</div>' +
+        '<div style="font-size:16px;font-weight:700;font-family:\'Space Grotesk\';color:' +
+        (isTod ? '#c4ef3f' : '#f4f5ee') + ';">' + p.d + '</div></div>';
     });
-  } else {
-    setTimeout(init, 100);
+
+    Component.CAL_SLOTS.forEach((time) => {
+      html += '<div class="pr-grid-time">' + time + '</div>';
+      days.forEach((ds) => {
+        const day = slotsByDate[ds];
+        let inner;
+        if (!day || !day.ok) {
+          // The day did not load. Unknown is never offered as free.
+          inner = '<div class="pr-slot-inner pr-slot-blocked" title="Unavailable">—</div>';
+        } else {
+          const slot = day.times[time];
+          if (!slot) {
+            // The server did not publish this slot: it is not bookable.
+            inner = '<div class="pr-slot-inner pr-slot-blocked" title="Not available">—</div>';
+          } else if (new Date(slot.startsAt).getTime() <= nowMs) {
+            inner = '<div class="pr-slot-inner pr-slot-blocked" title="Past">—</div>';
+          } else if (slot.available) {
+            inner = '<div class="pr-slot-inner pr-slot-free" role="button" tabindex="0"' +
+              ' data-slot-date="' + this._esc(ds) + '" data-slot-time="' + this._esc(time) + '"' +
+              ' data-slot-startsat="' + this._esc(slot.startsAt) + '">' + time + '</div>';
+          } else {
+            const label = slot.reason === 'BLOCKED' ? 'BLOCKED' : 'BOOKED';
+            inner = '<div class="pr-slot-inner pr-slot-booked">' + time +
+              '<br><span style="font-size:9px;opacity:.7;">' + label + '</span></div>';
+          }
+        }
+        html += '<div class="pr-slot">' + inner + '</div>';
+      });
+    });
+    el.innerHTML = html;
   }
 
-})();
+  // ── week navigation ─────────────────────────────────────────────────────
+  _goWeek(deltaDays) {
+    const ws = deltaDays === null
+      ? this._weekStartKey(this._todayKey())
+      : this._shiftKey(this.state.weekStart, deltaDays);
+    if (ws === this.state.weekStart && deltaDays === null) return;
+    this.setState({ weekStart: ws, slotsByDate: {}, slotsState: 'loading' }, () => this._loadSlots());
+  }
+
+  // ── slot selection / OTP ────────────────────────────────────────────────
+  _slotClick(date, time, startsAt) {
+    this._restoreFocusTo = document.activeElement;
+    const choosing = { courtId: this.state.selectedCourtId, date: date, time: time, startsAt: startsAt };
+    const api = window.takeOffApi;
+    const loggedIn = !!(api && api.getToken && api.getToken());
+    if (loggedIn) {
+      this.setState({ choosing: choosing, modeOpen: true, modeBusy: false });
+    } else {
+      // Remember what to resume once the phone number is verified.
+      this._pendingAfterOtp = () => this.setState({ modeOpen: true, modeBusy: false });
+      this.setState({
+        choosing: choosing, otpOpen: true, otpStep: 'phone',
+        otpError: '', otpBusy: false, otpPhone: '',
+      });
+    }
+  }
+
+  _closeOtp() {
+    /* Only an explicit dismissal drops the pending slot. The old close()
+       cleared the callback unconditionally, and verify() called close()
+       first — so a successful sign-in always lost the chosen slot. */
+    this._pendingAfterOtp = null;
+    this.setState({ otpOpen: false, otpStep: 'phone', otpError: '', otpBusy: false, choosing: null });
+    this._returnFocus();
+  }
+
+  _returnFocus() {
+    const el = this._restoreFocusTo;
+    this._restoreFocusTo = null;
+    if (el && document.contains(el) && typeof el.focus === 'function') el.focus();
+  }
+
+  _field(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+  _sendOtp() {
+    const phone = this._field('pr-otp-phone');
+    if (!phone) { this.setState({ otpError: 'Please enter your phone number.' }); return; }
+    const api = this._api();
+    if (!api || !api.auth || !api.auth.sendOtp) {
+      this.setState({ otpError: 'Sign-in is unavailable right now. Please try again shortly.' });
+      return;
+    }
+    this.setState({ otpBusy: true, otpError: '', otpPhone: phone });
+    api.auth.sendOtp(phone).then((res) => {
+      // Only ask for a name when this phone has no account yet.
+      const needsName = !res || res.isNewUser !== false;
+      this.setState({ otpBusy: false, otpStep: needsName ? 'name' : 'code' });
+    }).catch((e) => {
+      this.setState({ otpBusy: false, otpError: (e && e.message) || 'Failed to send code. Try again.' });
+    });
+  }
+
+  _otpNameNext() { this.setState({ otpStep: 'code' }); }
+
+  _otpVerify() {
+    const code = this._field('pr-otp-code');
+    if (!code) { this.setState({ otpError: 'Please enter the verification code.' }); return; }
+    const api = this._api();
+    if (!api || !api.auth || !api.auth.verifyOtp) {
+      this.setState({ otpError: 'Sign-in is unavailable right now. Please try again shortly.' });
+      return;
+    }
+    this.setState({ otpBusy: true, otpError: '' });
+    api.auth.verifyOtp(this.state.otpPhone, code, this._field('pr-otp-name')).then(() => {
+      // Capture before closing so the chosen slot survives the transition.
+      const resume = this._pendingAfterOtp;
+      this._pendingAfterOtp = null;
+      this.setState({ otpOpen: false, otpBusy: false, otpStep: 'phone', otpError: '' }, () => {
+        if (resume) resume();
+      });
+    }).catch((e) => {
+      // A rejected code must never look like a success.
+      this.setState({ otpBusy: false, otpError: (e && e.message) || 'Invalid code. Please try again.' });
+    });
+  }
+
+  // ── booking ─────────────────────────────────────────────────────────────
+  _closeMode() {
+    this.setState({ modeOpen: false, modeBusy: false, choosing: null });
+    this._returnFocus();
+  }
+
+  _toast(msg, ms) {
+    if (this._apiReadyHandler) window.removeEventListener('takeoff:api-ready', this._apiReadyHandler);
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this.setState({ toast: msg });
+    this._toastTimer = setTimeout(() => this.setState({ toast: '' }), ms || 3500);
+  }
+
+  _book(mode) {
+    const c = this.state.choosing;
+    if (!c) return;
+    const api = this._api();
+    if (!api || !api.courts || !api.courts.book) {
+      this._toast('Booking is unavailable right now. Please try again shortly.', 4000);
+      return;
+    }
+    this.setState({ modeBusy: true });
+    api.courts.book(c.courtId, c.startsAt, mode, 'PAY_AT_CLUB').then(() => {
+      this.setState({ modeOpen: false, modeBusy: false, choosing: null });
+      this._returnFocus();
+      this._toast('🎾 Booked! We\'ll see you on the court!', 4000);
+      this._loadSlots(); // re-read authoritative availability, never guess locally
+    }).catch((e) => {
+      this.setState({ modeBusy: false });
+      this._toast((e && e.message) || 'Booking failed. Please try again.', 3500);
+    });
+  }
+
+  // ── template bindings ───────────────────────────────────────────────────
+  renderVals() {
+    const s = this.state;
+    const c = s.choosing;
+    const court = s.courts.find((x) => (x.id || x._id) === s.selectedCourtId);
+    return {
+      gridRef: this.gridRef,
+      courtTabsRef: this.courtTabsRef,
+      otpPanelRef: this.otpPanelRef,
+      modePanelRef: this.modePanelRef,
+
+      weekLabel: this._weekLabel(s.weekStart),
+      onPrevWeek: () => this._goWeek(-7),
+      onNextWeek: () => this._goWeek(7),
+      onToday: () => this._goWeek(null),
+
+      otpDisplay: s.otpOpen ? 'flex' : 'none',
+      otpStep1Display: s.otpStep === 'phone' ? 'block' : 'none',
+      otpStepNameDisplay: s.otpStep === 'name' ? 'block' : 'none',
+      otpStep2Display: s.otpStep === 'code' ? 'block' : 'none',
+      otpHeading: s.otpStep === 'phone' ? 'Enter your phone number'
+        : s.otpStep === 'name' ? 'What\'s your name?' : 'Enter your code',
+      otpError: s.otpError,
+      otpErrDisplay: s.otpError ? 'block' : 'none',
+      otpPhoneHint: s.otpPhone ? 'Code sent to ' + s.otpPhone : '',
+      otpBusy: s.otpBusy,
+      sendOtpLabel: s.otpBusy ? 'Sending…' : 'Send code →',
+      verifyOtpLabel: s.otpBusy ? 'Verifying…' : 'Verify →',
+      onCloseOtp: () => this._closeOtp(),
+      onOtpBackdrop: (e) => { if (e.target === e.currentTarget) this._closeOtp(); },
+      onSendOtp: () => this._sendOtp(),
+      onOtpNameNext: () => this._otpNameNext(),
+      onOtpVerify: () => this._otpVerify(),
+
+      modeDisplay: s.modeOpen ? 'flex' : 'none',
+      modeBusy: s.modeBusy,
+      modeSlotInfo: c
+        ? 'Court: ' + ((court && court.name) || 'Court') + ' · Date: ' + c.date + ' · Time: ' + c.time + ' — 90 min'
+        : '',
+      onCloseMode: () => this._closeMode(),
+      onModeBackdrop: (e) => { if (e.target === e.currentTarget) this._closeMode(); },
+      onBookShare: () => this._book('SHARE'),
+      onBookFull: () => this._book('FULL'),
+
+      toast: s.toast,
+      toastClass: s.toast ? ' show' : '',
+    };
+  }
+}
 </script>
 
 </x-dc>
