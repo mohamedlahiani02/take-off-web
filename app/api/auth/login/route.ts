@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
     upstreamBody = { email: body.email, password: body.password }
   } else if (body?.phone && body?.code) {
     upstreamPath = '/api/v1/auth/verify-otp'
-    upstreamBody = { phone: body.phone, code: body.code }
+    upstreamBody = { phone: body.phone, code: body.code, ...(body.name ? { name: body.name } : {}) }
   } else {
-    return NextResponse.json({ error: 'email and password are required' }, { status: 400 })
+    return NextResponse.json({ error: 'phone and code are required' }, { status: 400 })
   }
 
   let upstream: Response
@@ -41,10 +41,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data, { status: upstream.status })
   }
 
-  const { accessToken, refreshToken, ...user } = data as {
-    accessToken: string
-    refreshToken: string
+  const parsed = data as {
+    tokens?: { accessToken?: string; refreshToken?: string }
+    user?: unknown
     [key: string]: unknown
+  }
+  const accessToken = parsed.tokens?.accessToken ?? (parsed.accessToken as string | undefined)
+  const refreshToken = parsed.tokens?.refreshToken ?? (parsed.refreshToken as string | undefined)
+  const user = parsed.user ?? (() => { const { tokens: _t, accessToken: _a, refreshToken: _r, ...rest } = parsed; return rest })()
+
+  if (!accessToken) {
+    return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
   }
 
   const cookieOpts = {
