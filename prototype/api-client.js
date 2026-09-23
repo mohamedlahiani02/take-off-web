@@ -246,4 +246,8 @@
   };
 
   window.takeOffApi = api;
+  // This file is loaded with `defer`, so a page whose runtime mounts from cache
+  // can reach componentDidMount before it runs. Announce availability instead of
+  // making every caller guess a delay.
+  try { window.dispatchEvent(new CustomEvent('takeoff:api-ready', { detail: api })); } catch (e) {}
 })();

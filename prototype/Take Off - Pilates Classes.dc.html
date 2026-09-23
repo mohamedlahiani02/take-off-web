@@ -142,21 +142,19 @@
   <div style="padding:0 5vw 80px;max-width:1040px;margin:0 auto;">
 
     <!-- Filter bar -->
-    <div class="pc-filter-bar tk-day-tabs" id="pc-filter-bar">
-      <button class="pc-filter-btn active" onclick="pcSetFilter('ALL')" data-filter="ALL">TOUS</button>
-    </div>
+    <div class="pc-filter-bar tk-day-tabs" id="pc-filter-bar" ref="{{ filterBarRef }}"></div>
 
     <!-- Week nav -->
     <div class="pc-week-nav">
-      <button class="pc-week-btn" onclick="pcPrevWeek()">‹ Semaine préc.</button>
-      <span class="pc-week-label" id="pc-week-label">Chargement…</span>
-      <button class="pc-week-btn" onclick="pcNextWeek()">Semaine suiv. ›</button>
-      <button class="pc-today-btn" onclick="pcToday()">Aujourd'hui</button>
+      <button class="pc-week-btn" type="button" onClick="{{ onPrevWeek }}" aria-label="Semaine précédente">‹ Semaine préc.</button>
+      <span class="pc-week-label" id="pc-week-label" aria-live="polite">{{ weekLabel }}</span>
+      <button class="pc-week-btn" type="button" onClick="{{ onNextWeek }}" aria-label="Semaine suivante">Semaine suiv. ›</button>
+      <button class="pc-today-btn" type="button" onClick="{{ onToday }}">Aujourd'hui</button>
     </div>
 
     <!-- Grid -->
     <div class="pc-grid-scroll tk-week-grid-wrap">
-      <div class="pc-grid tk-week-grid" id="pc-grid">
+      <div class="pc-grid tk-week-grid" id="pc-grid" ref="{{ gridRef }}">
         <div style="grid-column:1/-1;"><div class="pc-spinner"></div></div>
       </div>
     </div>
@@ -179,409 +177,483 @@
 </div><!-- /overflow wrapper -->
 
 <!-- ░ TOAST ░ -->
-<div class="pc-toast" id="pc-toast"></div>
+<div class="pc-toast{{ toastClass }}" id="pc-toast" role="status" aria-live="polite">{{ toast }}</div>
 
 <!-- ░ BOOKING DRAWER ░ -->
-<div class="pc-drawer-overlay" id="pc-drawer-overlay" style="display:none;" onclick="if(event.target===this)pcCloseDrawer()">
-  <div class="pc-drawer tk-booking-panel">
-    <button class="pc-drawer-close" onclick="pcCloseDrawer()">✕ fermer</button>
-    <div class="pc-drawer-tag" id="pc-drawer-tag">COURS</div>
-    <h2 class="pc-drawer-title" id="pc-drawer-title"></h2>
-    <div class="pc-drawer-meta" id="pc-drawer-meta"></div>
-    <div class="pc-drawer-price" id="pc-drawer-price"></div>
+<div class="pc-drawer-overlay" id="pc-drawer-overlay" style="display:{{ drawerDisplay }};" onClick="{{ onDrawerBackdrop }}" role="dialog" aria-modal="true" aria-label="Réservation">
+  <div class="pc-drawer tk-booking-panel" ref="{{ drawerRef }}">
+    <button class="pc-drawer-close" type="button" onClick="{{ onCloseDrawer }}">✕ fermer</button>
+    <div class="pc-drawer-tag" id="pc-drawer-tag">{{ drawerTag }}</div>
+    <h2 class="pc-drawer-title" id="pc-drawer-title">{{ drawerTitle }}</h2>
+    <div class="pc-drawer-meta" id="pc-drawer-meta">{{ drawerMeta }}</div>
+    <div class="pc-drawer-price" id="pc-drawer-price">{{ drawerPrice }}</div>
 
     <!-- Auth gate (shown if not logged in) -->
-    <div id="pc-auth-gate" style="display:none;">
+    <div id="pc-auth-gate" style="display:{{ authGateDisplay }};">
       <div style="font-family:'Space Mono';font-size:11px;letter-spacing:.08em;color:rgba(12,35,80,.6);margin-bottom:16px;line-height:1.7;">
         Connectez-vous pour réserver votre place.
       </div>
       <!-- Step 1: phone -->
-      <div id="pc-otp-step1">
+      <div id="pc-otp-step1" style="display:{{ otpStep1Display }};">
         <label class="pc-otp-label">NUMÉRO DE TÉLÉPHONE</label>
         <input class="pc-otp-input" id="pc-otp-phone" type="tel" placeholder="+216 XX XXX XXX" autocomplete="tel">
         <div class="pc-otp-info">Nous enverrons un code par SMS.</div>
-        <div class="pc-otp-err" id="pc-otp-err" style="display:none;"></div>
-        <button class="pc-drawer-btn" id="pc-otp-send" onclick="pcSendOtp()">Envoyer le code →</button>
+        <div class="pc-otp-err" id="pc-otp-err" style="display:{{ otpErrDisplay }};">{{ otpError }}</div>
+        <button class="pc-drawer-btn" id="pc-otp-send" type="button" onClick="{{ onSendOtp }}" disabled="{{ otpBusy }}">{{ sendOtpLabel }}</button>
       </div>
       <!-- Step 2: name -->
-      <div id="pc-otp-step-name" style="display:none;">
+      <div id="pc-otp-step-name" style="display:{{ otpStepNameDisplay }};">
         <label class="pc-otp-label">VOTRE PRÉNOM</label>
         <input class="pc-otp-input" id="pc-otp-name" type="text" placeholder="Prénom" autocomplete="given-name">
-        <button class="pc-drawer-btn" id="pc-otp-name-next" onclick="pcOtpNameNext()" style="margin-top:8px;">Continuer →</button>
+        <button class="pc-drawer-btn" id="pc-otp-name-next" type="button" onClick="{{ onOtpNameNext }}" style="margin-top:8px;">Continuer →</button>
       </div>
       <!-- Step 3: code -->
-      <div id="pc-otp-step2" style="display:none;">
+      <div id="pc-otp-step2" style="display:{{ otpStep2Display }};">
         <label class="pc-otp-label">CODE DE VÉRIFICATION</label>
         <input class="pc-otp-input" id="pc-otp-code" type="text" placeholder="Code à 6 chiffres" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
-        <div class="pc-otp-info" id="pc-otp-phone-hint"></div>
-        <div class="pc-otp-err" id="pc-otp-err2" style="display:none;"></div>
-        <button class="pc-drawer-btn" id="pc-otp-verify" onclick="pcOtpVerify()">Vérifier →</button>
+        <div class="pc-otp-info" id="pc-otp-phone-hint">{{ otpPhoneHint }}</div>
+        <div class="pc-otp-err" id="pc-otp-err2" style="display:{{ otpErrDisplay }};">{{ otpError }}</div>
+        <button class="pc-drawer-btn" id="pc-otp-verify" type="button" onClick="{{ onOtpVerify }}" disabled="{{ otpBusy }}">{{ verifyOtpLabel }}</button>
       </div>
     </div>
 
     <!-- Book button (shown if logged in) -->
-    <div id="pc-book-section" style="display:none;">
-      <button class="pc-drawer-btn" id="pc-book-btn" onclick="pcBookSession()">Réserver ma place →</button>
+    <div id="pc-book-section" style="display:{{ bookSectionDisplay }};">
+      <button class="pc-drawer-btn" id="pc-book-btn" type="button" onClick="{{ onBookSession }}" disabled="{{ bookBusy }}">{{ bookLabel }}</button>
     </div>
   </div>
 </div>
 
-<script>
-(function() {
-  var DAYS_SHORT = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-  var MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  var HOURS = [];
-  for(var h=7;h<=21;h++) HOURS.push(h);
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  /* Refs rather than getElementById: the runtime re-renders this template
+     after it re-fetches the page, so a node captured once goes stale. */
+  gridRef = React.createRef();
+  filterBarRef = React.createRef();
+  drawerRef = React.createRef();
 
-  var _weekStart = null;
-  var _sessions = []; // raw from API
-  var _filter = 'ALL';
-  var _types = []; // unique class type names
-  var _selectedSession = null;
-  var _otpPhone = '';
-  var _otpName = '';
+  /* Africa/Tunis is UTC+1 all year (no DST). Days shown are *club* days, so a
+     member in another timezone still sees the club's week. */
+  static CLUB_OFFSET_MIN = 60;
+  static DAYS_SHORT = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  static MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  static HOURS = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21];
+  static DAYS_SHOWN = 7;
 
-  function pad(n){ return String(n).padStart(2,'0'); }
-  function toDateStr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  state = {
+    weekStart: null,        // 'YYYY-MM-DD', first club day shown
+    sessions: [],
+    scheduleState: 'idle',  // idle | loading | ready | error
+    filter: 'ALL',
+    types: [],
+    selected: null,         // session object
+    drawerOpen: false,
+    loggedIn: false,
+    otpStep: 'phone',       // phone | name | code
+    otpError: '',
+    otpBusy: false,
+    otpPhone: '',
+    bookBusy: false,
+    toast: '',
+  };
 
-  function getWeekStart(date){
-    var d = new Date(date);
-    d.setHours(0,0,0,0);
-    return d;
+  _loadToken = 0;
+  _toastTimer = null;
+  _restoreFocusTo = null;
+
+  // ── club-time helpers ───────────────────────────────────────────────────
+  _clubParts(instant) {
+    const t = new Date(instant.getTime() + Component.CLUB_OFFSET_MIN * 60000);
+    return { y: t.getUTCFullYear(), m: t.getUTCMonth(), d: t.getUTCDate(), dow: t.getUTCDay() };
   }
-
-  function weekLabel(ws){
-    var we = new Date(ws); we.setDate(we.getDate()+6);
-    return DAYS_SHORT[ws.getDay()]+' '+ws.getDate()+' – '+DAYS_SHORT[we.getDay()]+' '+we.getDate()+' '+MONTHS_SHORT[we.getMonth()];
+  /** UTC instant of midnight starting the given club calendar day. */
+  _clubMidnight(y, m, d) {
+    return new Date(Date.UTC(y, m, d, 0, 0, 0) - Component.CLUB_OFFSET_MIN * 60000);
   }
-
-  function showToast(msg, ms){
-    var t = document.getElementById('pc-toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(function(){ t.classList.remove('show'); }, ms || 3500);
+  _pad(n) { return String(n).padStart(2, '0'); }
+  _key(y, m, d) {
+    const p = this._clubParts(this._clubMidnight(y, m, d));
+    return p.y + '-' + this._pad(p.m + 1) + '-' + this._pad(p.d);
   }
-
-  function isLoggedIn(){
-    var api = window.takeOffApi;
-    return !!(api && api.getToken && api.getToken());
+  _parseKey(key) { const [y, m, d] = key.split('-').map(Number); return { y: y, m: m - 1, d: d }; }
+  _shiftKey(key, delta) { const p = this._parseKey(key); return this._key(p.y, p.m, p.d + delta); }
+  _todayKey() { const p = this._clubParts(new Date()); return this._key(p.y, p.m, p.d); }
+  _dayKeys(weekStart) {
+    const out = [];
+    for (let i = 0; i < Component.DAYS_SHOWN; i++) out.push(this._shiftKey(weekStart, i));
+    return out;
   }
-
-  // Africa/Tunis = UTC+1 year-round (no DST)
-  function tunisiaTime(isoStr){
-    var ms = new Date(isoStr).getTime() + 3600000;
-    var t = new Date(ms);
+  _weekLabel(weekStart) {
+    if (!weekStart) return 'Chargement…';
+    const a = this._parseKey(weekStart);
+    const b = this._parseKey(this._shiftKey(weekStart, Component.DAYS_SHOWN - 1));
+    const ad = this._clubParts(this._clubMidnight(a.y, a.m, a.d));
+    const bd = this._clubParts(this._clubMidnight(b.y, b.m, b.d));
+    const head = Component.DAYS_SHORT[ad.dow] + ' ' + a.d;
+    const tail = Component.DAYS_SHORT[bd.dow] + ' ' + b.d + ' ' + Component.MONTHS_SHORT[b.m];
+    return (a.m === b.m && a.y === b.y)
+      ? head + ' – ' + tail
+      : head + ' ' + Component.MONTHS_SHORT[a.m] + ' – ' + tail + (a.y === b.y ? '' : ' ' + b.y);
+  }
+  _clubClock(iso) {
+    const t = new Date(new Date(iso).getTime() + Component.CLUB_OFFSET_MIN * 60000);
     return {
-      dateStr: t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate()),
+      dateStr: t.getUTCFullYear() + '-' + this._pad(t.getUTCMonth() + 1) + '-' + this._pad(t.getUTCDate()),
       hour: t.getUTCHours(),
-      timeStr: pad(t.getUTCHours())+':'+pad(t.getUTCMinutes())
+      timeStr: this._pad(t.getUTCHours()) + ':' + this._pad(t.getUTCMinutes()),
     };
   }
 
-  /* ── FILTER ─────────────────────────────────────────────────────── */
-  window.pcSetFilter = function(type){
-    _filter = type;
-    document.querySelectorAll('.pc-filter-btn').forEach(function(btn){
-      btn.classList.toggle('active', btn.getAttribute('data-filter') === type);
-    });
-    renderGrid();
-  };
+  // ── lifecycle ───────────────────────────────────────────────────────────
+  /** Runs `fn` once the API client exists — immediately if it already does. */
+  _whenApiReady(fn) {
+    if (window.takeOffApi) { fn(); return; }
+    this._apiReadyHandler = () => {
+      window.removeEventListener('takeoff:api-ready', this._apiReadyHandler);
+      this._apiReadyHandler = null;
+      fn();
+    };
+    window.addEventListener('takeoff:api-ready', this._apiReadyHandler);
+  }
 
-  function buildFilterBar(){
-    var bar = document.getElementById('pc-filter-bar');
-    // Keep TOUS btn, add type buttons
-    var extraBtns = _types.map(function(t){
-      return '<button class="pc-filter-btn" onclick="pcSetFilter(\''+t+'\')" data-filter="'+t+'">'+t.toUpperCase()+'</button>';
-    }).join('');
-    bar.innerHTML = '<button class="pc-filter-btn'+(_filter==='ALL'?' active':'')+'" onclick="pcSetFilter(\'ALL\')" data-filter="ALL">TOUS</button>'+extraBtns;
-    // Re-apply active state
-    bar.querySelectorAll('.pc-filter-btn').forEach(function(btn){
-      btn.classList.toggle('active', btn.getAttribute('data-filter') === _filter);
+  componentDidMount() {
+    this._onKeyDown = (e) => { if (e.key === 'Escape' && this.state.drawerOpen) this._closeDrawer(); };
+    document.addEventListener('keydown', this._onKeyDown);
+
+    // Delegated so innerHTML children keep working without inline handlers.
+    this._onGridClick = (e) => {
+      const card = e.target.closest('[data-session-id]');
+      if (!card || !this.gridRef.current || !this.gridRef.current.contains(card)) return;
+      const id = card.getAttribute('data-session-id');
+      if (id === 'retry') { this._loadSchedule(); return; }
+      this._openSession(id);
+    };
+    this._onFilterClick = (e) => {
+      const btn = e.target.closest('[data-filter]');
+      if (!btn || !this.filterBarRef.current || !this.filterBarRef.current.contains(btn)) return;
+      this.setState({ filter: btn.getAttribute('data-filter') });
+    };
+    if (this.gridRef.current) this.gridRef.current.addEventListener('click', this._onGridClick);
+    if (this.filterBarRef.current) this.filterBarRef.current.addEventListener('click', this._onFilterClick);
+
+    if (!this.state.weekStart) {
+      this.setState({ weekStart: this._todayKey(), loggedIn: this._isLoggedIn() }, () => this._whenApiReady(() => this._loadSchedule()));
+    } else {
+      // Re-mounted: repaint, and resume a load the previous mount never finished.
+      this._paint();
+      if (this.state.scheduleState !== 'ready' && this.state.scheduleState !== 'error')
+        this._whenApiReady(() => this._loadSchedule());
+    }
+
+    const loader = document.getElementById('pc-loader');
+    if (loader) { loader.style.opacity = '0'; loader.style.visibility = 'hidden'; }
+  }
+
+  componentDidUpdate() {
+    this._paint();
+    if (this.state.drawerOpen && this.drawerRef.current && !this.drawerRef.current.contains(document.activeElement)) {
+      const first = this.drawerRef.current.querySelector('input:not([disabled]), button:not([disabled])');
+      if (first) first.focus();
+    }
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this._onKeyDown);
+    if (this.gridRef.current) this.gridRef.current.removeEventListener('click', this._onGridClick);
+    if (this.filterBarRef.current) this.filterBarRef.current.removeEventListener('click', this._onFilterClick);
+    if (this._apiReadyHandler) window.removeEventListener('takeoff:api-ready', this._apiReadyHandler);
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._loadToken++;
+  }
+
+  // ── data ────────────────────────────────────────────────────────────────
+  _api() {
+    const api = window.takeOffApi;
+    return (api && api.isOnline && api.isOnline()) ? api : null;
+  }
+  _isLoggedIn() {
+    const api = window.takeOffApi;
+    return !!(api && api.getToken && api.getToken());
+  }
+
+  _loadSchedule() {
+    const ws = this.state.weekStart;
+    if (!ws) return;
+    const api = this._api();
+    if (!api || !api.classes || !api.classes.schedule) {
+      this.setState({ scheduleState: 'error', sessions: [] });
+      return;
+    }
+    const a = this._parseKey(ws);
+    const from = this._clubMidnight(a.y, a.m, a.d);
+    /* Exclusive upper bound at the start of the day AFTER the last one shown.
+       weekStart + 6 days stopped at midnight opening the seventh day, so every
+       session on that seventh date was silently outside the query. */
+    const to = this._clubMidnight(a.y, a.m, a.d + Component.DAYS_SHOWN);
+
+    this.setState({ scheduleState: 'loading' });
+    const token = ++this._loadToken;
+    api.classes.schedule(from.toISOString(), to.toISOString()).then((data) => {
+      if (token !== this._loadToken) return; // a newer week is already loading
+      const sessions = Array.isArray(data) ? data : (data && data.sessions) || [];
+      const seen = {}, types = [];
+      sessions.forEach((s) => {
+        const n = s.className || '';
+        if (n && !seen[n]) { seen[n] = 1; types.push(n); }
+      });
+      const filter = (this.state.filter !== 'ALL' && types.indexOf(this.state.filter) === -1)
+        ? 'ALL' : this.state.filter;
+      this.setState({ sessions: sessions, types: types, filter: filter, scheduleState: 'ready' });
+    }).catch(() => {
+      if (token !== this._loadToken) return;
+      // An outage is reported, never rendered as an empty but healthy week.
+      this.setState({ sessions: [], scheduleState: 'error' });
     });
   }
 
-  /* ── GRID ────────────────────────────────────────────────────────── */
-  function renderGrid(){
-    var grid = document.getElementById('pc-grid');
-    if(!_weekStart){
-      grid.innerHTML = '<div style="grid-column:1/-1;"><div class="pc-spinner"></div></div>';
+  // ── painting ────────────────────────────────────────────────────────────
+  _paint() { this._paintFilters(); this._paintGrid(); }
+
+  _esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  _paintFilters() {
+    const el = this.filterBarRef.current;
+    if (!el) return;
+    const f = this.state.filter;
+    el.innerHTML = ['ALL'].concat(this.state.types).map((t) =>
+      '<button type="button" class="pc-filter-btn' + (t === f ? ' active' : '') +
+      '" data-filter="' + this._esc(t) + '">' + this._esc(t === 'ALL' ? 'TOUS' : t.toUpperCase()) + '</button>',
+    ).join('');
+  }
+
+  _paintGrid() {
+    const el = this.gridRef.current;
+    if (!el) return;
+    const { weekStart, scheduleState, sessions, filter } = this.state;
+
+    if (scheduleState === 'error') {
+      el.innerHTML = '<div style="grid-column:1/-1;"><div class="pc-empty">' +
+        'Le planning est indisponible pour le moment.<br>Aucun cours ne peut être affiché ni réservé tant que le planning n&#39;a pas chargé.' +
+        '<br><br><button class="pc-filter-btn" data-session-id="retry" type="button">Réessayer</button>' +
+        '</div></div>';
+      return;
+    }
+    if (!weekStart || scheduleState === 'loading' || scheduleState === 'idle') {
+      el.innerHTML = '<div style="grid-column:1/-1;"><div class="pc-spinner"></div></div>';
       return;
     }
 
-    var today = toDateStr(new Date());
-    var days = [];
-    for(var i=0;i<7;i++){
-      var d = new Date(_weekStart);
-      d.setDate(d.getDate()+i);
-      days.push(d);
+    const filtered = filter === 'ALL' ? sessions : sessions.filter((s) => (s.className || '') === filter);
+    if (!filtered.length) {
+      el.innerHTML = '<div style="grid-column:1/-1;"><div class="pc-empty">Aucune séance cette semaine.' +
+        '<br><br><a href="https://wa.me/21627314100" style="color:#0c2350;font-weight:700;">Contactez-nous sur WhatsApp →</a>' +
+        '</div></div>';
+      return;
     }
 
-    var html = '';
-    // Header row
-    html += '<div class="pc-grid-corner"></div>';
-    days.forEach(function(d){
-      var ds = toDateStr(d);
-      var isTod = ds === today;
-      html += '<div class="pc-grid-day-header">';
-      html += '<div class="pc-grid-day-name">'+DAYS_SHORT[d.getDay()]+'</div>';
-      html += '<div class="pc-grid-day-num'+(isTod?' today':'')+'">'+(isTod?'<span>'+d.getDate()+'</span>':d.getDate())+'</div>';
-      html += '</div>';
+    const today = this._todayKey();
+    const days = this._dayKeys(weekStart);
+    let html = '<div class="pc-grid-corner"></div>';
+    days.forEach((ds) => {
+      const p = this._parseKey(ds);
+      const dow = this._clubParts(this._clubMidnight(p.y, p.m, p.d)).dow;
+      const isTod = ds === today;
+      html += '<div class="pc-grid-day-header">' +
+        '<div class="pc-grid-day-name">' + Component.DAYS_SHORT[dow] + '</div>' +
+        '<div class="pc-grid-day-num' + (isTod ? ' today' : '') + '">' +
+        (isTod ? '<span>' + p.d + '</span>' : p.d) + '</div></div>';
     });
 
-    // Filter sessions
-    var filtered = _filter === 'ALL' ? _sessions : _sessions.filter(function(s){
-      return (s.className || '') === _filter;
+    const cellMap = {};
+    filtered.forEach((s) => {
+      if (!s.startsAt) return;
+      const c = this._clubClock(s.startsAt);
+      const di = days.indexOf(c.dateStr);
+      if (di === -1) return;
+      const key = di + '_' + c.hour;
+      (cellMap[key] = cellMap[key] || []).push(s);
     });
 
-    // Build per-cell map: dayIndex_hour -> sessions[]
-    var cellMap = {};
-    filtered.forEach(function(s){
-      if(!s.startsAt) return;
-      var tt = tunisiaTime(s.startsAt);
-      for(var di=0;di<days.length;di++){
-        if(toDateStr(days[di]) === tt.dateStr){
-          var key = di+'_'+tt.hour;
-          if(!cellMap[key]) cellMap[key] = [];
-          cellMap[key].push(s);
-          break;
-        }
-      }
-    });
-
-    // Time rows
-    HOURS.forEach(function(hour){
-      html += '<div class="pc-time-cell">'+pad(hour)+':00</div>';
-      days.forEach(function(d, di){
-        var key = di+'_'+hour;
-        var cells = cellMap[key] || [];
+    Component.HOURS.forEach((hour) => {
+      html += '<div class="pc-time-cell">' + this._pad(hour) + ':00</div>';
+      days.forEach((ds, di) => {
         html += '<div class="pc-grid-cell">';
-        cells.forEach(function(s){
-          var name = s.className || 'Class';
-          var coach = s.instructorName || '';
-          var level = s.level || '';
-          var booked = s.bookedSpots || 0;
-          var max = s.maxSpots || 10;
-          var remaining = max - booked;
-          var spotsClass = remaining <= 0 ? 'pc-spots-full' : remaining <= 2 ? 'pc-spots-low' : 'pc-spots-ok';
-          var spotsLabel = remaining <= 0 ? 'Complet' : remaining+'/'+max+' places';
-          html += '<div class="pc-session-card" style="background:#0c2350;color:#f4f5ee;" onclick="pcOpenSession(\''+s.id+'\')">'+
-            '<div class="pc-session-name">'+name+'</div>'+
-            (coach ? '<div class="pc-session-coach">'+coach+'</div>' : '')+
-            (level ? '<div class="pc-session-level">'+level+'</div>' : '')+
-            '<div class="pc-session-spots '+spotsClass+'">'+spotsLabel+'</div>'+
-            '</div>';
+        (cellMap[di + '_' + hour] || []).forEach((s) => {
+          const max = s.maxSpots || 0;
+          const remaining = max - (s.bookedSpots || 0);
+          const cls = remaining <= 0 ? 'pc-spots-full' : remaining <= 2 ? 'pc-spots-low' : 'pc-spots-ok';
+          const label = remaining <= 0 ? 'Complet' : remaining + '/' + max + ' places';
+          html += '<div class="pc-session-card" role="button" tabindex="0" style="background:#0c2350;color:#f4f5ee;"' +
+            ' data-session-id="' + this._esc(s.id) + '">' +
+            '<div class="pc-session-name">' + this._esc(s.className || 'Cours') + '</div>' +
+            (s.instructorName ? '<div class="pc-session-coach">' + this._esc(s.instructorName) + '</div>' : '') +
+            (s.level ? '<div class="pc-session-level">' + this._esc(s.level) + '</div>' : '') +
+            '<div class="pc-session-spots ' + cls + '">' + label + '</div></div>';
         });
         html += '</div>';
       });
     });
+    el.innerHTML = html;
+  }
 
-    if(filtered.length === 0){
-      grid.innerHTML = '<div style="grid-column:1/-1;"><div class="pc-empty">Aucune séance cette semaine.<br><br><a href="https://wa.me/21627314100" style="color:#0c2350;font-weight:700;">Contactez-nous sur WhatsApp →</a></div></div>';
+  // ── week navigation ─────────────────────────────────────────────────────
+  _goWeek(delta) {
+    const ws = delta === null ? this._todayKey() : this._shiftKey(this.state.weekStart, delta);
+    this.setState({ weekStart: ws, sessions: [], scheduleState: 'loading' }, () => this._loadSchedule());
+  }
+
+  // ── drawer / OTP / booking ──────────────────────────────────────────────
+  _openSession(id) {
+    const sess = this.state.sessions.find((s) => String(s.id) === String(id));
+    if (!sess) return;
+    this._restoreFocusTo = document.activeElement;
+    this.setState({
+      selected: sess, drawerOpen: true, loggedIn: this._isLoggedIn(),
+      otpStep: 'phone', otpError: '', otpBusy: false, otpPhone: '', bookBusy: false,
+    });
+  }
+
+  _closeDrawer() {
+    this.setState({
+      drawerOpen: false, selected: null, otpStep: 'phone',
+      otpError: '', otpBusy: false, otpPhone: '', bookBusy: false,
+    });
+    const el = this._restoreFocusTo;
+    this._restoreFocusTo = null;
+    if (el && document.contains(el) && typeof el.focus === 'function') el.focus();
+  }
+
+  _field(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+  _toast(msg, ms) {
+    if (this._apiReadyHandler) window.removeEventListener('takeoff:api-ready', this._apiReadyHandler);
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this.setState({ toast: msg });
+    this._toastTimer = setTimeout(() => this.setState({ toast: '' }), ms || 3500);
+  }
+
+  _sendOtp() {
+    const phone = this._field('pc-otp-phone');
+    if (!phone) { this.setState({ otpError: 'Veuillez entrer votre numéro.' }); return; }
+    const api = this._api();
+    if (!api || !api.auth || !api.auth.sendOtp) {
+      this.setState({ otpError: 'La connexion est indisponible pour le moment.' });
       return;
     }
-
-    grid.innerHTML = html;
-  }
-
-  /* ── SESSION LOOKUP ─────────────────────────────────────────────── */
-  function findSessionById(id){
-    for(var i=0;i<_sessions.length;i++){
-      if(_sessions[i].id === id) return _sessions[i];
-    }
-    return null;
-  }
-
-  window.pcOpenSession = function(id){
-    var sess = findSessionById(id);
-    if(!sess) return;
-    _selectedSession = sess;
-    var name = sess.className || 'Class';
-    var coach = sess.instructorName || '';
-    var level = sess.level || '';
-    var tt = sess.startsAt ? tunisiaTime(sess.startsAt) : null;
-    var timeStr = tt ? tt.timeStr : '';
-    var dateStr = sess.startsAt ? new Date(new Date(sess.startsAt).getTime()+3600000).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}) : '';
-    var booked = sess.bookedSpots || 0;
-    var max = sess.maxSpots || 10;
-    var price = sess.priceDt || '35';
-
-    document.getElementById('pc-drawer-tag').textContent = name.toUpperCase();
-    document.getElementById('pc-drawer-title').textContent = name;
-    document.getElementById('pc-drawer-meta').innerHTML =
-      (coach ? 'Coach: <strong>'+coach+'</strong><br>' : '')+
-      (level ? 'Niveau: <strong>'+level+'</strong><br>' : '')+
-      (dateStr ? dateStr+' à '+timeStr+'<br>' : '')+
-      'Places: <strong>'+booked+'/'+max+'</strong>';
-    document.getElementById('pc-drawer-price').innerHTML = price+' DT <span>/ personne</span>';
-
-    // Reset OTP
-    resetOtpForm();
-
-    if(isLoggedIn()){
-      document.getElementById('pc-auth-gate').style.display = 'none';
-      document.getElementById('pc-book-section').style.display = 'block';
-    } else {
-      document.getElementById('pc-auth-gate').style.display = 'block';
-      document.getElementById('pc-book-section').style.display = 'none';
-    }
-
-    document.getElementById('pc-drawer-overlay').style.display = 'flex';
-  };
-
-  function resetOtpForm(){
-    _otpPhone = ''; _otpName = '';
-    var ids = ['pc-otp-phone','pc-otp-name','pc-otp-code'];
-    ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-    showOtpStep(1);
-    showOtpErr('');
-  }
-
-  function showOtpStep(step){
-    document.getElementById('pc-otp-step1').style.display = step===1 ? 'block' : 'none';
-    document.getElementById('pc-otp-step-name').style.display = step===1.5 ? 'block' : 'none';
-    document.getElementById('pc-otp-step2').style.display = step===2 ? 'block' : 'none';
-  }
-
-  function showOtpErr(msg){
-    ['pc-otp-err','pc-otp-err2'].forEach(function(id){
-      var el = document.getElementById(id);
-      if(el){ el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
+    this.setState({ otpBusy: true, otpError: '', otpPhone: phone });
+    api.auth.sendOtp(phone).then((res) => {
+      const needsName = !res || res.isNewUser !== false;
+      this.setState({ otpBusy: false, otpStep: needsName ? 'name' : 'code' });
+    }).catch((e) => {
+      this.setState({ otpBusy: false, otpError: (e && e.message) || 'Échec d\'envoi. Réessayez.' });
     });
   }
 
-  function closeDrawer(){
-    document.getElementById('pc-drawer-overlay').style.display = 'none';
-    _selectedSession = null;
-  }
+  _otpNameNext() { this.setState({ otpStep: 'code' }); }
 
-  window.pcCloseDrawer = closeDrawer;
-
-  window.pcSendOtp = function(){
-    var phone = document.getElementById('pc-otp-phone').value.trim();
-    if(!phone){ showOtpErr('Veuillez entrer votre numéro.'); return; }
-    _otpPhone = phone;
-    var btn = document.getElementById('pc-otp-send'); btn.disabled=true; btn.textContent='Envoi…';
-    showOtpErr('');
-    var api = window.takeOffApi;
-    var doNext = function(){
-      btn.disabled=false; btn.textContent='Envoyer le code →';
-      showOtpStep(1.5);
-    };
-    if(api && api.auth && api.auth.sendOtp){
-      api.auth.sendOtp(phone).then(doNext).catch(function(e){
-        btn.disabled=false; btn.textContent='Envoyer le code →';
-        showOtpErr(e&&e.message?e.message:'Échec d\'envoi. Réessayez.');
-      });
-    } else { doNext(); }
-  };
-
-  window.pcOtpNameNext = function(){
-    _otpName = document.getElementById('pc-otp-name').value.trim();
-    showOtpStep(2);
-    document.getElementById('pc-otp-phone-hint').textContent = 'Code envoyé au '+_otpPhone;
-  };
-
-  window.pcOtpVerify = function(){
-    var code = document.getElementById('pc-otp-code').value.trim();
-    if(!code){ showOtpErr('Veuillez entrer le code.'); return; }
-    var btn = document.getElementById('pc-otp-verify'); btn.disabled=true; btn.textContent='Vérification…';
-    showOtpErr('');
-    var api = window.takeOffApi;
-    var doNext = function(){
-      btn.disabled=false; btn.textContent='Vérifier →';
-      document.getElementById('pc-auth-gate').style.display = 'none';
-      document.getElementById('pc-book-section').style.display = 'block';
-    };
-    if(api && api.auth && api.auth.verifyOtp){
-      api.auth.verifyOtp(_otpPhone, code, _otpName).then(doNext).catch(function(e){
-        btn.disabled=false; btn.textContent='Vérifier →';
-        showOtpErr(e&&e.message?e.message:'Code invalide. Réessayez.');
-      });
-    } else { doNext(); }
-  };
-
-  window.pcBookSession = function(){
-    if(!_selectedSession) return;
-    var id = _selectedSession.id;
-    var btn = document.getElementById('pc-book-btn'); btn.disabled=true; btn.textContent='Réservation…';
-    var api = window.takeOffApi;
-    var doSuccess = function(){
-      btn.disabled=false; btn.textContent='Réserver ma place →';
-      closeDrawer();
-      showToast('✅ Réservé ! À bientôt sur le tapis.', 4000);
-      loadSchedule();
-    };
-    if(api && api.classes && api.classes.bookSession){
-      api.classes.bookSession(id).then(doSuccess).catch(function(e){
-        btn.disabled=false; btn.textContent='Réserver ma place →';
-        showToast((e&&e.message)?e.message:'Échec de réservation.', 3500);
-      });
-    } else { doSuccess(); }
-  };
-
-  /* ── LOAD SCHEDULE ──────────────────────────────────────────────── */
-  function loadSchedule(){
-    if(!_weekStart) return;
-    var weekEnd = new Date(_weekStart); weekEnd.setDate(weekEnd.getDate()+6);
-    var api = window.takeOffApi;
-
-    var grid = document.getElementById('pc-grid');
-    grid.innerHTML = '<div style="grid-column:1/-1;"><div class="pc-spinner"></div></div>';
-
-    if(api && api.classes && api.classes.schedule){
-      api.classes.schedule(_weekStart.toISOString(), weekEnd.toISOString()).then(function(data){
-        _sessions = Array.isArray(data) ? data : (data && data.sessions ? data.sessions : []);
-        buildTypes();
-        buildFilterBar();
-        renderGrid();
-      }).catch(function(){
-        _sessions = [];
-        renderGrid();
-      });
-    } else {
-      _sessions = [];
-      renderGrid();
+  _otpVerify() {
+    const code = this._field('pc-otp-code');
+    if (!code) { this.setState({ otpError: 'Veuillez entrer le code.' }); return; }
+    const api = this._api();
+    if (!api || !api.auth || !api.auth.verifyOtp) {
+      this.setState({ otpError: 'La connexion est indisponible pour le moment.' });
+      return;
     }
-  }
-
-  function buildTypes(){
-    var seen = {};
-    _types = [];
-    _sessions.forEach(function(s){
-      var name = s.className || '';
-      if(name && !seen[name]){ seen[name]=1; _types.push(name); }
+    this.setState({ otpBusy: true, otpError: '' });
+    api.auth.verifyOtp(this.state.otpPhone, code, this._field('pc-otp-name')).then(() => {
+      /* Stay on the chosen session and swap the gate for the booking button —
+         the selected session is never dropped by signing in. */
+      this.setState({ otpBusy: false, loggedIn: true, otpError: '' });
+    }).catch((e) => {
+      // A rejected code must never look like a success.
+      this.setState({ otpBusy: false, otpError: (e && e.message) || 'Code invalide. Réessayez.' });
     });
   }
 
-  /* ── WEEK NAVIGATION ─────────────────────────────────────────────── */
-  function setWeek(ws){
-    _weekStart = ws;
-    document.getElementById('pc-week-label').textContent = weekLabel(ws);
-    loadSchedule();
+  _bookSession() {
+    const sess = this.state.selected;
+    if (!sess) return;
+    const api = this._api();
+    if (!api || !api.classes || !api.classes.bookSession) {
+      this._toast('La réservation est indisponible pour le moment.', 4000);
+      return;
+    }
+    this.setState({ bookBusy: true });
+    api.classes.bookSession(sess.id).then(() => {
+      this.setState({ bookBusy: false });
+      this._closeDrawer();
+      this._toast('✅ Réservé ! À bientôt sur le tapis.', 4000);
+      this._loadSchedule(); // re-read authoritative availability
+    }).catch((e) => {
+      this.setState({ bookBusy: false });
+      this._toast((e && e.message) || 'Échec de réservation.', 3500);
+    });
   }
 
-  window.pcPrevWeek = function(){ var ws = new Date(_weekStart); ws.setDate(ws.getDate()-7); setWeek(ws); };
-  window.pcNextWeek = function(){ var ws = new Date(_weekStart); ws.setDate(ws.getDate()+7); setWeek(ws); };
-  window.pcToday    = function(){ setWeek(getWeekStart(new Date())); };
+  // ── template bindings ───────────────────────────────────────────────────
+  renderVals() {
+    const s = this.state;
+    const sess = s.selected;
+    const clock = sess && sess.startsAt ? this._clubClock(sess.startsAt) : null;
+    let dateLabel = '';
+    if (clock) {
+      const p = this._parseKey(clock.dateStr);
+      const dow = this._clubParts(this._clubMidnight(p.y, p.m, p.d)).dow;
+      dateLabel = Component.DAYS_SHORT[dow] + ' ' + p.d + ' ' + Component.MONTHS_SHORT[p.m] + ' à ' + clock.timeStr;
+    }
+    const meta = sess
+      ? [sess.instructorName ? 'Coach : ' + sess.instructorName : '',
+         sess.level ? 'Niveau : ' + sess.level : '',
+         dateLabel,
+         'Places : ' + (sess.bookedSpots || 0) + '/' + (sess.maxSpots || 0)].filter(Boolean).join(' · ')
+      : '';
 
-  /* ── INIT ────────────────────────────────────────────────────────── */
-  function init(){
-    _weekStart = getWeekStart(new Date());
-    document.getElementById('pc-week-label').textContent = weekLabel(_weekStart);
-    loadSchedule();
-    setTimeout(function(){
-      var loader = document.getElementById('pc-loader');
-      if(loader){ loader.style.opacity='0'; loader.style.visibility='hidden'; }
-    }, 600);
+    return {
+      gridRef: this.gridRef,
+      filterBarRef: this.filterBarRef,
+      drawerRef: this.drawerRef,
+
+      weekLabel: this._weekLabel(s.weekStart),
+      onPrevWeek: () => this._goWeek(-Component.DAYS_SHOWN),
+      onNextWeek: () => this._goWeek(Component.DAYS_SHOWN),
+      onToday: () => this._goWeek(null),
+
+      drawerDisplay: s.drawerOpen ? 'flex' : 'none',
+      drawerTag: sess ? String(sess.className || 'COURS').toUpperCase() : 'COURS',
+      drawerTitle: sess ? (sess.className || 'Cours') : '',
+      drawerMeta: meta,
+      drawerPrice: sess ? (sess.priceDt || 0) + ' DT / personne' : '',
+      onCloseDrawer: () => this._closeDrawer(),
+      onDrawerBackdrop: (e) => { if (e.target === e.currentTarget) this._closeDrawer(); },
+
+      authGateDisplay: s.drawerOpen && !s.loggedIn ? 'block' : 'none',
+      bookSectionDisplay: s.drawerOpen && s.loggedIn ? 'block' : 'none',
+      otpStep1Display: s.otpStep === 'phone' ? 'block' : 'none',
+      otpStepNameDisplay: s.otpStep === 'name' ? 'block' : 'none',
+      otpStep2Display: s.otpStep === 'code' ? 'block' : 'none',
+      otpError: s.otpError,
+      otpErrDisplay: s.otpError ? 'block' : 'none',
+      otpPhoneHint: s.otpPhone ? 'Code envoyé au ' + s.otpPhone : '',
+      otpBusy: s.otpBusy,
+      sendOtpLabel: s.otpBusy ? 'Envoi…' : 'Envoyer le code →',
+      verifyOtpLabel: s.otpBusy ? 'Vérification…' : 'Vérifier →',
+      onSendOtp: () => this._sendOtp(),
+      onOtpNameNext: () => this._otpNameNext(),
+      onOtpVerify: () => this._otpVerify(),
+
+      bookBusy: s.bookBusy,
+      bookLabel: s.bookBusy ? 'Réservation…' : 'Réserver ma place →',
+      onBookSession: () => this._bookSession(),
+
+      toast: s.toast,
+      toastClass: s.toast ? ' show' : '',
+    };
   }
-
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 100); });
-  } else {
-    setTimeout(init, 100);
-  }
-
-})();
+}
 </script>
 
 </x-dc>
