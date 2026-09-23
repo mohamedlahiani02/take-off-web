@@ -2,47 +2,33 @@ name: CI
 
 on:
   push:
-    branches: [dev, main, production]
+    branches: [main]
   pull_request:
-    branches: [main, production]
+  workflow_dispatch:
 
 concurrency:
+  # A newer push supersedes an in-flight run on the same ref.
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: Lint · Typecheck · Build
+  static:
+    name: Lint, types, build
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - name: Setup Node 20
-        uses: actions/setup-node@v6
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: 20
+          version: 9.15.0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          version: 9
+          node-version: 22
+          cache: pnpm
 
-      - name: Get pnpm store path
-        id: pnpm-store
-        shell: bash
-        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
-        uses: actions/cache@v5
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
       - name: Lint
         run: pnpm lint
@@ -50,8 +36,71 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Build
+      - name: Production build
         run: pnpm build
+
+  e2e:
+    name: End-to-end (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      # One failing suite should not hide the others.
+      fail-fast: false
+      matrix:
+        suite: [calendars, list-pages, detail-pages]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start fixture API
+        # Server Components fetch from the Node process, so browser-level
+        # routing cannot stub them; the suites need a real API to talk to.
+        run: |
+          node tests/fixtures/api-server.cjs 4599 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4599/api/v1/content/store >/dev/null && break
+            sleep 1
+          done
+
+      - name: Start web server
+        # API_URL feeds server-side fetches (the TSX pages); NEXT_PUBLIC_API_URL
+        # is injected into the prototype pages and must stay on the test origin
+        # so the browser suites can intercept those calls.
         env:
-          NEXT_PUBLIC_API_URL: https://staging.api.takeoff.tn
-          NEXT_PUBLIC_SENTRY_DSN: ""
+          API_URL: http://127.0.0.1:4599
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3104
+        run: |
+          pnpm exec next dev --hostname 127.0.0.1 --port 3104 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3104/api/health >/dev/null && break
+            sleep 1
+          done
+
+      - name: Run ${{ matrix.suite }}
+        env:
+          E2E_BASE_URL: http://127.0.0.1:3104
+          E2E_PORT: '3104'
+        run: pnpm exec playwright test tests/e2e/${{ matrix.suite }}.spec.ts --reporter=list
+
+      - name: Upload failure artefacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ matrix.suite }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

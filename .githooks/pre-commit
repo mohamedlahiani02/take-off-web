@@ -1,0 +1,21 @@
+#!/bin/sh
+# Lint and typecheck before a commit lands. Kept to the fast checks: the e2e
+# suites belong in CI, not in the path of every commit.
+#
+# Enabled automatically by the `prepare` script (git config core.hooksPath).
+# Skip once with:  git commit --no-verify
+
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx)$' || true)
+[ -z "$staged" ] && exit 0
+
+echo "pre-commit: eslint"
+# Only the staged files, so the hook stays quick on a large tree.
+echo "$staged" | xargs pnpm exec eslint --max-warnings=0
+
+echo "pre-commit: tsc"
+# Types are project-wide; a per-file run would miss cross-file breakage.
+pnpm exec tsc --noEmit
+
+echo "pre-commit: ok"
