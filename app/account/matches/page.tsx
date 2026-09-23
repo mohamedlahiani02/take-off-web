@@ -1,41 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@/lib/auth/client'
-
-const API = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '')
+import { useAccountResource } from '@/lib/api/use-account-resource'
+import { ResourceNotice } from '@/components/account/resource-state'
 
 export default function MatchesPage() {
-  const { isLoading } = useAuth()
-  const [matches, setMatches] = useState<Record<string, unknown>[]>([])
-  const [fetching, setFetching] = useState(true)
-
-  useEffect(() => {
-    if (isLoading) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('takeoff_access') : null
-    fetch(`${API}/api/v1/courts/bookings/mine`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(r => (r.ok ? r.json() : []))
-      .then((all: Record<string, unknown>[]) =>
-        setMatches(all.filter(b => b.mode === 'SHARE'))
-      )
-      .catch(() => setMatches([]))
-      .finally(() => setFetching(false))
-  }, [isLoading])
-
-  if (isLoading || fetching) {
-    return <p className="text-white/40 text-sm">Loading…</p>
-  }
-
+  const { rows: all, state } = useAccountResource('/api/courts/bookings')
+  const matches = all.filter((b) => b.mode === 'SHARE')
   return (
     <div>
       <p className="font-mono text-[13px] tracking-[0.34em] text-lime uppercase mb-4">Account</p>
       <h1 className="font-display text-[clamp(40px,6vw,88px)] leading-none text-white tracking-tight mb-10">
         MATCHES
       </h1>
-      {matches.length === 0 ? (
-        <p className="text-white/40">No shared matches yet.</p>
+      {state !== 'ready' || matches.length === 0 ? (
+        <ResourceNotice state={state} emptyMessage="No shared matches yet." />
       ) : (
         <div className="flex flex-col gap-3">
           {matches.map((b, i) => (

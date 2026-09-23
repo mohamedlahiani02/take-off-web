@@ -7,9 +7,10 @@
  * ported in a later sprint.
  */
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useFocusTrap } from '@/lib/a11y/focus-trap'
 
 interface MenuSection {
   n: string
@@ -125,6 +126,10 @@ interface MegaMenuProps {
 export function MegaMenu({ open, onClose }: MegaMenuProps) {
   const [activeKey, setActiveKey] = useState('padel')
   const active = MENU.find((c) => c.key === activeKey) ?? MENU[0]!
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // Same containment guarantee as the cart drawer while the overlay is open.
+  useFocusTrap(panelRef, open)
 
   useEffect(() => {
     if (!open) return
@@ -135,6 +140,7 @@ export function MegaMenu({ open, onClose }: MegaMenuProps) {
 
   return (
     <div
+      ref={panelRef}
       role="dialog"
       aria-modal="true"
       aria-label="Site navigation"

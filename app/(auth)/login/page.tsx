@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { Button } from '@/components/primitives/button'
+import { useAuth } from '@/lib/auth/client'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { refresh } = useAuth()
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
@@ -64,6 +65,9 @@ export default function LoginPage() {
         setError((d as { detail?: string; error?: string }).detail ?? (d as { detail?: string; error?: string }).error ?? 'Invalid code. Please try again.')
         return
       }
+      // Refresh the cached identity BEFORE navigating, so the next page (account, or
+      // checkout straight from the cart) already sees an authenticated user.
+      await refresh()
       router.push('/account')
       router.refresh()
     } catch {
@@ -165,11 +169,11 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <div className="mt-8 flex flex-col items-center gap-3 font-mono text-[11px] tracking-[0.18em]">
-        <Link href="/register" className="text-navy/50 hover:text-navy transition-colors">
-          CREATE AN ACCOUNT
-        </Link>
-      </div>
+      <p className="mt-8 text-center font-mono text-[11px] tracking-[0.18em] text-navy/45 leading-relaxed">
+        NEW HERE? ENTER YOUR PHONE
+        <br />
+        AND WE&apos;LL SET YOU UP.
+      </p>
     </>
   )
 }

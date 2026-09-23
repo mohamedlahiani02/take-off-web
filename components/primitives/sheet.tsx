@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { cn } from '@/lib/cn'
+import { useFocusTrap } from '@/lib/a11y/focus-trap'
 import { X } from 'lucide-react'
 
 interface SheetProps {
@@ -14,7 +15,6 @@ interface SheetProps {
 
 export function Sheet({ open, onClose, title, children, className }: SheetProps) {
   const panelRef = useRef<HTMLElement>(null)
-  const previousFocusRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -23,20 +23,8 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
     }
   }, [open])
 
-  useEffect(() => {
-    if (open) {
-      previousFocusRef.current = document.activeElement as HTMLElement
-      const panel = panelRef.current
-      if (panel) {
-        const first = panel.querySelector<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        )
-        first?.focus()
-      }
-    } else {
-      previousFocusRef.current?.focus()
-    }
-  }, [open])
+  // Contains Tab/Shift+Tab while open and restores focus to the opener on close.
+  useFocusTrap(panelRef, open)
 
   useEffect(() => {
     if (!open) return

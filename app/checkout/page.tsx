@@ -6,8 +6,6 @@ import { Nav } from '@/components/layout/nav'
 import { useCartStore } from '@/lib/cart/store'
 import { useAuth } from '@/lib/auth/client'
 
-const API = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '')
-
 type PayMethod = 'WALLET' | 'COD' | 'CARD'
 type DelivMethod = 'PICKUP' | 'DELIVER'
 
@@ -39,7 +37,7 @@ export default function CheckoutPage() {
   if (isLoading) return null
 
   const totalDt = getTotal() / 1000
-  const hasPhysical = items.some(i => !i.id.startsWith('booking|') && !i.id.startsWith('pack|'))
+  const hasPhysical = items.some(i => i.kind === 'product')
   const timbre = hasPhysical && totalDt >= 10 ? 1 : 0
   const shipping = delivery === 'DELIVER' ? (city.trim().toLowerCase() === 'sfax' || !city.trim() ? 7 : 15) : 0
   const grandTotal = totalDt + timbre + shipping
@@ -86,22 +84,33 @@ export default function CheckoutPage() {
           body: JSON.stringify({
             refType: 'ORDER',
             refId: orderId,
+            // The server recomputes the amount from the order; this is advisory only.
             amountDt: grandTotal,
             returnUrl: `${window.location.origin}/checkout/confirm`,
           }),
         })
         if (!intentRes.ok) {
           const errBody = await intentRes.json().catch(() => ({}))
-          setError((errBody as Record<string, unknown>).title as string || 'Could not initiate payment. Please try again.')
+          setError(
+            (errBody as Record<string, unknown>).detail as string ||
+            (errBody as Record<string, unknown>).title as string ||
+            'Could not start the card payment. Your order is saved — please try again from your orders.',
+          )
           return
         }
         const intent = await intentRes.json() as Record<string, unknown>
         const payUrl = String(intent.paymentUrl ?? intent.payUrl ?? '')
-        if (payUrl) {
-          clear()
-          window.location.href = payUrl
+        if (!payUrl) {
+          // Initiation reported success without anywhere to pay. Never fall through to the
+          // generic confirmation — that would claim a settlement that never happened.
+          setError('The payment provider did not return a payment link. Your order is saved — please retry from your orders.')
           return
         }
+        // The cart is deliberately NOT cleared here: until the bank confirms, it is the
+        // member's only record of what they were buying. /checkout/confirm clears it once
+        // the intent is authoritatively PAID.
+        window.location.href = payUrl
+        return
       }
 
       clear()

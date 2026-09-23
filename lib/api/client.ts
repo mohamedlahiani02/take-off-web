@@ -30,7 +30,7 @@ class NotImplementedError extends Error {
  */
 export async function apiFetch<T>(
   path: string,
-  init?: RequestInit,
+  _init?: RequestInit,
 ): Promise<ApiResponse<T>> {
   throw new NotImplementedError(path)
 

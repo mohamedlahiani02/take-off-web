@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 
@@ -46,9 +47,10 @@ export async function POST(req: NextRequest) {
     user?: unknown
     [key: string]: unknown
   }
-  const accessToken = parsed.tokens?.accessToken ?? (parsed.accessToken as string | undefined)
-  const refreshToken = parsed.tokens?.refreshToken ?? (parsed.refreshToken as string | undefined)
-  const user = parsed.user ?? (() => { const { tokens: _t, accessToken: _a, refreshToken: _r, ...rest } = parsed; return rest })()
+  // The API returns { tokens: { accessToken, refreshToken }, user, claimed }.
+  const accessToken = parsed.tokens?.accessToken
+  const refreshToken = parsed.tokens?.refreshToken
+  const user = parsed.user ?? null
 
   if (!accessToken) {
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })

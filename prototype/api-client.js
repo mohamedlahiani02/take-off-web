@@ -227,8 +227,13 @@
       availablePacks: function () {
         return request('GET', '/api/v1/classes/packs', undefined, true);
       },
-      purchasePack: function (packTypeId) {
-        return request('POST', '/api/v1/classes/packs/purchase', { packTypeId: packTypeId });
+      purchasePack: function (packTypeId, paymentMethod, quantity) {
+        // The server decides whether the chosen method can settle a pack; it is never assumed.
+        return request('POST', '/api/v1/classes/packs/purchase', {
+          packTypeId: packTypeId,
+          paymentMethod: paymentMethod || 'WALLET',
+          quantity: quantity || 1,
+        });
       },
       myPacks: function () {
         return request('GET', '/api/v1/classes/packs/mine');

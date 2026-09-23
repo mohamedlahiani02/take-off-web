@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Sheet } from '@/components/primitives/sheet'
 import { Button } from '@/components/primitives/button'
-import { useCartStore } from '@/lib/cart/store'
+import { useCartStore, lineKey } from '@/lib/cart/store'
 import { formatTND } from '@/lib/format/money'
 import { Trash2 } from 'lucide-react'
 
@@ -34,7 +34,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           {/* Items */}
           <ul className="flex flex-col divide-y divide-white/8 px-7">
             {items.map((item) => (
-              <li key={item.id} className="flex items-start justify-between gap-4 py-5">
+              <li key={lineKey(item)} className="flex items-start justify-between gap-4 py-5">
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-sm font-medium truncate">{item.name}</p>
                   {item.variant && (
@@ -43,8 +43,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   <p className="text-lime text-sm mt-1">{formatTND(item.priceTND)}</p>
                 </div>
                 <button
-                  onClick={() => remove(item.id)}
-                  aria-label={`Remove ${item.name}`}
+                  onClick={() => remove(item.id, item.variant)}
+                  aria-label={item.variant ? `Remove ${item.name} (${item.variant})` : `Remove ${item.name}`}
                   className="text-white/30 hover:text-white/70 transition-colors mt-0.5"
                 >
                   <Trash2 size={15} />
