@@ -144,12 +144,26 @@ async function dayNumbers(page: Page, kind: 'pr' | 'pc'): Promise<string[]> {
   return page.locator(sel).allInnerTexts()
 }
 
+/** Booting the prototype runtime needs longer on a cold CI runner than locally. */
+const BOOT_TIMEOUT = process.env['CI'] ? 60_000 : 30_000
+
 async function gotoCalendar(page: Page, kind: 'pr' | 'pc') {
   await page.goto(kind === 'pr' ? '/padel/reserve' : '/pilates/classes', { waitUntil: 'domcontentloaded' })
+  // The runtime is loaded from a CDN; surface that explicitly rather than
+  // letting the whole boot fail as an opaque timeout.
+  await page
+    .waitForFunction(() => !!(window as unknown as { React?: unknown }).React, null, {
+      timeout: BOOT_TIMEOUT,
+    })
+    .catch(() => {
+      throw new Error('Prototype runtime (React) never loaded — check CDN reachability')
+    })
   // Wait for the runtime to mount and the first data paint to land.
-  await expect(page.locator(`#${kind}-week-label`)).not.toHaveText(/Loading|Chargement/, { timeout: 30_000 })
+  await expect(page.locator(`#${kind}-week-label`)).not.toHaveText(/Loading|Chargement/, {
+    timeout: BOOT_TIMEOUT,
+  })
   // Seven day numbers in the header is the signal that real data has painted.
-  await expect.poll(async () => (await dayNumbers(page, kind)).length, { timeout: 30_000 }).toBe(7)
+  await expect.poll(async () => (await dayNumbers(page, kind)).length, { timeout: BOOT_TIMEOUT }).toBe(7)
 }
 
 for (const [label, viewport] of [

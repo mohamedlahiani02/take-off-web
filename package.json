@@ -9,7 +9,9 @@
     "lint": "eslint app components lib",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "test:e2e:ci": "playwright test --reporter=list"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.75.2",
