@@ -113,16 +113,9 @@
     },
 
     // Packs are still local (packs backend module is TODO)
-    purchasePack: function (opts) {
-      if (!auth.user) return;
-      if (!auth.user.packs) auth.user.packs = [];
-      var now = new Date();
-      var exp = new Date(now);
-      exp.setMonth(exp.getMonth() + (opts.months || 3));
-      auth.user.packs.push({ id: 'pack_' + Date.now(), name: opts.name || 'Pack', total: opts.total || 10, remaining: opts.total || 10, purchasedAt: now.toISOString(), expiresAt: exp.toISOString() });
-      storageSet('takeoff_user', auth.user);
-      notify();
-    },
+    // purchasePack() used to mint a pack in local state with no server call,
+    // which showed members credits that were never sold. Packs are issued by
+    // POST /classes/packs/purchase or not at all.
 
     consumePack: function (n) {
       if (!auth.user || !auth.user.packs) return false;

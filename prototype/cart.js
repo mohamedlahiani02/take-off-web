@@ -674,8 +674,13 @@
               showOrderError(e, 'Could not buy "' + (_packIt.name || 'pack') + '" — please choose another payment method or top up your wallet.');
               return;
             }
-          } else if (_packIt._packMeta && window.takeOffAuth && window.takeOffAuth.purchasePack) {
-            window.takeOffAuth.purchasePack(_packIt._packMeta);
+          } else {
+            // The old fallback wrote the pack straight into local state, so the
+            // member was shown credits the club had never sold them. A pack the
+            // server did not issue is not a pack.
+            if (btn) { btn.disabled = false; btn.textContent = ctaLabel; }
+            showOrderError(null, 'Packs cannot be bought right now. Your cart is kept — please try again shortly.');
+            return;
           }
         }
 
