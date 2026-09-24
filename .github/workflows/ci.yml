@@ -47,7 +47,7 @@ jobs:
       # One failing suite should not hide the others.
       fail-fast: false
       matrix:
-        suite: [list-pages, detail-pages]
+        suite: [calendars, list-pages, detail-pages]
     steps:
       - uses: actions/checkout@v4
 
@@ -83,49 +83,3 @@ jobs:
             playwright-report/
           retention-days: 7
 
-  calendars:
-    # Non-blocking on purpose. The prototype calendar pages fetch their React
-    # runtime from a CDN on every page load: warm locally (the suite passes
-    # 42/42), slow and flaky on a cold runner, where each timeout is retried
-    # twice. This is a property of the prototype runtime, not of the assertions,
-    # and it goes away once these two pages move to TSX and bundle React.
-    #
-    # Until then the suite still runs and is still reported — it just does not
-    # block a merge. Do not delete it: it covers the week navigation, the OTP
-    # modal and the four backend fields that were being ignored.
-    name: End-to-end (calendars, non-blocking)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Install Chromium for Playwright
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Run calendars
-        env:
-          E2E_BASE_URL: http://127.0.0.1:3104
-          E2E_PORT: '3104'
-        run: pnpm exec playwright test tests/e2e/calendars.spec.ts --reporter=list
-
-      - name: Upload failure artefacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-calendars
-          path: |
-            test-results/
-            playwright-report/
-          retention-days: 7

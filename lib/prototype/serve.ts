@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { apiBase } from '@/lib/api/base'
+import { publicApiBase } from '@/lib/api/base'
 
 const prototypeRoot = path.join(process.cwd(), 'prototype')
 
@@ -31,9 +31,9 @@ export async function prototypeHtml(fileName: keyof typeof htmlRoutes) {
   const filePath = path.join(prototypeRoot, fileName)
   let html = await fs.readFile(filePath, 'utf8')
 
-  // Inject API base URL before all other scripts. Same resolution as the React
-  // pages use, so prototype and TSX pages can never disagree about the API.
-  const apiScript = `<script>window.TAKEOFF_API_URL="${apiBase()}";</script>`
+  // Injected for the browser, so this must be the public URL: API_URL is a
+  // server-only override and would send the page to a foreign origin.
+  const apiScript = `<script>window.TAKEOFF_API_URL="${publicApiBase()}";</script>`
   html = html.replace('<script src="./support.js"></script>', apiScript + '\n<script src="./support.js"></script>')
 
   return new Response(rewritePrototypeHtml(html), {

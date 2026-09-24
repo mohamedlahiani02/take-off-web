@@ -697,7 +697,10 @@
               contact: { name: _d.name, email: _d.email || '', phone: _d.phone },
               items: _nonPackItems.map(function(it){
                 return {
-                  productId: it.productId || null,
+                  // Name the catalogue entry so the server can price the line;
+                  // an unreferenced line is refused rather than client-priced.
+                  productId: it.kind === 'pack' ? null : (it.productId || null),
+                  packTypeId: it.kind === 'pack' ? (it.packTypeId || null) : null,
                   productName: it.name || it.n,
                   qty: it.qty || 1,
                   size: it.size || null,

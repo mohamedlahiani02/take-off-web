@@ -12,8 +12,26 @@
  */
 const PRODUCTION_API = 'https://take-off-api.onrender.com'
 
+/**
+ * For fetches made by the server (route handlers, Server Components).
+ * `API_URL` wins so the server can be pointed elsewhere — at a private address
+ * or a test double — without that value reaching the browser.
+ */
 export function apiBase(): string {
   const configured = process.env['API_URL'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? ''
+  return (configured || PRODUCTION_API).replace(/\/$/, '')
+}
+
+/**
+ * For URLs handed to the browser — notably the one injected into the prototype
+ * pages as `window.TAKEOFF_API_URL`.
+ *
+ * Deliberately ignores `API_URL`: that address is only meaningful inside the
+ * server. Leaking it to the page sends the browser to a different origin, where
+ * the request dies in CORS rather than reaching the API.
+ */
+export function publicApiBase(): string {
+  const configured = process.env['NEXT_PUBLIC_API_URL'] ?? ''
   return (configured || PRODUCTION_API).replace(/\/$/, '')
 }
 

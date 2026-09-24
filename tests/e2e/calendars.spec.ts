@@ -27,6 +27,8 @@ interface ApiOptions {
   shareOpen?: boolean
   /** Decorates fixture sessions with status / own-booking / waitlist state. */
   sessionState?: 'cancelled' | 'booked' | 'waitlisted' | 'full-with-waitlist'
+  /** Treat the visitor as signed out, so the journey asks for a code. */
+  signedOut?: boolean
 }
 
 interface Recorded {
@@ -48,13 +50,44 @@ async function installApi(page: Page, opts: ApiOptions = {}): Promise<Recorded> 
   const rec: Recorded = { requests: [], pageErrors: [] }
   page.on('pageerror', (e) => rec.pageErrors.push(e.message))
 
-  await page.route('**/api/v1/**', async (route: Route) => {
+  await page.route('**/api/**', async (route: Route) => {
     const url = new URL(route.request().url())
     const method = route.request().method()
     rec.requests.push({ method, url: url.pathname + url.search })
 
     const json = (body: unknown, status = 200) =>
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+
+    // ── Next proxy routes (cookie session) ────────────────────────────────
+    if (url.pathname === '/api/courts/pricing' || url.pathname === '/api/v1/courts/pricing') {
+      return json({ fullPriceDt: 80, seatPriceDt: 20, seatsPerCourt: 4, currency: 'TND', slotMinutes: 90 })
+    }
+    if (url.pathname === '/api/auth/send-otp') {
+      // Existing member: straight to the code step.
+      return json({ message: 'sent', isNewUser: false })
+    }
+    if (url.pathname === '/api/auth/login') {
+      if (opts.verifyOtpStatus && opts.verifyOtpStatus !== 200) {
+        return json({ detail: 'Invalid or expired code' }, opts.verifyOtpStatus)
+      }
+      return json({ user: { id: 'u1', name: 'Fixture Member', phone: '+21622000000' } })
+    }
+    if (url.pathname === '/api/me') {
+      if (opts.signedOut) return json({ error: 'Not authenticated' }, 401)
+      return json({ id: 'u1', name: 'Fixture Member', phone: '+21622000000' })
+    }
+    if (/^\/api\/courts\/[^/]+\/bookings$/.test(url.pathname)) {
+      const status = opts.bookStatus ?? 201
+      if (status >= 400) return json({ detail: 'Booking refused' }, status)
+      return json({ bookingId: 'b1' }, 201)
+    }
+    if (url.pathname === '/api/classes/bookings') {
+      const status = opts.bookStatus ?? 201
+      if (status >= 400) return json({ detail: 'Booking refused' }, status)
+      return json({ bookingId: 'b1' }, 201)
+    }
+    // Anything else under /api/ that is not the versioned API is not ours.
+    if (!url.pathname.startsWith('/api/v1/')) return route.continue()
 
     if (url.pathname === '/api/v1/courts') {
       if (opts.failCourts) return json({ message: 'Synthetic outage' }, 503)
@@ -144,20 +177,15 @@ async function dayNumbers(page: Page, kind: 'pr' | 'pc'): Promise<string[]> {
   return page.locator(sel).allInnerTexts()
 }
 
-/** Booting the prototype runtime needs longer on a cold CI runner than locally. */
+/**
+ * Pages still served by the prototype fetch React from a CDN and are slow to
+ * boot on a cold runner; migrated TSX pages bundle it and are fast. One
+ * generous budget covers both while the migration is in progress.
+ */
 const BOOT_TIMEOUT = process.env['CI'] ? 60_000 : 30_000
 
 async function gotoCalendar(page: Page, kind: 'pr' | 'pc') {
   await page.goto(kind === 'pr' ? '/padel/reserve' : '/pilates/classes', { waitUntil: 'domcontentloaded' })
-  // The runtime is loaded from a CDN; surface that explicitly rather than
-  // letting the whole boot fail as an opaque timeout.
-  await page
-    .waitForFunction(() => !!(window as unknown as { React?: unknown }).React, null, {
-      timeout: BOOT_TIMEOUT,
-    })
-    .catch(() => {
-      throw new Error('Prototype runtime (React) never loaded — check CDN reachability')
-    })
   // Wait for the runtime to mount and the first data paint to land.
   await expect(page.locator(`#${kind}-week-label`)).not.toHaveText(/Loading|Chargement/, {
     timeout: BOOT_TIMEOUT,
@@ -266,81 +294,121 @@ for (const [label, viewport] of [
       expect(rec.pageErrors).toEqual([])
     })
 
-    test('OTP modal closes by button, by Escape and by backdrop, and reopens clean', async ({ page }) => {
-      await installApi(page)
-      await gotoCalendar(page, 'pr')
-
-      const overlay = page.locator('#pr-otp-overlay')
-      const firstFree = page.locator('.pr-slot-free').first()
-
-      // ── close button ───────────────────────────────────────────────────
-      await firstFree.click()
-      await expect(overlay).toBeVisible()
-      await page.locator('#pr-otp-overlay .pr-otp-close').click()
-      await expect(overlay).toBeHidden()
-
-      // ── Escape ─────────────────────────────────────────────────────────
-      await firstFree.click()
-      await expect(overlay).toBeVisible()
-      await page.keyboard.press('Escape')
-      await expect(overlay).toBeHidden()
-
-      // ── backdrop click ─────────────────────────────────────────────────
-      await firstFree.click()
-      await expect(overlay).toBeVisible()
-      await overlay.click({ position: { x: 5, y: 5 } })
-      await expect(overlay).toBeHidden()
-
-      // ── reopening a *different* slot starts from step 1 with no residue ─
-      await page.locator('.pr-slot-free').nth(2).click()
-      await expect(overlay).toBeVisible()
-      await expect(page.locator('#pr-otp-step1')).toBeVisible()
-      await expect(page.locator('#pr-otp-step2')).toBeHidden()
-      await expect(page.locator('#pr-otp-err')).toBeHidden()
-      // Focus is inside the dialog, not left behind on the grid.
-      expect(await page.evaluate(() => !!document.activeElement?.closest('.pr-otp-panel'))).toBe(true)
-    })
-
-    test('a successful OTP resumes the chosen slot and can complete the booking', async ({ page }) => {
+    test('clicking a slot books nothing until the journey is confirmed', async ({ page }) => {
       const rec = await installApi(page)
       await gotoCalendar(page, 'pr')
 
-      const target = page.locator('.pr-slot-free').first()
-      const targetTime = (await target.innerText()).trim()
-      await target.click()
+      await page.locator('.pr-slot-free').first().click()
+      await expect(page.locator('#pr-booking-overlay')).toBeVisible()
 
-      await page.locator('#pr-otp-phone').fill('+21622000000')
-      await page.getByRole('button', { name: /Send code/ }).click()
-      await expect(page.locator('#pr-otp-step2')).toBeVisible()
-      await page.locator('#pr-otp-code').fill('123456')
-      await page.getByRole('button', { name: /Verify/ }).click()
+      const bookings = () =>
+        rec.requests.filter((r) => r.method === 'POST' && r.url.includes('/bookings'))
 
-      // The slot the member picked before signing in is the one now offered.
-      const mode = page.locator('#pr-mode-overlay')
-      await expect(mode).toBeVisible()
-      await expect(page.locator('#pr-mode-slot-info')).toContainText(targetTime)
+      // The single most important guarantee: opening the journey is not a booking.
+      await page.waitForTimeout(500)
+      expect(bookings()).toEqual([])
 
-      await page.getByRole('button', { name: /Share/ }).click()
-      await expect.poll(() =>
-        rec.requests.some((r) => r.method === 'POST' && r.url.includes('/bookings')),
-      ).toBe(true)
-      await expect(mode).toBeHidden()
+      // Walking forward through every step still books nothing.
+      await page.locator('#pr-booking-next').click()
+      await page.locator('#pr-booking-next').click()
+      await expect(page.locator('#pr-booking-confirm')).toBeVisible()
+      expect(bookings()).toEqual([])
+
+      // Abandoning mid-journey leaves nothing behind either.
+      await page.keyboard.press('Escape')
+      await expect(page.locator('#pr-booking-overlay')).toBeHidden()
+      expect(bookings()).toEqual([])
     })
 
-    test('a rejected OTP code shows an error and never opens the booking step', async ({ page }) => {
-      await installApi(page, { verifyOtpStatus: 400 })
+    test('the journey closes by button, Escape and backdrop, and reopens clean', async ({ page }) => {
+      await installApi(page)
+      await gotoCalendar(page, 'pr')
+
+      const overlay = page.locator('#pr-booking-overlay')
+      const slot = page.locator('.pr-slot-free').first()
+
+      await slot.click()
+      await expect(overlay).toBeVisible()
+      await page.locator('#pr-booking-overlay button[aria-label="Close"]').click()
+      await expect(overlay).toBeHidden()
+
+      await slot.click()
+      await page.keyboard.press('Escape')
+      await expect(overlay).toBeHidden()
+
+      await slot.click()
+      await overlay.click({ position: { x: 5, y: 5 } })
+      await expect(overlay).toBeHidden()
+
+      // A different slot restarts at step one with no residue.
+      await page.locator('.pr-slot-free').nth(2).click()
+      await expect(page.locator('#pr-booking-heading')).toHaveText(/How do you want to book/)
+      expect(await page.evaluate(() => !!document.activeElement?.closest('#pr-booking-overlay'))).toBe(true)
+    })
+
+    test('the summary quotes the server price and confirming books once', async ({ page }) => {
+      const rec = await installApi(page)
       await gotoCalendar(page, 'pr')
 
       await page.locator('.pr-slot-free').first().click()
+      // Whole court, so the price shown must be the 80 DT the server published.
+      await page.locator('#pr-mode-full').click()
+      await page.locator('#pr-booking-next').click()
+      await page.locator('#pr-booking-next').click()
+
+      await expect(page.locator('#pr-booking-total')).toHaveText('80.000 DT')
+      await page.locator('#pr-booking-confirm').click()
+
+      await expect(page.locator('#pr-booking-done')).toBeVisible()
+      const posts = rec.requests.filter((r) => r.method === 'POST' && r.url.includes('/bookings'))
+      expect(posts).toHaveLength(1)
+    })
+
+    test('optional partners can be named, and booking alone still works', async ({ page }) => {
+      await installApi(page)
+      await gotoCalendar(page, 'pr')
+
+      await page.locator('.pr-slot-free').first().click()
+      await page.locator('#pr-booking-next').click()
+
+      // Naming is explicitly optional: the step can be walked straight past.
+      await expect(page.locator('#pr-booking-heading')).toHaveText(/optional/i)
+      await page.getByRole('button', { name: '+ Guest by name' }).click()
+      await page.getByLabel('Partner 1 name').fill('Invite Test')
+      await page.locator('#pr-booking-next').click()
+
+      await expect(page.locator('#pr-booking-confirm')).toBeVisible()
+      await expect(page.locator('#pr-booking-overlay')).toContainText('Players named')
+    })
+
+    test('a failed booking reports the error and never shows success', async ({ page }) => {
+      await installApi(page, { bookStatus: 409 })
+      await gotoCalendar(page, 'pr')
+
+      await page.locator('.pr-slot-free').first().click()
+      await page.locator('#pr-booking-next').click()
+      await page.locator('#pr-booking-next').click()
+      await page.locator('#pr-booking-confirm').click()
+
+      await expect(page.locator('#pr-booking-error')).toBeVisible()
+      await expect(page.locator('#pr-booking-done')).toHaveCount(0)
+    })
+
+    test('a rejected OTP code never reaches the summary', async ({ page }) => {
+      await installApi(page, { verifyOtpStatus: 400, signedOut: true })
+      await gotoCalendar(page, 'pr')
+
+      await page.locator('.pr-slot-free').first().click()
+      await page.locator('#pr-booking-next').click()
+      await page.locator('#pr-booking-next').click()
+
       await page.locator('#pr-otp-phone').fill('+21622000000')
       await page.getByRole('button', { name: /Send code/ }).click()
-      await expect(page.locator('#pr-otp-step2')).toBeVisible()
       await page.locator('#pr-otp-code').fill('000000')
       await page.getByRole('button', { name: /Verify/ }).click()
 
       await expect(page.locator('#pr-otp-err')).toBeVisible()
-      await expect(page.locator('#pr-otp-overlay')).toBeVisible()
-      await expect(page.locator('#pr-mode-overlay')).toBeHidden()
+      await expect(page.locator('#pr-booking-confirm')).toHaveCount(0)
     })
 
     test('a joinable shared match is distinguished from a free court', async ({ page }) => {
@@ -355,16 +423,8 @@ for (const [label, viewport] of [
 
       // Opening it offers joining the share, not taking the whole court.
       await share.click()
-      const otp = page.locator('#pr-otp-overlay')
-      if (await otp.isVisible()) {
-        await page.locator('#pr-otp-phone').fill('+21622000000')
-        await page.getByRole('button', { name: /Send code/ }).click()
-        await page.locator('#pr-otp-code').fill('123456')
-        await page.getByRole('button', { name: /Verify/ }).click()
-      }
-      await expect(page.locator('#pr-mode-overlay')).toBeVisible()
-      await expect(page.locator('#pr-mode-heading')).toHaveText('Join this match')
-      await expect(page.locator('#pr-mode-full')).toBeHidden()
+      await expect(page.locator('#pr-booking-heading')).toHaveText('Join this match')
+      await expect(page.locator('#pr-mode-full')).toHaveCount(0)
       await expect(page.locator('#pr-mode-share')).toBeVisible()
     })
 

@@ -54,8 +54,12 @@ export default function CheckoutPage() {
         paymentMethod: pay,
         contact: { name, phone, email: '' },
         discountCode: null,
+        // Each line names what it is, so the server can price it from its own
+        // catalogue. A line that references nothing sellable is refused — the
+        // browser is not allowed to set a price.
         items: items.map(it => ({
-          productId: it.id.includes('|') ? null : it.id,
+          productId: it.kind === 'product' ? it.id : null,
+          packTypeId: it.kind === 'pack' ? it.id : null,
           productName: it.name,
           qty: it.quantity,
           size: it.variant ?? null,

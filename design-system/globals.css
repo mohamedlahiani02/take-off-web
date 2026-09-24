@@ -100,3 +100,63 @@
     transform: translateY(-14px);
   }
 }
+
+/* ── Booking calendars ──────────────────────────────────────────────────
+   Ported from the prototype stylesheet when the padel and pilates
+   calendars moved to TSX. Sizes are rem/% so the grid scales with the
+   viewport and the reader's font size; the grid itself scrolls sideways on
+   a narrow screen rather than squeezing the cells below a usable size. */
+.pr-grid-header-cell {
+  border-bottom: 1px solid rgb(196 239 63 / 0.1);
+}
+.pr-grid-header-cell.today {
+  border-bottom-color: rgb(196 239 63 / 0.6);
+}
+.pr-slot {
+  min-height: 2.75rem;
+}
+.pr-slot-inner {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  border-radius: 0.35rem;
+  font-size: 0.7rem;
+}
+.pr-slot-free {
+  border: 1px solid rgb(196 239 63 / 0.28);
+  background: rgb(196 239 63 / 0.05);
+  color: var(--color-lime);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.pr-slot-free:hover {
+  background: rgb(196 239 63 / 0.16);
+  border-color: rgb(196 239 63 / 0.6);
+}
+.pr-slot-share-open {
+  border: 1px solid rgb(196 239 63 / 0.55);
+  background: rgb(196 239 63 / 0.12);
+  color: var(--color-lime);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.pr-slot-share-open:hover {
+  background: rgb(196 239 63 / 0.22);
+}
+.pr-slot-share-note {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+.pr-slot-blocked {
+  background: rgb(244 245 238 / 0.04);
+  color: rgb(244 245 238 / 0.25);
+}
+.pr-slot-booked {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  border-radius: 0.35rem;
+  background: rgb(244 245 238 / 0.07);
+  color: rgb(244 245 238 / 0.6);
+}

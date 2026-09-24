@@ -53,7 +53,9 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command: `pnpm exec next dev --hostname 127.0.0.1 --port ${PORT}`,
+      // --webpack: Turbopack refuses a junctioned node_modules, which a local
+      // verification copy relies on. CI has a real tree and is unaffected.
+      command: `pnpm exec next dev --webpack --hostname 127.0.0.1 --port ${PORT}`,
       url: BASE_URL,
       reuseExistingServer: !process.env['CI'],
       timeout: 180_000,
