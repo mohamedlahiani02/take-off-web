@@ -1,7 +1,11 @@
-import { prototypeHtml } from '@/lib/prototype/serve'
+import { redirect } from 'next/navigation'
 
-export const runtime = 'nodejs'
-
-export function GET() {
-  return prototypeHtml('Take Off - Padel.dc.html')
+/**
+ * The ladder has no backend: no endpoint serves standings, no admin section
+ * manages them, and the padel page carries no ladder content either. Rather
+ * than render an invented leaderboard, this sends members to the padel page
+ * until the feature exists.
+ */
+export function GET(): never {
+  redirect('/padel')
 }

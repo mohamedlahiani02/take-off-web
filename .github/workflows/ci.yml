@@ -47,7 +47,7 @@ jobs:
       # One failing suite should not hide the others.
       fail-fast: false
       matrix:
-        suite: [calendars, account-bookings, list-pages, detail-pages]
+        suite: [calendars, account-bookings, padel-routes, list-pages, detail-pages]
     steps:
       - uses: actions/checkout@v4
 

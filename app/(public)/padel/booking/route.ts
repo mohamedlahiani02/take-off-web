@@ -1,7 +1,10 @@
-import { prototypeHtml } from '@/lib/prototype/serve'
+import { redirect } from 'next/navigation'
 
-export const runtime = 'nodejs'
-
-export function GET() {
-  return prototypeHtml('Take Off - Padel.dc.html')
+/**
+ * "Book a court" is the court calendar, which lives at /padel/reserve. This
+ * path used to return the general padel page, so the menu entry took members
+ * somewhere that could not book anything.
+ */
+export function GET(): never {
+  redirect('/padel/reserve')
 }
