@@ -2407,9 +2407,10 @@ function coachName(id){ if(!id) return null; var c=_coaches.filter(function(x){r
 async function loadSessions() {
   var ww = weekWindow(_classDate);
   var days = [];
+  // ww.startDate is a club-day key (string), not a Date — club-time.js changed
+  // this when timezone handling was centralised, and this call site was missed.
   for (var i = 0; i < 7; i++) {
-    var dd = new Date(ww.startDate.getTime() + i * 86400000);
-    var _k = ClubTime.dayKey(dd.toISOString());
+    var _k = ClubTime.shiftDay(ww.startDate, i);
     days.push({ iso: _k, label: ClubTime.dayLabel(_k) });
   }
   try {
