@@ -194,12 +194,18 @@ async function gotoCalendar(page: Page, kind: 'pr' | 'pc') {
   await expect.poll(async () => (await dayNumbers(page, kind)).length, { timeout: BOOT_TIMEOUT }).toBe(7)
 }
 
+/**
+ * Both viewports in two timezones. Africa/Tunis is the club's own; Europe/Paris
+ * is an hour ahead in summer, which is where a grid keyed on the browser's
+ * clock puts a booking on a row that does not exist — and so shows nothing.
+ */
 for (const [label, viewport] of [
   ['desktop', { width: 1440, height: 1000 }],
   ['mobile', devices['Pixel 5'].viewport!],
-] as const) {
-  test.describe(`${label} — padel reserve`, () => {
-    test.use({ viewport, timezoneId: 'Africa/Tunis' })
+] as const)
+for (const tz of ['Africa/Tunis', 'Europe/Paris'] as const) {
+  test.describe(`${label}/${tz} — padel reserve`, () => {
+    test.use({ viewport, timezoneId: tz })
 
     test('week controls move the week, repaint dates and refetch availability', async ({ page }) => {
       const rec = await installApi(page)
@@ -445,8 +451,8 @@ for (const [label, viewport] of [
     })
   })
 
-  test.describe(`${label} — pilates classes`, () => {
-    test.use({ viewport, timezoneId: 'Africa/Tunis' })
+  test.describe(`${label}/${tz} — pilates classes`, () => {
+    test.use({ viewport, timezoneId: tz })
 
     test('week controls move the week, repaint dates and refetch the schedule', async ({ page }) => {
       const rec = await installApi(page)

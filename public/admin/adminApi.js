@@ -3,13 +3,16 @@
 (function () {
   if (window.adminApi) return;
 
-  var _baseUrl = (window.TAKEOFF_API_URL || '').replace(/\/$/, '');
+  /* Read on each call, never captured at load: the address arrives from
+     /api/config after this file has already been evaluated, so a snapshot
+     taken here would permanently be the empty string. */
+  function baseUrl() { return (window.TAKEOFF_API_URL || '').replace(/\/$/, ''); }
   var TOKEN_KEY = 'takeoff_admin_token';
 
   function getToken() { return sessionStorage.getItem(TOKEN_KEY); }
   function storeToken(t) { if (t) sessionStorage.setItem(TOKEN_KEY, t); }
   function clearToken() { sessionStorage.removeItem(TOKEN_KEY); }
-  function offline() { return !_baseUrl; }
+  function offline() { return !baseUrl(); }
 
   async function request(method, path, body) {
     if (offline()) throw { status: 0, message: 'No API URL configured' };
@@ -17,7 +20,7 @@
     var headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = 'Bearer ' + token;
 
-    var res = await fetch(_baseUrl + path, {
+    var res = await fetch(baseUrl() + path, {
       method: method,
       headers: headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -203,7 +206,7 @@
         var fd = new FormData();
         fd.append('file', file);
         if (folder) fd.append('folder', folder);
-        var res = await fetch(_baseUrl + '/api/v1/admin/media/upload', {
+        var res = await fetch(baseUrl() + '/api/v1/admin/media/upload', {
           method: 'POST',
           headers: token ? { 'Authorization': 'Bearer ' + token } : {},
           body: fd,

@@ -39,6 +39,12 @@ export async function proxy(path: string, init: ProxyInit = {}): Promise<NextRes
     return NextResponse.json({ error: 'Could not reach API' }, { status: 502 })
   }
 
+  // 204/304 carry no body, and NextResponse.json() would attach one — which is
+  // rejected, so a successful cancellation reached the browser as a failure.
+  if (upstream.status === 204 || upstream.status === 304) {
+    return new NextResponse(null, { status: upstream.status })
+  }
+
   const text = await upstream.text()
   let data: unknown = null
   if (text) {

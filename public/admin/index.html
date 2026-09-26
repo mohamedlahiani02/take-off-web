@@ -172,8 +172,19 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
 <body>
 
 <!-- ── API URL config ── -->
-<script>window.TAKEOFF_API_URL = 'https://take-off-api.onrender.com';</script>
-<script src="/admin/adminApi.js?v=2"></script>
+<script>
+  /* This file is served statically, so Next cannot template the API address
+     into it. Hard-coding production meant a local or preview console silently
+     drove the live backend while the member site used its own. The address is
+     fetched from /api/config before the app boots, so both consoles always
+     agree on which backend they are talking to. */
+  window.TAKEOFF_API_READY = fetch('/api/config', { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (c) { window.TAKEOFF_API_URL = (c && c.apiUrl) || ''; })
+    .catch(function () { window.TAKEOFF_API_URL = ''; });
+</script>
+<script src="/admin/club-time.js?v=1"></script>
+<script src="/admin/adminApi.js?v=3"></script>
 
 <div id="toast"></div>
 
@@ -613,9 +624,13 @@ var _bookSelectedUserId = null;
 var _bookSearchTimer = null;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
-window.addEventListener('load', function () {
+window.addEventListener('load', async function () {
   window.addEventListener('admin:unauthorized', function () { showLogin(); });
   window.addEventListener('admin:logout', function () { showLogin(); });
+
+  // The API address is fetched, so wait for it before the first request:
+  // booting without it would show "API not configured" on a healthy install.
+  try { await window.TAKEOFF_API_READY; } catch (e) {}
 
   if (window.adminApi && window.adminApi.isLoggedIn()) {
     showDashboard();
@@ -1387,7 +1402,7 @@ async function loadProfileCourtHistory() {
     if (!list.length) { panel.innerHTML = '<p style="color:var(--muted);">No court bookings found.</p>'; return; }
     var rows = list.map(function(b){
       return '<tr>' +
-        '<td>'+new Date(b.startsAt).toLocaleDateString()+'</td>' +
+        '<td>'+ClubTime.dayLabel(ClubTime.dayKey(b.startsAt))+'</td>' +
         '<td style="font-family:Space Mono;font-size:11px;">'+fmtTime(b.startsAt)+'</td>' +
         '<td>'+esc(b.courtName)+'</td>' +
         '<td>'+esc(b.mode)+'</td>' +
@@ -1438,15 +1453,14 @@ function toggleBlock(id, name, block) {
 // ════════════════════════════════════════════════════════════════════════════
 // COURT CALENDAR (Epic C)
 // ════════════════════════════════════════════════════════════════════════════
-function todayStr() { var d = new Date(); return d.toISOString().slice(0, 10); }
+/* All calendar arithmetic runs in club time (see club-time.js): the browser's
+   zone must not decide which day or row a booking belongs to. */
+function todayStr() { return ClubTime.todayKey(); }
 
-function dayWindow(dateStr) {
-  var start = new Date(dateStr + 'T00:00:00');
-  var end = new Date(start.getTime() + 24 * 3600 * 1000);
-  return { from: start.toISOString(), to: end.toISOString() };
-}
-function localToIso(dateStr, timeStr) { return new Date(dateStr + 'T' + timeStr + ':00').toISOString(); }
-function fmtTime(iso) { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+function dayWindow(dateStr) { return ClubTime.dayWindow(dateStr); }
+/* A time typed by staff is a club wall-clock time, wherever they are. */
+function localToIso(dateStr, timeStr) { return ClubTime.instantOf(dateStr, timeStr).toISOString(); }
+function fmtTime(iso) { return ClubTime.timeKey(iso); }
 
 var CAL_SLOTS = ['07:00','08:30','10:00','11:30','13:00','14:30','16:00','17:30','19:00','20:30','22:00','23:00'];
 function renderCourts() {
@@ -1489,16 +1503,12 @@ function setCalView(v) {
 
 function changeCalDate(d) { _calDate = d; var el = document.getElementById('cal-date'); if (el) el.value = d; loadCalendar(); }
 function shiftCalDate(delta) {
-  var d = new Date(_calDate + 'T00:00:00');
-  d.setDate(d.getDate() + (_calView === 'week' ? delta * 7 : delta));
-  changeCalDate(d.toISOString().slice(0, 10));
+  changeCalDate(ClubTime.shiftDay(_calDate, _calView === 'week' ? delta * 7 : delta));
 }
 function weekWindow(dateStr) {
-  var d = new Date(dateStr + 'T00:00:00');
-  var dow = d.getDay(); // 0=Sun
-  var mon = new Date(d.getTime() - ((dow === 0 ? 6 : dow - 1) * 86400000));
-  var sun = new Date(mon.getTime() + 7 * 86400000);
-  return { from: mon.toISOString(), to: sun.toISOString(), startDate: mon };
+  /* startDate is a club day key, not a Date: handing callers a Date invites a
+     getDay()/toISOString() round-trip that drifts by a day near midnight. */
+  return ClubTime.weekWindow(ClubTime.weekStart(dateStr));
 }
 
 async function loadCalendar() {
@@ -1548,13 +1558,11 @@ function slotToMinutes(slot) {
   var parts = slot.split(':');
   return parseInt(parts[0]) * 60 + parseInt(parts[1]);
 }
-function isoToLocalSlot(iso) {
-  var d = new Date(iso);
-  var h = d.getHours().toString().padStart(2,'0');
-  var m = d.getMinutes().toString().padStart(2,'0');
-  return h + ':' + m;
-}
-function isoDateStr(iso) { return new Date(iso).toISOString().slice(0,10); }
+/* The grid row a booking belongs to, in club time. getHours() put the same
+   booking on different rows for staff in different countries — and on no row
+   at all when the shifted hour was not in CAL_SLOTS. */
+function isoToLocalSlot(iso) { return ClubTime.timeKey(iso); }
+function isoDateStr(iso) { return ClubTime.dayKey(iso); }
 
 function calClickSlot(dateStr, slotTime, courtId) {
   openBookModal(dateStr, slotTime, courtId);
@@ -1569,7 +1577,7 @@ async function showReceivables() {
         '<td>'+esc(r.userName||'—')+'<div style="font-family:Space Mono;font-size:10px;color:var(--muted);">'+esc(r.phone||'')+'</div></td>' +
         '<td style="color:#f87171;font-weight:700;">'+Number(r.totalDueDt).toFixed(0)+' DT</td>' +
         '<td>'+r.unpaidCount+'</td>' +
-        '<td style="font-size:11px;color:var(--muted);">'+(r.oldestDue?new Date(r.oldestDue).toLocaleDateString():'—')+'</td>' +
+        '<td style="font-size:11px;color:var(--muted);">'+(r.oldestDue?ClubTime.dayLabel(ClubTime.dayKey(r.oldestDue)):'—')+'</td>' +
         '<td>'+(r.noShowCount?'<span style="color:#f87171;">'+r.noShowCount+'</span>':'0')+'</td></tr>';
     }).join('');
     var body = list.length
@@ -1622,8 +1630,8 @@ function renderCalendarWeek(wrap, courts) {
   var ww = weekWindow(_calDate);
   var days = [];
   for (var i = 0; i < 7; i++) {
-    var d = new Date(ww.startDate.getTime() + i * 86400000);
-    days.push({ iso: d.toISOString().slice(0,10), label: d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) });
+    var key = ClubTime.shiftDay(ww.startDate, i);
+    days.push({ iso: key, label: ClubTime.dayLabel(key) });
   }
   var DAYS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
   var colCount = days.length + 1;
@@ -1681,7 +1689,7 @@ function renderCalendarDay(wrap, courts) {
   var colCount = courts.length + 1;
   var gridStyle = 'display:grid;grid-template-columns:54px repeat('+courts.length+',1fr);border:1px solid var(--border);border-radius:12px;overflow:hidden;';
   var headerHtml = '<div style="background:var(--navy3);border-bottom:1px solid var(--border);padding:8px 4px;text-align:center;font-size:11px;color:var(--muted);">' +
-    new Date(_calDate+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'</div>' +
+    ClubTime.dayLabel(_calDate)+'</div>' +
     courts.map(function(c){
       return '<div style="background:var(--navy3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:8px 4px;text-align:center;font-family:Space Mono;font-size:10px;color:var(--muted);">'+esc(c.name)+'</div>';
     }).join('');
@@ -2082,12 +2090,16 @@ function sel(label, id, options, val) {
   }).join('');
   return '<div class="form-group"><label>' + label + '</label><select id="' + id + '">' + opts + '</select></div>';
 }
-function dtLocal(iso) { // ISO → value for datetime-local input
+function dtLocal(iso) { // ISO → value for a datetime-local input, in club time
   if (!iso) return '';
-  var d = new Date(iso); var p = function (n) { return String(n).padStart(2, '0'); };
-  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+  return ClubTime.dayKey(iso) + 'T' + ClubTime.timeKey(iso);
 }
-function isoFromLocal(id) { var v = gv(id); return v ? new Date(v).toISOString() : null; }
+function isoFromLocal(id) {
+  var v = gv(id);
+  if (!v) return null;
+  var parts = v.split('T');
+  return ClubTime.instantOf(parts[0], (parts[1] || '00:00').slice(0, 5)).toISOString();
+}
 
 // ── Reusable image uploader (Cloudinary) ──
 var _imgLists = {};
@@ -2387,7 +2399,7 @@ async function renderClasses() {
     '<div id="sessions-wrap"><div class="loading"><div class="spinner"></div>Loading…</div></div>';
   loadSessions();
 }
-function shiftClassDate(d){ var x=new Date(_classDate+'T00:00:00'); x.setDate(x.getDate()+d); _classDate=x.toISOString().slice(0,10); var el=document.getElementById('cls-date'); if(el)el.value=_classDate; loadSessions(); }
+function shiftClassDate(d){ _classDate=ClubTime.shiftDay(_classDate, d); var el=document.getElementById('cls-date'); if(el)el.value=_classDate; loadSessions(); }
 function classTypeName(id){ var t=_classTypes.filter(function(x){return x.id===id;})[0]; return t?t.name:'—'; }
 function classTypeLevel(id){ var t=_classTypes.filter(function(x){return x.id===id;})[0]; return t?t.level:null; }
 function coachName(id){ if(!id) return null; var c=_coaches.filter(function(x){return x.id===id;})[0]; return c?c.firstName+' '+c.lastName:null; }
@@ -2397,7 +2409,8 @@ async function loadSessions() {
   var days = [];
   for (var i = 0; i < 7; i++) {
     var dd = new Date(ww.startDate.getTime() + i * 86400000);
-    days.push({ iso: dd.toISOString().slice(0,10), label: dd.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) });
+    var _k = ClubTime.dayKey(dd.toISOString());
+    days.push({ iso: _k, label: ClubTime.dayLabel(_k) });
   }
   try {
     var list = (_classSessions = await window.adminApi.classes.sessions(ww.from, ww.to) || []);
@@ -2413,7 +2426,7 @@ async function loadSessions() {
       var dayCells = days.map(function(d) {
         // Cancelled sessions never occupy the live grid (US-2.3) — visible only via the toggle.
         var sessions = list.filter(function(sd){
-          var h = new Date(sd.session.startsAt).getHours().toString().padStart(2,'0');
+          var h = ClubTime.timeKey(sd.session.startsAt).slice(0, 2);
           return isoDateStr(sd.session.startsAt)===d.iso && h===hr &&
             (sd.session.status !== 'CANCELLED' || _showCancelledSessions);
         });
@@ -3407,7 +3420,7 @@ function expenseForm(e) {
   var catOpts = EXP_CATS.map(function(c){ return {v:c, t:c}; });
   var body =
     '<input type="hidden" id="exp-id" value="' + (e ? e.id : '') + '">' +
-    '<div class="form-row">' + fld('DATE','exp-date','date', e ? e.date : new Date().toISOString().slice(0,10)) + sel('CATEGORY','exp-cat', catOpts, e ? e.category : 'OTHER') + '</div>' +
+    '<div class="form-row">' + fld('DATE','exp-date','date', e ? e.date : ClubTime.todayKey()) + sel('CATEGORY','exp-cat', catOpts, e ? e.category : 'OTHER') + '</div>' +
     '<div class="form-row">' + fld('AMOUNT (DT)','exp-amt','number', e ? e.amountDt : '') + fld('SUPPLIER','exp-sup','text', e ? (e.supplier || '') : '') + '</div>' +
     '<div class="form-row full"><div class="form-group"><label>NOTES</label><textarea id="exp-notes">' + esc(e ? (e.notes || '') : '') + '</textarea></div></div>';
   openGenModal(e ? 'Edit expense' : 'Add expense', body, 'Save', async function() {
