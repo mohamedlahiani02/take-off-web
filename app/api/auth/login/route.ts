@@ -1,15 +1,11 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
+import { apiBase } from '@/lib/api/base'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
-
-  const apiBase = (process.env['API_URL'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? '').replace(/\/$/, '')
-  if (!apiBase) {
-    return NextResponse.json({ error: 'API not configured' }, { status: 503 })
-  }
 
   // Determine which backend endpoint to call
   let upstreamPath: string
@@ -25,9 +21,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'phone and code are required' }, { status: 400 })
   }
 
+  // apiBase() always resolves — it falls back to the production API instead of
+  // returning empty, so a missing env var on this deployment never turns into a
+  // fake "API not configured" refusal.
   let upstream: Response
   try {
-    upstream = await fetch(`${apiBase}${upstreamPath}`, {
+    upstream = await fetch(`${apiBase()}${upstreamPath}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(upstreamBody),
