@@ -184,7 +184,7 @@ tbody td { padding: 12px 16px; vertical-align: middle; font-size: 13px; }
     .catch(function () { window.TAKEOFF_API_URL = ''; });
 </script>
 <script src="/admin/club-time.js?v=1"></script>
-<script src="/admin/adminApi.js?v=3"></script>
+<script src="/admin/adminApi.js?v=4"></script>
 
 <div id="toast"></div>
 
@@ -1615,8 +1615,12 @@ function bookingCardHtml(b, courtLabel) {
       '<div style="color:#fca5a5;font-size:10px;">CANCELLED</div></div>';
   }
   var st = PAY_STATE_STYLES[b.paymentState] || PAY_STATE_STYLES.UNPAID;
-  var chip = (b.totalSlots > 1)
-    ? '<span style="font-family:Space Mono;font-size:9px;background:'+st.bg+';border:1px solid '+st.bd+';color:'+st.fg+';border-radius:999px;padding:1px 6px;margin-left:4px;">'+b.paidCount+'/'+b.totalSlots+'</span>'
+  // Real money collected vs. what the court is worth — a guest's lump cash-in
+  // has no per-seat count to show, so this reads off the actual amounts
+  // (paidCount/totalSlots used to count settled *players*, which stayed wrong
+  // forever once a payment had no player row behind it).
+  var chip = (b.paymentState === 'PARTIAL' && b.totalDueDt != null)
+    ? '<span style="font-family:Space Mono;font-size:9px;background:'+st.bg+';border:1px solid '+st.bd+';color:'+st.fg+';border-radius:999px;padding:1px 6px;margin-left:4px;">'+Number(b.totalCollectedDt||0).toFixed(0)+'/'+Number(b.totalDueDt).toFixed(0)+'</span>'
     : '';
   return '<div onclick="event.stopPropagation();showBookingDetail(\''+b.id+'\')" ' +
     'style="background:'+st.bg+';border:1px solid '+st.bd+';border-left:3px solid '+st.fg+';border-radius:6px;padding:4px 6px;margin:2px;cursor:pointer;font-size:11px;">' +
@@ -1745,14 +1749,54 @@ function renderBookingDetail(b) {
   var slots = b.totalSlots || (b.mode === 'SHARE' ? 4 : 1);
   var st = PAY_STATE_STYLES[b.paymentState] || PAY_STATE_STYLES.UNPAID;
 
+  var totalDue = Number(b.totalDueDt != null ? b.totalDueDt : b.priceDt);
+  var totalCollected = Number(b.totalCollectedDt != null ? b.totalCollectedDt : 0);
+  var remaining = Math.max(totalDue - totalCollected, 0);
   var body = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
     '<div><div class="kicker">COURT</div><div>'+esc(courtName)+'</div></div>' +
     '<div><div class="kicker">TIME</div><div>'+fmtTime(b.startsAt)+' – '+fmtTime(b.endsAt)+'</div></div>' +
     '<div><div class="kicker">ORGANIZER</div><div>'+(b.userName ? esc(b.userName) : '<span style="color:var(--muted)">—</span>')+'</div></div>' +
     '<div><div class="kicker">MODE</div><div>'+esc(b.mode)+' — '+Number(b.priceDt).toFixed(0)+' DT'+(b.mode==='SHARE'?'/joueur':'')+'</div></div>' +
-    '<div><div class="kicker">PAYMENT</div><div style="color:'+st.fg+';font-weight:700;">'+b.paymentState+(slots>1?' ('+b.paidCount+'/'+slots+')':'')+'</div></div>' +
+    '<div><div class="kicker">PAYMENT</div><div style="color:'+st.fg+';font-weight:700;">'+b.paymentState+'</div></div>' +
     '<div><div class="kicker">BOOKING STATUS</div><div>'+bookingStatusBadge(b.status)+'</div></div>' +
     '</div>';
+
+  // ── Money actually collected (US: encaissement invité) ──
+  body += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;padding:10px;background:var(--surface);border-radius:8px;">' +
+    '<div><div class="kicker">TOTAL COURT</div><div>'+totalDue.toFixed(3)+' DT</div></div>' +
+    '<div><div class="kicker">ENCAISSÉ</div><div style="color:var(--lime);">'+totalCollected.toFixed(3)+' DT</div></div>' +
+    '<div><div class="kicker">RESTE DÛ</div><div style="color:'+(remaining>0?'#f87171':'var(--lime)')+';">'+remaining.toFixed(3)+' DT</div></div>' +
+    '</div>';
+
+  var gpays = b.guestPayments || [];
+  if (gpays.length > 0) {
+    body += '<div class="kicker" style="margin-bottom:6px;">ENCAISSEMENTS INVITÉS</div>';
+    gpays.forEach(function(gp) {
+      body += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;'+(gp.voided?'opacity:.45;':'')+'">' +
+        '<span>'+Number(gp.amountDt).toFixed(3)+' DT — '+esc(gp.method)+(gp.payerName?' ('+esc(gp.payerName)+')':'')+
+          (gp.coveredSeats>0?' · '+gp.coveredSeats+' place(s)':'')+(gp.voided?' · ANNULÉ':'')+'</span>' +
+        (live && !gp.voided ? '<button class="btn-icon danger" style="font-size:11px;" onclick="voidGuestPayment(&quot;'+b.id+'&quot;,&quot;'+gp.id+'&quot;)">Annuler</button>' : '') +
+        '</div>';
+    });
+  }
+
+  if (live && remaining > 0) {
+    body += '<div style="margin-top:10px;margin-bottom:14px;padding:10px;border:1px dashed var(--border);border-radius:8px;">' +
+      '<div class="kicker" style="margin-bottom:6px;">ENCAISSER UN INVITÉ</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">' +
+      '<input id="gp-amount" type="number" step="0.001" max="'+remaining.toFixed(3)+'" placeholder="Montant (max '+remaining.toFixed(3)+')" ' +
+        'style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">' +
+      '<select id="gp-method" style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">' +
+        '<option value="CASH">Espèces</option><option value="CARD">Carte</option><option value="D17">D17</option></select>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">' +
+      '<input id="gp-name" placeholder="Nom (facultatif)" style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">' +
+      (b.mode==='SHARE' ? '<input id="gp-seats" type="number" min="0" step="1" placeholder="Places couvertes" style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">' : '<input type="hidden" id="gp-seats" value="0">') +
+      '</div>' +
+      '<input id="gp-ref" placeholder="Référence (facultatif)" style="width:100%;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);box-sizing:border-box;margin-bottom:8px;">' +
+      '<button class="btn-sm btn-lime" onclick="addGuestPayment(&quot;'+b.id+'&quot;)">Encaisser</button>' +
+      '</div>';
+  }
 
   // ── Participant slots (US-1.2) ──
   body += '<hr style="border:none;border-top:1px solid var(--border);margin:4px 0 12px;">';
@@ -1881,6 +1925,34 @@ async function coverAllParticipants(bookingId) {
   try {
     var b = await window.adminApi.courts.coverAll(bookingId);
     toast('Terrain entièrement payé par l\'organisateur.', 'success');
+    renderBookingDetail(b); loadCalendar();
+  } catch(e) { toast(e.message || 'Échec.', 'error'); }
+}
+
+// ── Guest cash-in: money collected with no named seat behind it ──
+async function addGuestPayment(bookingId) {
+  var amountEl = document.getElementById('gp-amount');
+  var amount = parseFloat(amountEl ? amountEl.value : '');
+  if (!amount || amount <= 0) { toast('Montant invalide.', 'error'); return; }
+  var method = document.getElementById('gp-method').value;
+  var name = (document.getElementById('gp-name').value || '').trim();
+  var seatsEl = document.getElementById('gp-seats');
+  var seats = seatsEl ? (parseInt(seatsEl.value, 10) || 0) : 0;
+  var ref = (document.getElementById('gp-ref').value || '').trim();
+  try {
+    var b = await window.adminApi.courts.addGuestPayment(bookingId, {
+      amountDt: amount, method: method, payerName: name || null, coveredSeats: seats, reference: ref || null,
+    });
+    toast('Encaissement enregistré.', 'success');
+    renderBookingDetail(b); loadCalendar();
+  } catch(e) { toast(e.message || 'Échec.', 'error'); }
+}
+async function voidGuestPayment(bookingId, paymentId) {
+  var reason = prompt('Motif de l\'annulation de cet encaissement :');
+  if (!reason || !reason.trim()) { return; }
+  try {
+    var b = await window.adminApi.courts.voidGuestPayment(bookingId, paymentId, { reason: reason.trim() });
+    toast('Encaissement annulé.', 'success');
     renderBookingDetail(b); loadCalendar();
   } catch(e) { toast(e.message || 'Échec.', 'error'); }
 }
