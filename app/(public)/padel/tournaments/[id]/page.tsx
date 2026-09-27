@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getTournament } from '@/lib/api/public'
 import { idFromSegment } from '@/lib/slug'
 import { DetailShell, Fact, Unavailable } from '@/components/public/detail-shell'
+import { TournamentRegisterForm } from '@/components/tournaments/register-form'
 
 interface Params {
   params: Promise<{ id: string }>
@@ -57,7 +57,10 @@ export default async function TournamentPage({ params }: Params) {
   const deadlinePassed = t.registrationDeadline
     ? new Date(t.registrationDeadline).getTime() < Date.now()
     : false
-  const closed = t.status === 'CANCELLED' || t.status === 'COMPLETED' || deadlinePassed || remaining === 0
+  // TournamentStatus is DRAFT | PUBLISHED | REGISTRATION_OPEN |
+  // REGISTRATION_CLOSED | ONGOING | FINISHED — there is no cancelled state.
+  const open = t.status === 'REGISTRATION_OPEN'
+  const closed = !open || deadlinePassed || remaining === 0
 
   return (
     <DetailShell eyebrow={t.category ?? 'Tournoi'} title={t.title} {...BACK}>
@@ -111,21 +114,18 @@ export default async function TournamentPage({ params }: Params) {
 
             {closed ? (
               <p className="mt-6 rounded-[0.5rem] bg-white/5 px-4 py-3 font-mono text-[0.65rem] leading-relaxed tracking-[0.1em] text-white/55">
-                {t.status === 'CANCELLED'
-                  ? 'CE TOURNOI A ÉTÉ ANNULÉ.'
-                  : t.status === 'COMPLETED'
-                    ? 'CE TOURNOI EST TERMINÉ.'
+                {t.status === 'FINISHED'
+                  ? 'CE TOURNOI EST TERMINÉ.'
+                  : t.status === 'ONGOING'
+                    ? 'CE TOURNOI EST EN COURS.'
                     : remaining === 0
                       ? 'PLUS AUCUNE PLACE DISPONIBLE.'
                       : 'LES INSCRIPTIONS SONT CLOSES.'}
               </p>
             ) : (
-              <Link
-                href="/padel/tournaments"
-                className="mt-6 block w-full rounded-full bg-lime py-4 text-center text-[0.9rem] font-bold text-navy"
-              >
-                S’inscrire
-              </Link>
+              <div className="mt-6">
+                <TournamentRegisterForm tournament={t} />
+              </div>
             )}
 
             <p className="mt-4 font-mono text-[0.6rem] leading-relaxed tracking-[0.1em] text-white/30">

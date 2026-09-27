@@ -7,6 +7,7 @@ const SIDEBAR_LINKS = [
   { href: '/account/bookings', label: 'Bookings' },
   { href: '/account/packs', label: 'Packs' },
   { href: '/account/matches', label: 'Matches' },
+  { href: '/account/tournaments', label: 'Tournaments' },
   { href: '/account/orders', label: 'Orders' },
   { href: '/account/profile', label: 'Profile' },
 ] as const

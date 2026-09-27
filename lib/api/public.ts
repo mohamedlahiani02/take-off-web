@@ -50,6 +50,8 @@ export interface PublicTournament {
   maxParticipants?: number | null
   registrationDeadline?: string | null
   currentRegistrations?: number
+  paymentRule?: 'ONLINE' | 'AT_CLUB' | 'BOTH'
+  registrationMode?: 'OPEN' | 'MEMBERS_ONLY' | 'INVITATION_ONLY'
 }
 
 /**
