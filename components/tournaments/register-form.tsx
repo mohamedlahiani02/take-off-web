@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/lib/auth/client'
+import { InlineSignIn } from '@/components/auth/inline-signin'
 import type { PublicTournament } from '@/lib/api/public'
 
 interface FieldDto {
@@ -201,14 +202,7 @@ export function TournamentRegisterForm({ tournament }: { tournament: PublicTourn
   }
 
   if (step === 'signin') {
-    return (
-      <TournamentSignIn
-        onVerified={() => {
-          setStep('recap')
-        }}
-        onBack={() => setStep('recap')}
-      />
-    )
+    return <InlineSignIn onVerified={() => setStep('recap')} onBack={() => setStep('recap')} />
   }
 
   if (step === 'recap') {
@@ -428,140 +422,6 @@ function TournamentField({
         />
       )}
       {field.helpText && <p className="mt-1 text-[0.68rem] text-white/40">{field.helpText}</p>}
-    </div>
-  )
-}
-
-/** Minimal inline phone+OTP, reusing the same Next proxies as the padel
- *  booking flow so this shares the one common session. */
-function TournamentSignIn({ onVerified, onBack }: { onVerified: () => void; onBack: () => void }) {
-  const { refresh } = useAuth()
-  const [phase, setPhase] = useState<'phone' | 'name' | 'code'>('phone')
-  const [phone, setPhone] = useState('')
-  const [name, setName] = useState('')
-  const [code, setCode] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-
-  const sendCode = useCallback(async () => {
-    if (!phone.trim()) {
-      setError('Entrez votre numéro de téléphone.')
-      return
-    }
-    setBusy(true)
-    setError('')
-    try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone.trim() }),
-      })
-      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
-      if (!res.ok) {
-        setError((data['detail'] as string) ?? 'Échec de l’envoi du code.')
-        return
-      }
-      setPhase(data['isNewUser'] === false ? 'code' : 'name')
-    } catch {
-      setError('Erreur réseau.')
-    } finally {
-      setBusy(false)
-    }
-  }, [phone])
-
-  const verify = useCallback(async () => {
-    if (!code.trim()) {
-      setError('Entrez le code reçu.')
-      return
-    }
-    setBusy(true)
-    setError('')
-    try {
-      const body: Record<string, string> = { phone: phone.trim(), code: code.trim() }
-      if (name.trim()) body['name'] = name.trim()
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
-        setError((data['detail'] as string) ?? 'Code invalide.')
-        return
-      }
-      await refresh()
-      onVerified()
-    } catch {
-      setError('Erreur réseau.')
-    } finally {
-      setBusy(false)
-    }
-  }, [code, phone, name, refresh, onVerified])
-
-  return (
-    <div className="rounded-card bg-card-navy p-5 sm:p-6">
-      <p className="font-mono text-[0.65rem] tracking-[0.22em] text-white/40 uppercase">Connexion</p>
-      <p className="mt-1 text-[0.8rem] text-white/60">Connectez-vous pour finaliser votre inscription.</p>
-
-      {phase === 'phone' && (
-        <div className="mt-3">
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+216 ..."
-            className="w-full rounded-[0.4rem] border border-white/15 bg-transparent px-3 py-2 text-[0.85rem] text-white outline-none focus:border-lime"
-          />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void sendCode()}
-            className="mt-3 w-full rounded-full bg-lime py-3 text-[0.85rem] font-bold text-navy disabled:opacity-40"
-          >
-            {busy ? '…' : 'Recevoir le code'}
-          </button>
-        </div>
-      )}
-      {phase === 'name' && (
-        <div className="mt-3">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Votre nom"
-            className="w-full rounded-[0.4rem] border border-white/15 bg-transparent px-3 py-2 text-[0.85rem] text-white outline-none focus:border-lime"
-          />
-          <button
-            type="button"
-            onClick={() => setPhase('code')}
-            className="mt-3 w-full rounded-full bg-lime py-3 text-[0.85rem] font-bold text-navy"
-          >
-            Continuer
-          </button>
-        </div>
-      )}
-      {phase === 'code' && (
-        <div className="mt-3">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Code reçu"
-            className="w-full rounded-[0.4rem] border border-white/15 bg-transparent px-3 py-2 text-[0.85rem] text-white outline-none focus:border-lime"
-          />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void verify()}
-            className="mt-3 w-full rounded-full bg-lime py-3 text-[0.85rem] font-bold text-navy disabled:opacity-40"
-          >
-            {busy ? '…' : 'Vérifier'}
-          </button>
-        </div>
-      )}
-
-      {error && <p className="mt-3 text-[0.78rem] text-red-400">{error}</p>}
-
-      <button type="button" onClick={onBack} className="mt-4 font-mono text-[0.62rem] tracking-[0.1em] text-white/40">
-        ← RETOUR
-      </button>
     </div>
   )
 }
