@@ -1781,6 +1781,14 @@ function renderBookingDetail(b) {
   }
 
   if (live && remaining > 0) {
+    // Fresh idempotency key per render of this form, i.e. per genuine new
+    // admin action: a double-click on "Encaisser" before the response comes
+    // back re-reads this same hidden field (no re-render has happened yet),
+    // so both clicks carry the SAME key and the backend collapses them into
+    // one payment. Once the request succeeds, renderBookingDetail() rebuilds
+    // this whole block with a new key for whatever the admin does next.
+    var gpIdemKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() :
+      (Date.now().toString(36) + Math.random().toString(36).slice(2));
     body += '<div style="margin-top:10px;margin-bottom:14px;padding:10px;border:1px dashed var(--border);border-radius:8px;">' +
       '<div class="kicker" style="margin-bottom:6px;">ENCAISSER UN INVITÉ</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">' +
@@ -1794,7 +1802,8 @@ function renderBookingDetail(b) {
       (b.mode==='SHARE' ? '<input id="gp-seats" type="number" min="0" step="1" placeholder="Places couvertes" style="padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);">' : '<input type="hidden" id="gp-seats" value="0">') +
       '</div>' +
       '<input id="gp-ref" placeholder="Référence (facultatif)" style="width:100%;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);box-sizing:border-box;margin-bottom:8px;">' +
-      '<button class="btn-sm btn-lime" onclick="addGuestPayment(&quot;'+b.id+'&quot;)">Encaisser</button>' +
+      '<input type="hidden" id="gp-idem" value="'+gpIdemKey+'">' +
+      '<button id="gp-submit-btn" class="btn-sm btn-lime" onclick="addGuestPayment(&quot;'+b.id+'&quot;)">Encaisser</button>' +
       '</div>';
   }
 
@@ -1939,13 +1948,27 @@ async function addGuestPayment(bookingId) {
   var seatsEl = document.getElementById('gp-seats');
   var seats = seatsEl ? (parseInt(seatsEl.value, 10) || 0) : 0;
   var ref = (document.getElementById('gp-ref').value || '').trim();
+  var idemEl = document.getElementById('gp-idem');
+  // Reused as-is on every call while this form render is still on screen, so
+  // a double-click (or a retry of this same in-flight request) replays the
+  // SAME key — the backend then returns the existing payment instead of
+  // billing twice. A genuinely new "Encaisser" action only gets a fresh key
+  // because renderBookingDetail() below rebuilds this whole block with one.
+  var idemKey = idemEl ? idemEl.value : '';
+  var btn = document.getElementById('gp-submit-btn');
+  if (btn && btn.disabled) return; // already in flight with this same key
+  if (btn) btn.disabled = true;
   try {
     var b = await window.adminApi.courts.addGuestPayment(bookingId, {
       amountDt: amount, method: method, payerName: name || null, coveredSeats: seats, reference: ref || null,
+      idempotencyKey: idemKey,
     });
     toast('Encaissement enregistré.', 'success');
     renderBookingDetail(b); loadCalendar();
-  } catch(e) { toast(e.message || 'Échec.', 'error'); }
+  } catch(e) {
+    toast(e.message || 'Échec.', 'error');
+    if (btn) btn.disabled = false; // let the admin retry the same action/key after a real failure
+  }
 }
 async function voidGuestPayment(bookingId, paymentId) {
   var reason = prompt('Motif de l\'annulation de cet encaissement :');

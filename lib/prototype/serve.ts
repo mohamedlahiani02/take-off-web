@@ -51,7 +51,11 @@ export async function prototypeAsset(segments: string[]) {
     return new Response('Not found', { status: 404 })
   }
 
-  const body = await fs.readFile(filePath)
+  // filePath is already root-confined by resolvePrototypePath (segment
+  // validation + path.relative check below), so this fs access can't
+  // escape prototypeRoot. Turbopack can't see that statically, hence the
+  // ignore comment rather than a path-traversal fix.
+  const body = await fs.readFile(/*turbopackIgnore: true*/ filePath)
   const ext = path.extname(filePath).toLowerCase()
   // JS files get a short TTL so updated scripts are picked up within a day;
   // static assets (images, fonts) stay cached for a year.
@@ -100,12 +104,19 @@ async function resolvePrototypePath(segments: string[]) {
       return null
     }
 
-    const entries = await fs.readdir(current, { withFileTypes: true })
+    // `current` is always a descendant of the static prototypeRoot at this
+    // point (built up one validated segment at a time below), so this read
+    // never leaves the prototype directory. Turbopack's static analyzer
+    // can't verify that across the loop, hence the ignore comment.
+    const entries = await fs.readdir(/*turbopackIgnore: true*/ current, { withFileTypes: true })
     const match = entries.find((entry) => entry.name.toLowerCase() === segment.toLowerCase())
 
     if (!match) return null
 
-    current = path.join(current, match.name)
+    // match.name comes from the real directory listing above (never from
+    // raw user input), so this join can only produce a path inside
+    // `current`, which is itself confined to prototypeRoot.
+    current = path.join(/*turbopackIgnore: true*/ current, match.name)
   }
 
   const relative = path.relative(prototypeRoot, current)
@@ -114,7 +125,9 @@ async function resolvePrototypePath(segments: string[]) {
     return null
   }
 
-  const stat = await fs.stat(current)
+  // Belt-and-suspenders: the relative-path check above already guarantees
+  // `current` is inside prototypeRoot before this stat runs.
+  const stat = await fs.stat(/*turbopackIgnore: true*/ current)
 
   return stat.isFile() ? current : null
 }

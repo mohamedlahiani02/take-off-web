@@ -47,6 +47,10 @@ export function ClassCalendar() {
   const [selected, setSelected] = useState<PilatesSession | null>(null)
   const [busyBookingId, setBusyBookingId] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
+  // Session whose booking the member is about to cancel, pending confirmation
+  // — the member must see the policy consequence (late vs. non-late) before
+  // the DELETE actually fires, not after.
+  const [confirmCancel, setConfirmCancel] = useState<PilatesSession | null>(null)
 
   const days = weekDayKeys(weekStart)
   const today = todayKey()
@@ -145,7 +149,7 @@ export function ClassCalendar() {
       {state === 'loading' ? (
         <div className="h-[36rem] animate-pulse rounded-card bg-white" />
       ) : state === 'error' ? (
-        <div className="rounded-card bg-white p-5 text-center">
+        <div id="pl-outage" className="rounded-card bg-white p-5 text-center">
           <p className="text-[0.85rem] text-navy-alt/60">Le planning est indisponible pour le moment.</p>
           <button
             type="button"
@@ -158,6 +162,7 @@ export function ClassCalendar() {
       ) : (
         <div className="overflow-x-auto">
           <div
+            id="pl-grid"
             className="min-w-[46rem] overflow-hidden rounded-card border border-navy-alt/10 bg-white"
             style={{ display: 'grid', gridTemplateColumns: '4.5rem repeat(7, 1fr)' }}
           >
@@ -169,7 +174,7 @@ export function ClassCalendar() {
                 <div key={d} className="border-r border-b border-navy-alt/10 bg-cream-alt px-2 py-3 text-center last:border-r-0">
                   <div className="font-mono text-[0.55rem] tracking-[0.12em] text-navy-alt/50">{DAYS_EN[dowOf(d)]}</div>
                   <div
-                    className={`mx-auto mt-1 flex h-8 w-8 items-center justify-center text-[1.05rem] font-bold ${
+                    className={`pl-grid-day-num mx-auto mt-1 flex h-8 w-8 items-center justify-center text-[1.05rem] font-bold ${
                       isToday ? 'rounded-full bg-navy-alt text-lime' : 'text-navy-alt'
                     }`}
                   >
@@ -211,18 +216,30 @@ export function ClassCalendar() {
                           spotsLabel = `${remaining}/${s.maxSpots} places`
                           spotsTone = remaining <= 2 ? 'text-amber-300' : 'text-lime'
                         }
+                        const sessionDataState = cancelled
+                          ? 'CANCELLED'
+                          : mine
+                            ? 'BOOKED'
+                            : onWaitlist
+                              ? 'WAITLIST'
+                              : remaining <= 0
+                                ? 'FULL'
+                                : 'OPEN'
                         return (
                           <button
                             key={s.id}
                             type="button"
                             disabled={cancelled}
                             data-session-id={s.id}
+                            data-state={sessionDataState}
                             onClick={() => {
                               if (!cancelled && !mine && !onWaitlist) setSelected(s)
                             }}
-                            className={`mb-1 block w-full rounded-[0.4rem] bg-navy-alt px-2 py-1.5 text-left text-cream transition hover:brightness-110 ${
-                              cancelled ? 'cursor-not-allowed opacity-50 line-through' : ''
-                            } ${mine ? 'outline outline-1 outline-lime' : ''}`}
+                            className={`pl-session-card mb-1 block w-full rounded-[0.4rem] bg-navy-alt px-2 py-1.5 text-left text-cream transition hover:brightness-110 ${
+                              cancelled ? 'pl-session-cancelled cursor-not-allowed opacity-50 line-through' : ''
+                            } ${mine ? 'pl-session-mine outline outline-1 outline-lime' : ''} ${
+                              onWaitlist ? 'pl-session-waitlist' : ''
+                            } ${!cancelled && !mine && !onWaitlist && remaining <= 0 ? 'pl-session-full' : ''}`}
                           >
                             <div className="text-[0.68rem] leading-tight font-bold">{s.className}</div>
                             {s.instructorName && (
@@ -235,7 +252,7 @@ export function ClassCalendar() {
                                 tabIndex={0}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  void cancel(s.myBookingId!)
+                                  setConfirmCancel(s)
                                 }}
                                 className="mt-0.5 inline-block font-mono text-[0.55rem] underline"
                               >
@@ -266,6 +283,92 @@ export function ClassCalendar() {
           }}
         />
       )}
+
+      {confirmCancel && (
+        <CancelBookingConfirm
+          session={confirmCancel}
+          busy={busyBookingId === confirmCancel.myBookingId}
+          onClose={() => setConfirmCancel(null)}
+          onConfirm={async () => {
+            const bookingId = confirmCancel.myBookingId!
+            setConfirmCancel(null)
+            await cancel(bookingId)
+          }}
+        />
+      )}
     </>
+  )
+}
+
+/**
+ * Cancellation-confirmation dialog for a member's own booking. Shown before
+ * the DELETE request fires, so the club's policy consequence is understood
+ * up front — never as a surprise after the fact:
+ *  - within 24h of the session (LATE_CANCEL, unchanged existing rule): no
+ *    refund and no credit at all.
+ *  - 24h or more out (not late): the wallet is NOT recredited — the member
+ *    gets a non-monetary use credit valid for a future booking instead.
+ * These are two distinct messages and must never be merged into one.
+ */
+function CancelBookingConfirm({
+  session,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  session: PilatesSession
+  busy: boolean
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  const hoursUntil = (Date.parse(session.startsAt) - Date.now()) / 3_600_000
+  const isLate = hoursUntil < 24
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div
+        id="pl-cancel-confirm-overlay"
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[90vh] w-full max-w-[26rem] overflow-y-auto rounded-t-card bg-cream p-5 sm:rounded-card sm:p-6"
+      >
+        <p className="font-mono text-[0.65rem] tracking-[0.22em] text-navy-alt/50 uppercase">Annuler la réservation</p>
+        <h3 className="mt-2 font-display text-[1.2rem] text-navy-alt">{session.className}</h3>
+
+        <div className="mt-4 rounded-[0.5rem] bg-cream-alt p-4">
+          {isLate ? (
+            <p id="pl-cancel-late-notice" className="text-[0.85rem] leading-relaxed text-navy-alt/80">
+              Cette séance commence dans moins de 24h : conformément à la politique du club, cette annulation tardive
+              ne donne droit à aucun remboursement ni crédit. Votre place sera simplement libérée.
+            </p>
+          ) : (
+            <p id="pl-cancel-use-credit-notice" className="text-[0.85rem] leading-relaxed text-navy-alt/80">
+              Votre place va être libérée. Comme cette annulation n&rsquo;est pas tardive, le montant ne sera pas
+              recrédité sur votre wallet : vous recevrez à la place un crédit d&rsquo;utilisation, valable pour
+              réserver une prochaine séance.
+            </p>
+          )}
+        </div>
+
+        <div className="mt-5 flex gap-2">
+          <button
+            type="button"
+            id="pl-cancel-confirm-back"
+            onClick={onClose}
+            className="rounded-full border border-navy-alt/25 px-4 py-3 font-mono text-[0.65rem] tracking-[0.1em] text-navy-alt/70"
+          >
+            RETOUR
+          </button>
+          <button
+            type="button"
+            id="pl-cancel-confirm-submit"
+            disabled={busy}
+            onClick={onConfirm}
+            className="flex-1 rounded-full bg-navy-alt py-3 text-center text-[0.85rem] font-bold text-cream disabled:opacity-40"
+          >
+            {busy ? '…' : "Confirmer l'annulation"}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

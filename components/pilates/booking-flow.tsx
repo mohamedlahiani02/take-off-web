@@ -130,7 +130,7 @@ export function PilatesBookingFlow({
       >
         {step === 'done' && result ? (
           <div id="pl-done">
-            <p className="font-mono text-[0.75rem] tracking-[0.14em] text-lime-dark">
+            <p id="pl-done-status" data-status={result.status} className="font-mono text-[0.75rem] tracking-[0.14em] text-lime-dark">
               {result.status === 'BOOKED' ? 'PLACE CONFIRMÉE' : 'AJOUTÉ·E À LA LISTE D’ATTENTE'}
             </p>
             <p className="mt-2 text-[0.85rem] text-navy-alt/70">
@@ -167,7 +167,7 @@ export function PilatesBookingFlow({
 
             <div className="mt-4 rounded-[0.5rem] bg-cream-alt p-4">
               {isFull ? (
-                <p className="text-[0.85rem] text-amber-700">
+                <p id="pl-full-notice" className="text-[0.85rem] text-amber-700">
                   Cours complet — vous serez placé·e sur liste d’attente. Rien ne vous sera débité.
                 </p>
               ) : user && !authLoading && packs === null ? (
@@ -191,6 +191,7 @@ export function PilatesBookingFlow({
             <div className="mt-5 flex gap-2">
               <button
                 type="button"
+                id="pl-cancel"
                 onClick={onClose}
                 className="rounded-full border border-navy-alt/25 px-4 py-3 font-mono text-[0.65rem] tracking-[0.1em] text-navy-alt/70"
               >

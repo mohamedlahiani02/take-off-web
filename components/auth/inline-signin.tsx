@@ -101,6 +101,7 @@ export function InlineSignIn({
       {phase === 'phone' && (
         <div className="mt-3">
           <input
+            id="auth-phone-input"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="+216 ..."
@@ -108,6 +109,7 @@ export function InlineSignIn({
           />
           <button
             type="button"
+            id="auth-send-code"
             disabled={busy}
             onClick={() => void sendCode()}
             className={`mt-3 w-full rounded-full py-3 text-[0.85rem] font-bold disabled:opacity-40 ${cta}`}
@@ -119,12 +121,13 @@ export function InlineSignIn({
       {phase === 'name' && (
         <div className="mt-3">
           <input
+            id="auth-name-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Votre nom"
             className={`w-full rounded-[0.4rem] border bg-transparent px-3 py-2 text-[0.85rem] outline-none focus:border-lime ${inputBorder}`}
           />
-          <button type="button" onClick={() => setPhase('code')} className={`mt-3 w-full rounded-full py-3 text-[0.85rem] font-bold ${cta}`}>
+          <button type="button" id="auth-name-continue" onClick={() => setPhase('code')} className={`mt-3 w-full rounded-full py-3 text-[0.85rem] font-bold ${cta}`}>
             Continuer
           </button>
         </div>
@@ -132,6 +135,7 @@ export function InlineSignIn({
       {phase === 'code' && (
         <div className="mt-3">
           <input
+            id="auth-code-input"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="Code reçu"
@@ -139,6 +143,7 @@ export function InlineSignIn({
           />
           <button
             type="button"
+            id="auth-verify"
             disabled={busy}
             onClick={() => void verify()}
             className={`mt-3 w-full rounded-full py-3 text-[0.85rem] font-bold disabled:opacity-40 ${cta}`}
@@ -148,7 +153,7 @@ export function InlineSignIn({
         </div>
       )}
 
-      {error && <p className="mt-3 text-[0.78rem] text-red-400">{error}</p>}
+      {error && <p id="auth-error" className="mt-3 text-[0.78rem] text-red-400">{error}</p>}
 
       <button type="button" onClick={onBack} className={`mt-4 font-mono text-[0.62rem] tracking-[0.1em] ${back}`}>
         ← RETOUR
