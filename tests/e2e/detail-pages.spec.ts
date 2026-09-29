@@ -78,21 +78,22 @@ for (const [label, viewport] of [
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('Coupe de Test')
       await expect(page.locator('body')).toContainText('5')
       await expect(page.locator('body')).toContainText('11 place(s) restante(s)')
-      await expect(page.getByRole('link', { name: 'S’inscrire' })).toBeVisible()
+      await expect(page.locator('#tr-form')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Continuer' })).toBeVisible()
     })
 
     test('a full tournament does not offer registration', async ({ page }) => {
       await page.goto(`/padel/tournaments/coupe-de-test--${TOURNAMENT_FULL}`)
 
       await expect(page.locator('body')).toContainText('Complet')
-      await expect(page.getByRole('link', { name: 'S’inscrire' })).toHaveCount(0)
+      await expect(page.locator('#tr-form')).toHaveCount(0)
     })
 
-    test('a cancelled tournament says so instead of taking registrations', async ({ page }) => {
+    test('a closed tournament says so instead of taking registrations', async ({ page }) => {
       await page.goto(`/padel/tournaments/coupe-de-test--${TOURNAMENT_CANCELLED}`)
 
-      await expect(page.locator('body')).toContainText('ANNULÉ')
-      await expect(page.getByRole('link', { name: 'S’inscrire' })).toHaveCount(0)
+      await expect(page.locator('body')).toContainText('LES INSCRIPTIONS SONT CLOSES.')
+      await expect(page.locator('#tr-form')).toHaveCount(0)
     })
 
     test('an unknown id is a 404, not the general page', async ({ page }) => {

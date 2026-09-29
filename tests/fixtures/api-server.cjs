@@ -62,7 +62,7 @@ const tournament = (id, over = {}) => ({
   endsAt: null,
   entryFeeDt: 60,
   prize: '1000 DT',
-  status: 'PUBLISHED',
+  status: 'REGISTRATION_OPEN',
   maxParticipants: 16,
   registrationDeadline: '2026-11-10T22:00:00Z',
   currentRegistrations: 5,
@@ -87,7 +87,7 @@ function tokenOpts(req) {
 
 function resolve(pathname, req) {
   const seg = pathname.split('/').filter(Boolean)
-  const [, , kind, id] = seg // api v1 <kind> <id>
+  const [, , kind, id, sub] = seg // api v1 <kind> <id> <sub>
 
   // Editable page copy. Deliberately different from the built-in defaults so a
   // test can prove the CMS is actually read (the prototype ignored it).
@@ -204,12 +204,14 @@ function resolve(pathname, req) {
 
   if (kind === 'tournaments') {
     if (!id) return { status: 200, body: [tournament(IDS.tournament)] }
+    if (sub === 'fields') return { status: 200, body: [] }
+    if (sub === 'pricing') return { status: 200, body: [] }
     if (id === IDS.tournament) return { status: 200, body: tournament(id) }
     if (id === IDS.tournamentFull) {
       return { status: 200, body: tournament(id, { currentRegistrations: 16 }) }
     }
     if (id === IDS.tournamentCancelled) {
-      return { status: 200, body: tournament(id, { status: 'CANCELLED' }) }
+      return { status: 200, body: tournament(id, { status: 'REGISTRATION_CLOSED' }) }
     }
     return { status: 404, body: { message: 'Not found' } }
   }
