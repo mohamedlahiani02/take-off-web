@@ -277,8 +277,9 @@ export function ClassCalendar() {
         <PilatesBookingFlow
           session={selected}
           onClose={() => setSelected(null)}
+          // Refresh the grid but keep the modal open: its "done" step is where
+          // the member is told what was confirmed and what was (not) debited.
           onBooked={() => {
-            setSelected(null)
             void load()
           }}
         />

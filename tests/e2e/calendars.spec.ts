@@ -231,11 +231,18 @@ async function dayNumbers(page: Page, kind: 'pr' | 'pl'): Promise<string[]> {
 const BOOT_TIMEOUT = process.env['CI'] ? 60_000 : 30_000
 
 async function gotoCalendar(page: Page, kind: 'pr' | 'pl') {
+  // The pilates grid is server-rendered, so its header is visible before React
+  // has hydrated and a click on it would be silently dropped. Its first
+  // schedule fetch only fires from a post-hydration effect, so waiting for that
+  // response is the signal that the controls are live.
+  const hydrated =
+    kind === 'pl' ? page.waitForResponse((r) => r.url().includes('/classes/schedule'), { timeout: BOOT_TIMEOUT }) : null
   await page.goto(kind === 'pr' ? '/padel/reserve' : '/pilates/classes', { waitUntil: 'domcontentloaded' })
   // Wait for the runtime to mount and the first data paint to land.
   await expect(page.locator(`#${kind}-week-label`)).not.toHaveText(/Loading|Chargement/, {
     timeout: BOOT_TIMEOUT,
   })
+  await hydrated
   // Seven day numbers in the header is the signal that real data has painted.
   await expect.poll(async () => (await dayNumbers(page, kind)).length, { timeout: BOOT_TIMEOUT }).toBe(7)
 }
@@ -389,7 +396,8 @@ for (const tz of ['Africa/Tunis', 'Europe/Paris'] as const) {
       await expect(overlay).toBeHidden()
 
       await slot.click()
-      await overlay.click({ position: { x: 5, y: 5 } })
+      // The id sits on the panel; the backdrop is its parent.
+      await overlay.locator('xpath=..').click({ position: { x: 5, y: 5 } })
       await expect(overlay).toBeHidden()
 
       // A different slot restarts at step one with no residue.
@@ -585,7 +593,8 @@ for (const tz of ['Africa/Tunis', 'Europe/Paris'] as const) {
 
       await card.click()
       await expect(overlay).toBeVisible()
-      await overlay.click({ position: { x: 5, y: 5 } })
+      // The id sits on the panel; the backdrop is its parent.
+      await overlay.locator('xpath=..').click({ position: { x: 5, y: 5 } })
       await expect(overlay).toBeHidden()
       expect(bookings()).toEqual([])
 
