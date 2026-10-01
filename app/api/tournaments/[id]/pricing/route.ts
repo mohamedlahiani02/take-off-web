@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiBase } from '@/lib/api/base'
+import { apiBase, readSignal } from '@/lib/api/base'
 
 export const runtime = 'nodejs'
 
@@ -14,6 +14,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const upstream = await fetch(`${apiBase()}/api/v1/tournaments/${encodeURIComponent(id)}/pricing`, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
+      signal: readSignal(),
     })
     const text = await upstream.text()
     let data: unknown

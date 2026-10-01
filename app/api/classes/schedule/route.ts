@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import type { NextRequest } from 'next/server'
-import { apiBase } from '@/lib/api/base'
+import { apiBase, readSignal } from '@/lib/api/base'
 
 export const runtime = 'nodejs'
 
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   try {
     const upstream = await fetch(
       `${apiBase()}/api/v1/classes/schedule?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-      { headers, cache: 'no-store' },
+      { headers, cache: 'no-store', signal: readSignal() },
     )
     const text = await upstream.text()
     let data: unknown

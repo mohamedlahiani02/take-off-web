@@ -1,5 +1,6 @@
 import 'server-only'
-import { apiBase } from '@/lib/auth/session'
+import { cache } from 'react'
+import { apiBase, readSignal } from '@/lib/api/base'
 
 /**
  * Editable page content, read on the server so it is in the HTML that reaches
@@ -21,13 +22,16 @@ interface SiteContentRow {
   displayOrder?: number
 }
 
-export async function getPageContent(page: string): Promise<CmsSections> {
+// cache(): generateMetadata and the page both read the same page content, and
+// a fetch carrying a signal is not memoized by Next.js on its own.
+export const getPageContent = cache(async (page: string): Promise<CmsSections> => {
   const base = apiBase()
   if (!base) return {}
   try {
     const res = await fetch(`${base}/api/v1/content/${encodeURIComponent(page)}`, {
       headers: { Accept: 'application/json' },
       next: { revalidate: 300 },
+      signal: readSignal(),
     })
     if (!res.ok) return {}
     const rows = (await res.json()) as SiteContentRow[]
@@ -39,10 +43,10 @@ export async function getPageContent(page: string): Promise<CmsSections> {
     }
     return sections
   } catch {
-    // Missing CMS content is never fatal: callers fall back to their defaults.
+    // Missing or slow CMS content is never fatal: callers fall back to their defaults.
     return {}
   }
-}
+})
 
 /** Reads a string field from a CMS section, falling back to the built-in copy. */
 export function text(
