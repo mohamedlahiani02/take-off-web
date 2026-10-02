@@ -1,7 +1,7 @@
 import 'server-only'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { apiBase } from '@/lib/auth/session'
+import { apiBase, readSignal } from '@/lib/api/base'
 
 interface ProxyInit {
   method?: string
@@ -27,13 +27,16 @@ export async function proxy(path: string, init: ProxyInit = {}): Promise<NextRes
     return NextResponse.json({ error: 'API not configured' }, { status: 503 })
   }
 
+  const method = init.method ?? 'GET'
   let upstream: Response
   try {
     upstream = await fetch(base + path, {
-      method: init.method ?? 'GET',
+      method,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       ...(init.body === undefined ? {} : { body: init.body }),
       cache: 'no-store',
+      // Only reads are bounded here; see readSignal() for why writes are not.
+      ...(method === 'GET' ? { signal: readSignal() } : {}),
     })
   } catch {
     return NextResponse.json({ error: 'Could not reach API' }, { status: 502 })
@@ -45,7 +48,13 @@ export async function proxy(path: string, init: ProxyInit = {}): Promise<NextRes
     return new NextResponse(null, { status: upstream.status })
   }
 
-  const text = await upstream.text()
+  let text: string
+  try {
+    text = await upstream.text()
+  } catch {
+    // The body can still be cut off (or time out) after the headers arrived.
+    return NextResponse.json({ error: 'Could not reach API' }, { status: 502 })
+  }
   let data: unknown = null
   if (text) {
     try {

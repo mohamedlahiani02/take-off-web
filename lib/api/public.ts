@@ -1,5 +1,6 @@
 import 'server-only'
-import { apiBase } from '@/lib/auth/session'
+import { cache } from 'react'
+import { apiBase, readSignal } from '@/lib/api/base'
 
 /**
  * Server-side reads of the public catalogue, used by the detail pages so the
@@ -64,7 +65,9 @@ export type Fetched<T> =
   | { kind: 'missing' }
   | { kind: 'unavailable' }
 
-async function getJson<T>(path: string): Promise<Fetched<T>> {
+// cache(): a detail page reads the same resource in generateMetadata and in the
+// page, and a fetch carrying a signal is not memoized by Next.js on its own.
+const getJson = cache(async function getJson<T>(path: string): Promise<Fetched<T>> {
   const base = apiBase()
   if (!base) return { kind: 'unavailable' }
   try {
@@ -72,6 +75,8 @@ async function getJson<T>(path: string): Promise<Fetched<T>> {
       headers: { Accept: 'application/json' },
       // Catalogue data changes rarely; revalidate rather than caching forever.
       next: { revalidate: 300 },
+      // A timeout is an outage, never a miss: it lands in the catch below.
+      signal: readSignal(),
     })
     if (res.status === 404 || res.status === 410) return { kind: 'missing' }
     if (!res.ok) return { kind: 'unavailable' }
@@ -79,7 +84,7 @@ async function getJson<T>(path: string): Promise<Fetched<T>> {
   } catch {
     return { kind: 'unavailable' }
   }
-}
+}) as <T>(path: string) => Promise<Fetched<T>>
 
 export const getProduct = (id: string) => getJson<PublicProduct>(`/api/v1/products/${id}`)
 export const getCoach = (id: string) => getJson<PublicCoach>(`/api/v1/coaches/${id}`)

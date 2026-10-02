@@ -35,6 +35,40 @@ export function publicApiBase(): string {
   return (configured || PRODUCTION_API).replace(/\/$/, '')
 }
 
+/**
+ * Upper bound for a server-side read from the API.
+ *
+ * Without it a stalled upstream (a Render instance waking up, a dropped
+ * connection) hangs the caller indefinitely: `next build` gives up on a page
+ * after 60s, and a route handler holds the browser until the platform kills
+ * the function. Kept well under the 60s prerender budget so a page that waits
+ * on several reads in parallel still finishes and falls back to its
+ * "unavailable" state instead of failing the build.
+ */
+const DEFAULT_READ_TIMEOUT_MS = 15_000
+
+export function readTimeoutMs(): number {
+  const configured = Number(process.env['API_READ_TIMEOUT_MS'])
+  return Number.isInteger(configured) && configured > 0 ? configured : DEFAULT_READ_TIMEOUT_MS
+}
+
+/**
+ * Abort signal for an idempotent read (GET) from the API. It also covers the
+ * body, so a response whose headers arrive but whose body stalls is bounded too.
+ *
+ * Deliberately not used for writes: aborting a booking or payment POST on our
+ * side does not stop the API from committing it, so the member would see a
+ * failure for something that happened — and could pay twice by retrying.
+ *
+ * Next.js skips per-render request memoization for a fetch that carries a
+ * signal, so callers that run more than once per render wrap themselves in
+ * React's `cache()`. The persistent data cache (`next.revalidate`) is
+ * unaffected: the signal is not part of its cache key.
+ */
+export function readSignal(): AbortSignal {
+  return AbortSignal.timeout(readTimeoutMs())
+}
+
 /** True when the URL came from configuration rather than the built-in default. */
 export function apiBaseIsConfigured(): boolean {
   return !!(process.env['API_URL'] ?? process.env['NEXT_PUBLIC_API_URL'])

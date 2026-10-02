@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiBase } from '@/lib/api/base'
+import { apiBase, readSignal } from '@/lib/api/base'
 
 export const runtime = 'nodejs'
 
@@ -14,6 +14,7 @@ export async function GET() {
     const upstream = await fetch(`${apiBase()}/api/v1/courts/pricing`, {
       headers: { Accept: 'application/json' },
       next: { revalidate: 300 },
+      signal: readSignal(),
     })
     if (!upstream.ok) {
       return NextResponse.json({ error: 'Pricing unavailable' }, { status: 502 })

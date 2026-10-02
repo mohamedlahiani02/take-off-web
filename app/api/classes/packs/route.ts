@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { apiBase } from '@/lib/api/base'
+import { apiBase, readSignal } from '@/lib/api/base'
 
 export const runtime = 'nodejs'
 
@@ -9,6 +9,7 @@ export async function GET() {
     const upstream = await fetch(`${apiBase()}/api/v1/classes/packs`, {
       headers: { Accept: 'application/json' },
       next: { revalidate: 300 },
+      signal: readSignal(),
     })
     if (!upstream.ok) return NextResponse.json({ error: 'Packs unavailable' }, { status: 502 })
     return NextResponse.json(await upstream.json())
