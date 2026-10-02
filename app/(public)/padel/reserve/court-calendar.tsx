@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BookingFlow, type SlotSelection } from '@/components/booking/booking-flow'
+import { publicApiBase } from '@/lib/api/base'
 import {
   DAYS_EN,
   MONTHS_EN,
@@ -16,7 +17,7 @@ import {
   weekStartKey,
 } from '@/lib/club-time'
 
-const API = (process.env['NEXT_PUBLIC_API_URL'] ?? '').replace(/\/$/, '')
+const API = publicApiBase()
 const SLOTS = slotTimes()
 
 interface Court {

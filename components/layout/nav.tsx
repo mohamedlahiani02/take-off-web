@@ -23,8 +23,14 @@ export function Nav({ theme = 'dark' }: NavProps) {
     <>
       <header
         className={cn(
-          'fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-[8vw] h-20',
-          isDark ? 'text-white' : 'text-navy',
+          // Translucent blurred glass panel — same treatment the prototype
+          // used on every page (.pr-nav / the pilates header), so the bar
+          // reads identically whether it's floating over a rich gradient
+          // hero or a flat section, instead of only looking right on one.
+          'fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-[5vw] h-[74px] backdrop-blur-[14px] border-b',
+          isDark
+            ? 'bg-navy/[.82] border-lime/[.14] text-white'
+            : 'bg-cream/[.82] border-navy/10 text-navy',
         )}
       >
         {/* Brand */}
