@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Nav } from '@/components/layout/nav'
+import { Footer } from '@/components/layout/footer'
+import { PilatesInstructors } from '@/components/pilates/instructors'
 import { getPageContent, text } from '@/lib/api/cms'
 import { apiBase } from '@/lib/api/base'
 import { ClassCalendar } from '@/components/pilates/class-calendar'
@@ -75,6 +77,14 @@ export default async function PilatesPage() {
   const scheduleHeading = text(cms, 'schedule', 'heading', 'Cette semaine')
   const packsKicker = text(cms, 'packs', 'kicker', 'FORFAITS')
   const packsHeading = text(cms, 'packs', 'heading', 'Choisissez votre formule')
+  const instructorsKicker = text(cms, 'instructors', 'kicker', 'NOS INSTRUCTEURS')
+  const instructorsHeading = text(cms, 'instructors', 'heading', 'Encadré·e à chaque mouvement')
+  const instructorsDesc = text(
+    cms,
+    'instructors',
+    'subtitle',
+    'Des instructeurs diplômés qui adaptent chaque séance à votre niveau et à votre corps.',
+  )
   const heroStats = [
     { big: '450+', label: 'SÉANCES / MOIS' },
     { big: '70+', label: 'COURS PAR SEMAINE' },
@@ -193,6 +203,12 @@ export default async function PilatesPage() {
           <ClassCalendar />
         </section>
 
+        <PilatesInstructors
+          kicker={instructorsKicker}
+          heading={instructorsHeading}
+          description={instructorsDesc}
+        />
+
         <section className="px-[max(1rem,5vw)] py-[max(4rem,9vh)]">
           <p className="mb-2 font-mono text-[0.65rem] tracking-[0.24em] text-lime-dark">{packsKicker}</p>
           <h2 className="mb-8 font-display text-[clamp(1.75rem,4vw,3rem)] text-navy-alt">{packsHeading}</h2>
@@ -211,6 +227,7 @@ export default async function PilatesPage() {
           </Link>
         </section>
       </main>
+      <Footer theme="light" />
     </>
   )
 }

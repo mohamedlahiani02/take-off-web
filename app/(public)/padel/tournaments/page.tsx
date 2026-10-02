@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Nav } from '@/components/layout/nav'
+import { Footer } from '@/components/layout/footer'
 import { listTournaments, type PublicTournament } from '@/lib/api/public'
 import { getPageContent, text } from '@/lib/api/cms'
 import { toSegment } from '@/lib/slug'
@@ -182,6 +183,7 @@ export default async function TournamentsPage() {
           )}
         </section>
       </main>
+      <Footer theme="dark" />
     </>
   )
 }

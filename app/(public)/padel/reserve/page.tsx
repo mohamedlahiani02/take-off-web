@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Nav } from '@/components/layout/nav'
+import { Footer } from '@/components/layout/footer'
 import { CourtCalendar } from './court-calendar'
 
 export const metadata: Metadata = {
@@ -34,6 +35,7 @@ export default function ReservePage() {
           <CourtCalendar />
         </section>
       </main>
+      <Footer theme="dark" />
     </>
   )
 }

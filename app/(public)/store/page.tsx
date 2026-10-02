@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Nav } from '@/components/layout/nav'
+import { Footer } from '@/components/layout/footer'
 import { listProducts } from '@/lib/api/public'
 import { getPageContent, text } from '@/lib/api/cms'
 import { StoreGrid } from './store-grid'
@@ -65,6 +66,7 @@ export default async function StorePage() {
           )}
         </section>
       </main>
+      <Footer theme="dark" />
     </>
   )
 }

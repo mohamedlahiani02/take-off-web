@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Nav } from '@/components/layout/nav'
+import { Footer } from '@/components/layout/footer'
 import { getPageContent, text } from '@/lib/api/cms'
 import { ClassCalendar } from '@/components/pilates/class-calendar'
 
@@ -39,6 +40,7 @@ export default async function PilatesClassesPage() {
           <ClassCalendar />
         </section>
       </main>
+      <Footer theme="light" />
     </>
   )
 }
