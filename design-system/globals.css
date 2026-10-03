@@ -91,6 +91,17 @@
   }
 }
 
+/* The padel marquee strip: one copy of the text scrolls a full width while
+   a duplicate follows, so the loop has no visible seam. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @keyframes float-ghost {
   0%,
   100% {

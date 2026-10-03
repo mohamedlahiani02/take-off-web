@@ -20,7 +20,9 @@ interface PackType {
  * server refuses any other method rather than issue unpaid credits), and the
  * price shown is exactly what gets charged.
  */
-export function PackCatalogue() {
+/** Defaults to the pilates track; the padel page passes 'PADEL'. Both sell
+ *  packs through the same endpoint and the same wallet-only purchase rule. */
+export function PackCatalogue({ activity = 'PILATES' }: { activity?: 'PADEL' | 'PILATES' } = {}) {
   const { user } = useAuth()
   const [packs, setPacks] = useState<PackType[] | null>(null)
   const [buying, setBuying] = useState<PackType | null>(null)
@@ -34,7 +36,7 @@ export function PackCatalogue() {
     fetch('/api/classes/packs', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : []))
       .then((rows: PackType[]) => {
-        if (active) setPacks((Array.isArray(rows) ? rows : []).filter((p) => p.activity === 'PILATES' && p.active))
+        if (active) setPacks((Array.isArray(rows) ? rows : []).filter((p) => p.activity === activity && p.active))
       })
       .catch(() => {
         if (active) setPacks([])
@@ -42,7 +44,7 @@ export function PackCatalogue() {
     return () => {
       active = false
     }
-  }, [])
+  }, [activity])
 
   const purchase = useCallback(async () => {
     if (!buying) return
