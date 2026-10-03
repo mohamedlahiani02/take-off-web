@@ -13,6 +13,7 @@ import {
   type PadelFormat,
 } from '@/components/padel/sections'
 import { PadelCoaches, PadelTournaments, PadelShop } from '@/components/padel/data-sections'
+import { CoachingForm } from '@/app/(public)/coaches/coaching-form'
 
 export async function generateMetadata(): Promise<Metadata> {
   const cms = await getPageContent('padel')
@@ -150,10 +151,10 @@ export default async function PadelPage() {
           <PackCatalogue activity="PADEL" />
         </section>
 
-        {/* COACHING ENQUIRY — the working form lives on /coaches and posts to
-            /api/coaching/inquiry; this routes there rather than standing up a
-            second form against the same endpoint. */}
-        <section className="bg-card-navy px-[max(1rem,5vw)] py-[max(4rem,9vh)]">
+        {/* COACHING ENQUIRY — the same single CoachingForm component the
+            coaches page uses, embedded here as the prototype had it, so an
+            enquiry never costs a page change. One form, one endpoint. */}
+        <section id="coaching-form" className="bg-card-navy px-[max(1rem,5vw)] py-[max(4rem,9vh)]">
           <div className="max-w-[44rem]">
             <p className="font-mono text-[0.7rem] tracking-[0.26em] text-lime uppercase">
               {text(cms, 'coachingForm', 'kicker', '07 — DEMANDE DE COACHING')}
@@ -181,12 +182,9 @@ export default async function PadelPage() {
                 </li>
               ))}
             </ul>
-            <Link
-              href="/coaches"
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-lime px-7 py-4 text-[0.95rem] font-bold text-navy transition hover:brightness-105"
-            >
-              Demander une séance →
-            </Link>
+          </div>
+          <div className="mt-9 max-w-[52rem]">
+            <CoachingForm theme="dark" />
           </div>
         </section>
 

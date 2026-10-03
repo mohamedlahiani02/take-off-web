@@ -14,7 +14,8 @@ const SLOTS = ['Matin', 'Midi', 'Soir'] as const
  * A failed submission keeps the form and its values so nothing is retyped, and
  * never shows the confirmation screen.
  */
-export function CoachingForm() {
+export function CoachingForm({ theme = 'dark' }: { theme?: 'dark' | 'light' } = {}) {
+  const isDark = theme === 'dark'
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -72,19 +73,43 @@ export function CoachingForm() {
 
   if (done) {
     return (
-      <div className="rounded-card bg-card-navy p-6 sm:p-8">
-        <p className="font-mono text-[0.7rem] tracking-[0.3em] text-lime uppercase">Envoyé</p>
-        <p className="mt-3 text-[1.05rem] text-white">Merci — nous vous rappelons très vite.</p>
-        <p className="mt-2 text-[0.9rem] text-white/60">
+      <div className={`rounded-card p-6 sm:p-8 ${isDark ? 'bg-card-navy' : 'bg-cream-alt'}`}>
+        <p
+          className={`font-mono text-[0.7rem] tracking-[0.3em] uppercase ${isDark ? 'text-lime' : 'text-lime-dark'}`}
+        >
+          Envoyé
+        </p>
+        <p className={`mt-3 text-[1.05rem] ${isDark ? 'text-white' : 'text-navy-alt'}`}>
+          Merci — nous vous rappelons très vite.
+        </p>
+        <p className={`mt-2 text-[0.9rem] ${isDark ? 'text-white/60' : 'text-navy-alt/65'}`}>
           Un coach vous contactera au {phone} pour convenir d’un créneau.
         </p>
       </div>
     )
   }
 
-  const field =
-    'w-full rounded-card border border-white/12 bg-white/5 px-4 py-3 text-[0.9rem] text-white placeholder-white/30 focus:border-lime/50 focus:outline-none'
-  const legend = 'mb-2 font-mono text-[0.65rem] tracking-[0.22em] text-white/40 uppercase'
+  const field = isDark
+    ? 'w-full rounded-card border border-white/12 bg-white/5 px-4 py-3 text-[0.9rem] text-white placeholder-white/30 focus:border-lime/50 focus:outline-none'
+    : 'w-full rounded-card border border-navy-alt/15 bg-white px-4 py-3 text-[0.9rem] text-navy-alt placeholder-navy-alt/35 focus:border-lime-dark/60 focus:outline-none'
+  const legend = isDark
+    ? 'mb-2 font-mono text-[0.65rem] tracking-[0.22em] text-white/40 uppercase'
+    : 'mb-2 font-mono text-[0.65rem] tracking-[0.22em] text-navy-alt/50 uppercase'
+  const chipOff = isDark
+    ? 'border-white/15 text-white/65 hover:border-white/35'
+    : 'border-navy-alt/20 text-navy-alt/70 hover:border-navy-alt/45'
+  const chipAccentOff = isDark
+    ? 'border-lime/35 text-lime/85 hover:border-lime/60'
+    : 'border-lime-dark/40 text-lime-dark hover:border-lime-dark/70'
+  const chipOn = isDark ? 'border-lime bg-lime text-navy' : 'border-lime-dark bg-lime-dark text-cream'
+  const gridHead = isDark ? 'text-white/40' : 'text-navy-alt/50'
+  const slotOff = isDark
+    ? 'border-white/10 bg-white/5 hover:border-white/25'
+    : 'border-navy-alt/12 bg-white hover:border-navy-alt/30'
+  const slotOn = isDark ? 'border-lime bg-lime/80' : 'border-lime-dark bg-lime-dark/80'
+  const submitBtn = isDark
+    ? 'bg-lime text-navy'
+    : 'bg-navy-alt text-cream'
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6">
@@ -114,8 +139,8 @@ export function CoachingForm() {
               onClick={() => toggleType(t)}
               className={`rounded-full border px-4 py-2 font-mono text-[0.68rem] tracking-[0.1em] transition-colors ${
                 lessonTypes.includes(t)
-                  ? 'border-lime bg-lime text-navy'
-                  : 'border-lime/35 text-lime/85 hover:border-lime/60'
+                  ? chipOn
+                  : chipAccentOff
               }`}
             >
               {t}
@@ -135,8 +160,8 @@ export function CoachingForm() {
               onClick={() => setLevel(level === l ? '' : l)}
               className={`rounded-full border px-4 py-2 font-mono text-[0.68rem] tracking-[0.1em] transition-colors ${
                 level === l
-                  ? 'border-lime bg-lime text-navy'
-                  : 'border-white/15 text-white/65 hover:border-white/35'
+                  ? chipOn
+                  : chipOff
               }`}
             >
               {l}
@@ -154,7 +179,7 @@ export function CoachingForm() {
               <tr>
                 <th className="w-[3.5rem]" />
                 {DAYS.map((d) => (
-                  <th key={d} className="font-mono text-[0.6rem] tracking-[0.1em] text-white/40">
+                  <th key={d} className={`font-mono text-[0.6rem] tracking-[0.1em] ${gridHead}`}>
                     {d}
                   </th>
                 ))}
@@ -163,7 +188,7 @@ export function CoachingForm() {
             <tbody>
               {SLOTS.map((s) => (
                 <tr key={s}>
-                  <th className="text-left font-mono text-[0.6rem] tracking-[0.1em] text-white/40">
+                  <th className={`text-left font-mono text-[0.6rem] tracking-[0.1em] ${gridHead}`}>
                     {s}
                   </th>
                   {DAYS.map((d) => {
@@ -178,8 +203,8 @@ export function CoachingForm() {
                           onClick={() => toggleSlot(key)}
                           className={`h-9 w-full rounded-[0.4rem] border transition-colors ${
                             on
-                              ? 'border-lime bg-lime/80'
-                              : 'border-white/10 bg-white/5 hover:border-white/25'
+                              ? slotOn
+                              : slotOff
                           }`}
                         />
                       </td>
@@ -208,7 +233,7 @@ export function CoachingForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-full bg-lime py-4 text-[0.9rem] font-bold text-navy disabled:opacity-40 sm:w-auto sm:px-10"
+        className={`w-full rounded-full py-4 text-[0.9rem] font-bold disabled:opacity-40 sm:w-auto sm:px-10 ${submitBtn}`}
       >
         {submitting ? 'Envoi…' : 'Envoyer ma demande'}
       </button>

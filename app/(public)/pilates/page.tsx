@@ -9,6 +9,7 @@ import { PilatesJourney, type JourneyStep } from '@/components/pilates/journey'
 import { PilatesStories, type Story } from '@/components/pilates/stories'
 import { PilatesShopStrip } from '@/components/pilates/shop-strip'
 import { PilatesFaq, type FaqItem } from '@/components/pilates/faq'
+import { CoachingForm } from '@/app/(public)/coaches/coaching-form'
 import { getPageContent, list, text } from '@/lib/api/cms'
 import { apiBase } from '@/lib/api/base'
 import { ClassCalendar } from '@/components/pilates/class-calendar'
@@ -348,20 +349,19 @@ export default async function PilatesPage() {
           items={faqs}
         />
 
-        {/* PRIVATE SESSION — the prototype had its own enquiry form here. The
-            club already has one working coaching enquiry form (it posts to
-            /api/coaching/inquiry); this routes there instead of standing up a
-            second form against the same endpoint. */}
-        <section className="bg-navy-alt px-[max(1rem,5vw)] py-[max(4rem,9vh)] text-cream">
+        {/* PRIVATE SESSION — the same single CoachingForm the coaches and
+            padel pages use, embedded here as the prototype had it, so an
+            enquiry never costs a page change. One form, one endpoint. */}
+        <section id="seance-privee" className="bg-cream px-[max(1rem,5vw)] py-[max(4rem,9vh)]">
           <div className="max-w-[44rem]">
-            <p className="flex items-center gap-2 font-mono text-[0.7rem] tracking-[0.26em] text-cream/50 uppercase">
-              <span className="text-[1rem] text-lime">✦</span>
+            <p className="flex items-center gap-2 font-mono text-[0.7rem] tracking-[0.26em] text-navy-alt/50 uppercase">
+              <span className="text-[1rem] text-lime-dark">✦</span>
               {text(cms, 'privateSession', 'kicker', 'SÉANCE PRIVÉE')}
             </p>
-            <h2 className="mt-4 font-display text-[clamp(2.125rem,4.6vw,4.25rem)] leading-none tracking-[-0.02em]">
+            <h2 className="mt-4 font-display text-[clamp(2.125rem,4.6vw,4.25rem)] leading-none tracking-[-0.02em] text-navy-alt">
               {text(cms, 'privateSession', 'heading', 'Envie d’un accompagnement rien qu’à vous ?')}
             </h2>
-            <p className="mt-5 max-w-[34rem] text-[0.98rem] leading-[1.65] text-cream/70">
+            <p className="mt-5 max-w-[34rem] text-[0.98rem] leading-[1.65] text-navy-alt/70">
               {text(
                 cms,
                 'privateSession',
@@ -369,12 +369,9 @@ export default async function PilatesPage() {
                 'Duo ou individuel, sur reformer ou au tapis : dites-nous ce que vous cherchez et vos disponibilités, un instructeur vous rappelle.',
               )}
             </p>
-            <Link
-              href="/coaches"
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-lime px-7 py-4 text-[0.95rem] font-bold text-navy transition hover:brightness-105"
-            >
-              Demander une séance privée →
-            </Link>
+          </div>
+          <div className="mt-9 max-w-[52rem]">
+            <CoachingForm theme="light" />
           </div>
         </section>
 
