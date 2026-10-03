@@ -1,16 +1,7 @@
-import Link from 'next/link'
 import { Nav } from '@/components/layout/nav'
+import { Footer } from '@/components/layout/footer'
 import { requireAuth } from '@/lib/auth/server-guards'
-
-const SIDEBAR_LINKS = [
-  { href: '/account', label: 'Overview' },
-  { href: '/account/bookings', label: 'Bookings' },
-  { href: '/account/packs', label: 'Packs' },
-  { href: '/account/matches', label: 'Matches' },
-  { href: '/account/tournaments', label: 'Tournaments' },
-  { href: '/account/orders', label: 'Orders' },
-  { href: '/account/profile', label: 'Profile' },
-] as const
+import { AccountNav } from './account-nav'
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   await requireAuth()
@@ -18,36 +9,43 @@ export default async function AccountLayout({ children }: { children: React.Reac
   return (
     <>
       <Nav theme="dark" />
-      <div className="min-h-screen bg-navy pt-24 flex">
-        {/* Sidebar */}
-        <aside className="hidden md:flex flex-col w-56 flex-none border-r border-white/8 px-6 py-10 gap-1">
-          <p className="font-mono text-[10px] tracking-[0.32em] text-white/30 mb-6">
-            MY ACCOUNT
-          </p>
-          {SIDEBAR_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-3 py-2.5 rounded-card text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <div className="mt-auto pt-10">
-            <form action="/api/auth/logout" method="post">
-              <button
-                type="submit"
-                className="font-mono text-[10px] tracking-[0.22em] text-white/30 hover:text-white/60 transition-colors"
-              >
-                SIGN OUT
-              </button>
-            </form>
-          </div>
-        </aside>
+      <div className="min-h-screen bg-navy pt-[74px]">
+        {/* Phone: the account sections as a horizontal scroller. Desktop:
+            the sidebar below. */}
+        <AccountNav variant="bar" />
 
-        {/* Main content */}
-        <main className="flex-1 px-[5vw] py-10">{children}</main>
+        <div className="flex">
+          <aside className="hidden w-56 flex-none flex-col gap-1 border-r border-white/8 px-6 py-10 md:flex">
+            <p className="mb-6 font-mono text-[10px] tracking-[0.32em] text-white/30">MON COMPTE</p>
+            <AccountNav variant="sidebar" />
+            <div className="mt-auto pt-10">
+              <form action="/api/auth/logout" method="post">
+                <button
+                  type="submit"
+                  className="font-mono text-[10px] tracking-[0.22em] text-white/30 transition-colors hover:text-white/60"
+                >
+                  DÉCONNEXION
+                </button>
+              </form>
+            </div>
+          </aside>
+
+          <main className="min-w-0 flex-1 px-[5vw] py-10">{children}</main>
+        </div>
+
+        {/* Phone: sign out has no sidebar to live in. */}
+        <div className="border-t border-white/8 px-[5vw] py-6 md:hidden">
+          <form action="/api/auth/logout" method="post">
+            <button
+              type="submit"
+              className="font-mono text-[10px] tracking-[0.22em] text-white/30 transition-colors hover:text-white/60"
+            >
+              DÉCONNEXION
+            </button>
+          </form>
+        </div>
       </div>
+      <Footer theme="dark" />
     </>
   )
 }

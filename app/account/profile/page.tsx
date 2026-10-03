@@ -11,7 +11,7 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <p className="font-mono text-[13px] tracking-[0.34em] text-lime uppercase mb-4">Account</p>
+      <p className="font-mono text-[13px] tracking-[0.34em] text-lime uppercase mb-4">Mon compte</p>
       <h1 className="font-display text-[clamp(40px,6vw,88px)] leading-none text-white tracking-tight mb-10">
         PROFILE
       </h1>

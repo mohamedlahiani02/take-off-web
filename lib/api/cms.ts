@@ -59,6 +59,22 @@ export function text(
   return typeof value === 'string' && value.trim() ? value : fallback
 }
 
+/**
+ * Reads a repeatable field (bullet lists, steps, testimonials, FAQ entries)
+ * from a CMS section, falling back to the built-in copy when the admin has not
+ * filled one in. Mirrors the prototype's `(cms.x.items && cms.x.items.length)
+ * ? … : default` pattern.
+ */
+export function list<T>(
+  sections: CmsSections,
+  sectionKey: string,
+  field: string,
+  fallback: T[],
+): T[] {
+  const value = sections[sectionKey]?.[field]
+  return Array.isArray(value) && value.length ? (value as T[]) : fallback
+}
+
 /** Reads an image URL from a CMS section; null when the admin has not set one. */
 export function image(
   sections: CmsSections,

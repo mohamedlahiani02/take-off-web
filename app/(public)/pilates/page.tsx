@@ -3,7 +3,13 @@ import Link from 'next/link'
 import { Nav } from '@/components/layout/nav'
 import { Footer } from '@/components/layout/footer'
 import { PilatesInstructors } from '@/components/pilates/instructors'
-import { getPageContent, text } from '@/lib/api/cms'
+import { PilatesApproach } from '@/components/pilates/approach'
+import { PilatesClassTypes, type PilatesClassType } from '@/components/pilates/class-types'
+import { PilatesJourney, type JourneyStep } from '@/components/pilates/journey'
+import { PilatesStories, type Story } from '@/components/pilates/stories'
+import { PilatesShopStrip } from '@/components/pilates/shop-strip'
+import { PilatesFaq, type FaqItem } from '@/components/pilates/faq'
+import { getPageContent, list, text } from '@/lib/api/cms'
 import { apiBase } from '@/lib/api/base'
 import { ClassCalendar } from '@/components/pilates/class-calendar'
 import { PackCatalogue } from '@/components/pilates/pack-catalogue'
@@ -91,6 +97,90 @@ export default async function PilatesPage() {
     { big: '96%', label: 'SE SENTENT PLUS FORTS' },
   ]
   const nextSession = await nextUpcomingSession()
+
+  // Sections below the schedule. Copy is CMS-overridable; the defaults are
+  // the prototype's own, translated.
+  const approachPoints = list<string>(cms, 'approach', 'points', [
+    'Adapté à chaque niveau et à chaque corps',
+    'Petits groupes, vraie attention',
+    'Reformer, tapis, duo et privé',
+  ])
+  const classTypes = list<PilatesClassType>(cms, 'classes', 'items', [
+    {
+      name: 'Reformer Flow',
+      level: 'Tous niveaux',
+      dur: '50 min',
+      desc: 'Un enchaînement fluide sur reformer : gainage, mobilité et contrôle.',
+    },
+    {
+      name: 'Mat Foundations',
+      level: 'Débutant',
+      dur: '50 min',
+      desc: 'Les bases du pilates au sol, guidées mouvement par mouvement.',
+    },
+    {
+      name: 'Sculpt & Tone',
+      level: 'Intermédiaire',
+      dur: '50 min',
+      desc: 'Plus de résistance, plus de rythme — pour renforcer en profondeur.',
+    },
+  ])
+  const journeySteps = list<JourneyStep>(cms, 'journey', 'steps', [
+    {
+      n: '01',
+      title: 'Choisissez votre cours',
+      desc: 'Reformer, tapis, sculpt — filtrez selon votre niveau et vos horaires.',
+    },
+    {
+      n: '02',
+      title: 'Réservez votre place',
+      desc: 'Un créneau qui s’adapte à votre semaine. Places restantes en direct.',
+    },
+    {
+      n: '03',
+      title: 'Venez respirer',
+      desc: 'Arrivez, respirez, bougez. On s’occupe du reste — matériel compris.',
+    },
+  ])
+  const stories = list<Story>(cms, 'testimonials', 'items', [
+    {
+      text: 'J’arrivais raide et stressée. Six semaines plus tard, je me tiens plus droite, je dors mieux, et j’attends le lundi avec impatience.',
+      name: 'Amira B.',
+      tag: 'MEMBRE · 8 MOIS',
+    },
+    {
+      text: 'Les instructrices remarquent tout. Chaque consigne est pour mon corps — je ne me suis jamais sentie aussi forte ni aussi accompagnée.',
+      name: 'Khalil R.',
+      tag: 'MEMBRE · 1 AN',
+    },
+    {
+      text: 'Le reformer, c’est mon bouton reset. L’esprit calme, le centre solide, et une communauté qui me ressemble.',
+      name: 'Sonia M.',
+      tag: 'MEMBRE · 4 MOIS',
+    },
+  ])
+  const faqs = list<FaqItem>(cms, 'faq', 'items', [
+    {
+      q: 'Faut-il de l’expérience pour commencer ?',
+      a: 'Aucune. Les cours Mat Foundations et les reformers tous niveaux sont pensés pour débuter — l’instructeur vous guide sur chaque mouvement, à votre rythme.',
+    },
+    {
+      q: 'Que faut-il apporter ?',
+      a: 'Une tenue confortable et des chaussettes antidérapantes (disponibles à la boutique). Reformers, tapis et accessoires sont fournis.',
+    },
+    {
+      q: 'Comment fonctionnent les réservations ?',
+      a: 'Choisissez un créneau dans le planning et réservez votre place. Les places sont limitées par cours : mieux vaut réserver tôt.',
+    },
+    {
+      q: 'Puis-je suspendre ou partager mon forfait ?',
+      a: 'Les forfaits sont valables 3 mois et peuvent être suspendus une fois. Les membres illimités peuvent inviter une personne par mois.',
+    },
+    {
+      q: 'Y a-t-il un parking au studio ?',
+      a: 'Oui — parking membres gratuit sur place, et les courts de padel sont juste à côté si vous voulez enchaîner.',
+    },
+  ])
 
   return (
     <>
@@ -203,16 +293,89 @@ export default async function PilatesPage() {
           <ClassCalendar />
         </section>
 
+        <PilatesApproach
+          kicker={text(cms, 'approach', 'kicker', 'NOTRE APPROCHE')}
+          heading={text(cms, 'approach', 'heading', 'Un pilates pour tous les corps')}
+          body={text(
+            cms,
+            'approach',
+            'body',
+            'Aucun corps ne bouge de la même façon. Nos instructeurs adaptent chaque séance à votre niveau — première séance ou centième — pour que vous avanciez avec contrôle, confiance et aisance.',
+          )}
+          points={approachPoints}
+          photo1="/prototype-assets/Photos/Pilates_reformer.jpg"
+          photo2="/prototype-assets/Photos/Mat_pilates.jpg"
+        />
+
+        <PilatesClassTypes
+          kicker={text(cms, 'classes', 'kicker', 'NOS COURS')}
+          heading={text(cms, 'classes', 'heading', 'Trouvez le cours qui vous fait du bien')}
+          items={classTypes}
+        />
+
+        <PilatesJourney
+          kicker={text(cms, 'journey', 'kicker', 'COMMENT ÇA MARCHE')}
+          heading={text(cms, 'journey', 'heading', 'De la réservation au tapis')}
+          steps={journeySteps}
+        />
+
         <PilatesInstructors
           kicker={instructorsKicker}
           heading={instructorsHeading}
           description={instructorsDesc}
         />
 
+        <PilatesStories
+          kicker={text(cms, 'testimonials', 'kicker', 'TÉMOIGNAGES')}
+          heading={text(cms, 'testimonials', 'heading', 'Elles et ils en parlent')}
+          stories={stories}
+        />
+
         <section className="px-[max(1rem,5vw)] py-[max(4rem,9vh)]">
           <p className="mb-2 font-mono text-[0.65rem] tracking-[0.24em] text-lime-dark">{packsKicker}</p>
           <h2 className="mb-8 font-display text-[clamp(1.75rem,4vw,3rem)] text-navy-alt">{packsHeading}</h2>
           <PackCatalogue />
+        </section>
+
+        <PilatesShopStrip
+          kicker={text(cms, 'shop', 'kicker', 'BOUTIQUE')}
+          heading={text(cms, 'shop', 'heading', 'L’essentiel du studio')}
+        />
+
+        <PilatesFaq
+          kicker={text(cms, 'faq', 'kicker', 'QUESTIONS')}
+          heading={text(cms, 'faq', 'heading', 'Ce qu’on nous demande le plus')}
+          items={faqs}
+        />
+
+        {/* PRIVATE SESSION — the prototype had its own enquiry form here. The
+            club already has one working coaching enquiry form (it posts to
+            /api/coaching/inquiry); this routes there instead of standing up a
+            second form against the same endpoint. */}
+        <section className="bg-navy-alt px-[max(1rem,5vw)] py-[max(4rem,9vh)] text-cream">
+          <div className="max-w-[44rem]">
+            <p className="flex items-center gap-2 font-mono text-[0.7rem] tracking-[0.26em] text-cream/50 uppercase">
+              <span className="text-[1rem] text-lime">✦</span>
+              {text(cms, 'privateSession', 'kicker', 'SÉANCE PRIVÉE')}
+            </p>
+            <h2 className="mt-4 font-display text-[clamp(2.125rem,4.6vw,4.25rem)] leading-none tracking-[-0.02em]">
+              {text(cms, 'privateSession', 'heading', 'Envie d’un accompagnement rien qu’à vous ?')}
+            </h2>
+            <p className="mt-5 max-w-[34rem] text-[0.98rem] leading-[1.65] text-cream/70">
+              {text(
+                cms,
+                'privateSession',
+                'subtitle',
+                'Duo ou individuel, sur reformer ou au tapis : dites-nous ce que vous cherchez et vos disponibilités, un instructeur vous rappelle.',
+              )}
+            </p>
+            <Link
+              href="/coaches"
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-lime px-7 py-4 text-[0.95rem] font-bold text-navy transition hover:brightness-105"
+            >
+              Demander une séance privée →
+            </Link>
+          </div>
         </section>
 
         <section className="bg-cream-alt px-[max(1rem,5vw)] py-[max(3rem,7vh)] text-center">

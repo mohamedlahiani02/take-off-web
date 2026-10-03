@@ -46,7 +46,7 @@ export default function TournamentsPage() {
 
   return (
     <div>
-      <p className="mb-4 font-mono text-[13px] tracking-[0.34em] text-lime uppercase">Account</p>
+      <p className="mb-4 font-mono text-[13px] tracking-[0.34em] text-lime uppercase">Mon compte</p>
       <h1 className="mb-10 font-display text-[clamp(40px,6vw,88px)] leading-none tracking-tight text-white">
         TOURNAMENTS
       </h1>
